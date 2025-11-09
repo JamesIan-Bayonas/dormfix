@@ -1,4 +1,14 @@
+@plugin "daisyui";
 @import 'tailwindcss';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {  
+    font-family: 'Inter', sans-serif;
+  }
+}
 
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
