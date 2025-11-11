@@ -5,7 +5,7 @@ import { useAuth } from './UserContext'; // Import the useAuth hook
 import type { UserRole } from '../types/types.ts';
 
 const Login: React.FC = () => {
-  const { login, user } = useAuth(); // Destructure login function and user state
+  const { user , login } = useAuth(); // Destructure login function and user state
   
   // State for form inputs
   const [email, setEmail] = useState('');
@@ -26,7 +26,6 @@ const Login: React.FC = () => {
   return (
     <form onSubmit={handleSubmit}>
       <h3>Login</h3>
-      
       {/* Email Input */}
       <div>
         <label htmlFor="email">Email:</label>
@@ -37,6 +36,7 @@ const Login: React.FC = () => {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="e.g., tenant@dormfix.com"
           required
+          className = 'text-gray-300'
         />
       </div>
       
@@ -54,8 +54,8 @@ const Login: React.FC = () => {
         </select>
       </div>
 
-      <button type="submit">Log In</button>
-      <p>Try: tenant@dormfix.com (Tenant) or landlord@dormfix.com (Landlord)</p>
+      <button type="submit" className = 'text-red-500'>Log In</button>
+      <p className = 'text-cyan-100'>Try: tenant@dormfix.com (Tenant) or landlord@dormfix.com (Landlord)</p>
     </form>
   );
 };
