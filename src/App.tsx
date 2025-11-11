@@ -1,35 +1,41 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+// src/App.tsx
 
-function App() {
-  const [count, setCount] = useState(0)
+import React from 'react';
+import  { useAuth } from '../src/components/UserContext'; // Import the useAuth hook
+import Login from '../src/components/Login'; // Assuming you create this file
+// import other components like Dashboard, Header, etc.
+
+const App: React.FC = () => {
+  const { user, logout } = useAuth(); // Access user state and logout function
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1 className="text-3xl font-semi-bold text-red-500">Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div className="App">
+      <header>
+        <h1 className = 'text-green-500'>DormFix App</h1>
+        {/* Conditional rendering for logout button */}
+        {user ? (
+          <div>
+            <span className = 'text-green-500'>Logged in as: **{user.name}** ({user.role})</span>
+            <button onClick={logout} style={{ marginLeft: '10px' }}>Log Out</button>
+          </div>
+        ) : (
+          <span>Not logged in.</span>
+        )}
+      </header>
 
-export default App
+      <main>
+        {/* Conditional rendering based on user role */}
+
+        {!user ? (
+          <Login /> // Show login page if no user
+        ) : user.role === 'landlord' ? (
+          <div>{/* Landlord Dashboard Component */}<h2>Landlord Dashboard</h2></div> 
+        ) : (
+          <div>{/* Tenant View Component */}<h2>Tenant View</h2></div>
+        )}
+      </main>
+    </div>
+  );
+};
+
+export default App;
