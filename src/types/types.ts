@@ -10,7 +10,7 @@ export interface User {
 }
 
 export interface AuthContextType {
-  user: User | null;
-  login: (email: string, role: UserRole) => void;
+  user: (User | null);
+  login: (email: string, role: UserRole) => void;//'void' because it doesn't return anything via 'return types'
   logout: () => void;
 }
