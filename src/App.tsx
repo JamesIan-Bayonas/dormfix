@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Home } from 'lucide-react';
+import Login from './components/Login.tsx';
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -16,12 +17,8 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      {/* LEFT SIDE - Visual / Branding 
-          matches the "Student housing" context  
-      */}
       <div className="hidden lg:flex w-1/2 bg-slate-900 relative overflow-hidden justify-center items-center">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/90 to-slate-900/90 z-10" />
-        {/* Placeholder image for a dormitory/building */}
+        <div className="absolute inset-0 bg-linear-to-br from-indigo-600/90 to-slate-900/90 z-10" />
         <img 
           src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&q=80" 
           alt="Dormitory Building" 
@@ -68,7 +65,7 @@ const LoginPage = () => {
               
               {/* Email Input */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
+                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1 border-blue-500">
                   Email address
                 </label>
                 <div className="relative">
@@ -113,13 +110,11 @@ const LoginPage = () => {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                    > {showPassword ? <EyeOff size={18} /> : <Eye size={18} />} {/* Toggle password visibility icon either off | on */}</button> {/*This is the button for toggling password visibility */}
+
                 </div>
               </div>
             </div>
-
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <input
@@ -131,17 +126,17 @@ const LoginPage = () => {
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-600 cursor-pointer select-none">
                   Remember me
                 </label>
-              </div>
+              </div> {/* This is the div for the "Remember me" checkbox */}  
 
               <div className="text-sm">
                 <a href="#" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
                   Forgot password?
                 </a>
-              </div>
-            </div>
+              </div>  
+            </div>  {/* This is the div for the "Forgot password?" link */}
 
             <button
-              type="submit"
+              type="submit" // Btn for the submit button --
               disabled={isLoading}
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
             >
@@ -151,10 +146,10 @@ const LoginPage = () => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Signing in...
+                  Signing In...
                 </span>
               ) : (
-                "Sign in"
+                "Sign In" // this is the button text when not loading --
               )}
             </button>
           </form>
@@ -170,7 +165,7 @@ const LoginPage = () => {
           </div>
         </div>
       </div>
-    </div>
+    </div> // This is the end main container 
   );
 };
 
