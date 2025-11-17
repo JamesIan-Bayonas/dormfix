@@ -7,7 +7,7 @@ import type { UserRole } from './types/types';
 
 const LoginPage: React.FC = () => {
     // Destructure all necessary state and functions from the updated useAuth hook
-    const { user, login, isLoading, error } = useAuth();
+    const { login, isLoading, error } = useAuth(); // the user is down in App component
     
     // Local state for form inputs
     const [email, setEmail] = useState('');
@@ -183,7 +183,7 @@ const LoginPage: React.FC = () => {
   );
 };
 
-const App: React.FC = () => {
+const App: React.FC = () => { // user 
     const { user } = useAuth();
 
     if (user) {
