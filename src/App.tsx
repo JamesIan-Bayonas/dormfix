@@ -26,12 +26,12 @@ const LoginPage: React.FC = () => {
     // ===============================================================
     return (
     // THE FIX IS HERE: Added "w-full" to remove the "black bar".
-    <div className="min-h-screen flex w-full bg-emerald-950">
+    <div className="min-h-screen flex w-full bg-emerald-950 overflow-hidden"> {/*overflow-hidden*/}
       
       {/* LEFT SIDE: "DormFix" panel (Green theme) */}
       <div className="hidden lg:flex w-1/2 bg-emerald-950 relative overflow-hidden justify-center items-center">
         {/* Changed gradient to green hues */}
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/90 to-emerald-550/90 z-10" /> 
+        <div className="absolute inset-0 bg-linear-to-br from-emerald-900/90 to-emerald-550/90 z-10" /> 
         <img 
           src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&q=80" 
           alt="Dormitory Building" 
