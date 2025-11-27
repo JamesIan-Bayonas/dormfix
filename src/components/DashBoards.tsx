@@ -1,8 +1,8 @@
 // src/components/Dashboards.tsx
 import React from 'react';
 import { Home, LogOut, Wrench, CreditCard, LayoutDashboard, User as UserIcon } from 'lucide-react';
-import type { User } from '../types/types';
 import { useAuth } from './UserContext';
+import type { User } from '../types/types';
 
 // Tenant Dashboard
 export const TenantDashboard: React.FC = () => {
@@ -107,3 +107,4 @@ export const LandlordDashboard: React.FC = () => {
         </div>
     );
 };
+
