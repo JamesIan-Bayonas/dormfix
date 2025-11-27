@@ -4,7 +4,7 @@ import type { User, UserRole, AuthContextType } from '../types/types.ts';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined); 
 
-// Mock user data including a password field for realistic login
+// Mock user data for demonstration purposes
 const MOCK_USERS: Record<string, User & { password: string }> = {
     'landlord@dormfix.com': { id: 'L1', name: 'Admin Dela Cruz', role: 'landlord', email: 'landlord@dormfix.com', password: 'adminpass' },
     'tenant@dormfix.com': { id: 'T101', name: 'Maria Santos', role: 'tenant', email: 'tenant@dormfix.com', password: 'tenantpass' },
@@ -17,7 +17,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Signature updated to accept password
     const login = (email: string, password: string, role: UserRole) => {
-        setIsLoading(true);
+        setIsLoading(true); 
         setError(null);
 
         // Simulate network delay
@@ -48,6 +48,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 };
 
+
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (context === undefined) {
@@ -55,12 +56,3 @@ export const useAuth = () => {
     }
     return context;
 };
-
-// Update the type definition in types.ts to reflect the new state and login signature:
-// export interface AuthContextType {
-//   user: User | null; 
-//   login: (email: string, password: string, role: UserRole) => void; 
-//   logout: () => void;
-//   isLoading: boolean;
-//   error: string | null;
-// }
