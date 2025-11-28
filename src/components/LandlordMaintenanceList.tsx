@@ -37,7 +37,7 @@ const INITIAL_REQUESTS: (MaintenanceRequest & { tenantName: string, roomNumber: 
         tenantName: 'Sarah Lee',
         roomNumber: '202-C',
         dateSubmitted: '2025-10-25',
-        issueType: 'Electrical',
+        issueType: 'Erical',
         description: 'Hallway light is flickering.',
         urgency: 'Low',
         status: 'Pending',
