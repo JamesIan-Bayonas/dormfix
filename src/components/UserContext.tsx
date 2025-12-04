@@ -1,46 +1,49 @@
-// src/components/UserContext.tsx
 import React, { createContext, useState, useContext, type ReactNode } from 'react';
-import type { User, UserRole, AuthContextType } from '../types/types.ts';
+import type { User, AuthContextType } from '../types/types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined); 
-
-// Mock user data for demonstration purposes
-const MOCK_USERS: Record<string, User & { password: string }> = {
-    'landlord@dormfix.com': { id: 'L1', name: 'Admin Dela Cruz', role: 'landlord', email: 'landlord@dormfix.com', password: 'adminpass' },
-    'tenant@dormfix.com': { id: 'T101', name: 'Maria Santos', role: 'tenant', email: 'tenant@dormfix.com', password: 'tenantpass' },
-}; 
-
-
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Signature updated to accept password
-    const login = (email: string, password: string, role: UserRole) => {
+    // 🛑 UPDATED LOGIN: Now fetches from Real API
+    const login = async (email: string, password: string) => {
         setIsLoading(true); 
         setError(null);
 
-        // Simulate network delay
-        setTimeout(() => {
-            const mockUser = MOCK_USERS[email as keyof typeof MOCK_USERS];
+        try {
+            const response = await fetch('http://localhost:5000/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+            });
 
-            if (mockUser && mockUser.role === role && mockUser.password === password) {
-                // Success
-                setUser(mockUser);
+            const data = await response.json();
+
+            if (response.ok) {
+                // Success! The backend returns the sanitized user object
+                setUser(data);
                 setIsLoading(false);
             } else {
-                // Failure
-                setError('Login failed: Invalid credentials or role selected.');
+                // Failure (401 Unauthorized, etc.)
+                setError(data.error || 'Login failed');
                 setIsLoading(false);
             }
-        }, 800);
+        } catch (err) {
+            console.error("Network Error:", err);
+            setError('Unable to connect to the server.');
+            setIsLoading(false);
+        }
     };
 
     const logout = () => {
         setUser(null);
         setError(null);
+        setIsLoading(false);
     };
 
     return (
@@ -49,7 +52,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         </AuthContext.Provider>
     );
 };
-
 
 export const useAuth = () => {
     const context = useContext(AuthContext);
