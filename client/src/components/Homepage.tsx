@@ -5,15 +5,15 @@ import { useAuth } from './UserContext';
 
 const Login: React.FC = () => {
     const { login, isLoading, error } = useAuth();
-    
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    // 🛑 REMOVED: Role state is gone.
+
 
     const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        // 🛑 UPDATED: We just send credentials. The Context handles the rest.
+        e.preventDefault(); // Prevent the application from refreshing
+
+        // Login: first fetches the email and pass and contain them herein
         login(email, password); 
     };
 
@@ -50,6 +50,7 @@ const Login: React.FC = () => {
                     </div>
 
                     <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+                         {/* handleSubmit contains preventDefault to avoid refreshing the stored email and pass */}
                         <div className="space-y-5">
                             {/* Email Input */}
                             <div>
@@ -99,12 +100,8 @@ const Login: React.FC = () => {
                                     </button>
                                 </div>
                             </div>
-
-                            {/* 🛑 REMOVED: Role Selector is completely gone from here */}
                         </div>
-
-                        {/* Hint Text (Updated to remove Role instructions, just creds) */}
-                        <div className='text-xs text-left text-gray-500 bg-gray-100 p-3 rounded-lg mt-6'>
+                       <div className='text-xs text-left text-gray-500 bg-gray-100 p-3 rounded-lg mt-6'>
                             <p className="mb-1 font-semibold text-gray-800 flex items-center gap-1"><UserIcon size={14} /> Demo Accounts:</p>
                             <p className="ml-5">Tenant: <strong className="text-gray-700">tenant@dormfix.com</strong> (Pass: tenantpass)</p>
                             <p className="ml-5">Landlord: <strong className="text-gray-700">landlord@dormfix.com</strong> (Pass: adminpass)</p>
@@ -137,7 +134,7 @@ const Login: React.FC = () => {
                             )}
                         </button>
                     </form>
-                    
+
                     <div className="mt-6 text-center">
                         <p className="text-sm text-gray-500">
                             Don't have an account?{' '}
