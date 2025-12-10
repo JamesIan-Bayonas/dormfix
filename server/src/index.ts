@@ -14,7 +14,6 @@ const PORT = 5000;
 app.use(cors());
 app.use(express.json());
 
-// --- 1. DATABASE CONFIGURATION ---
 // Using your specific SQL Server details
 const dbConfig: sql.config = {
     user: 'dormfix_admin', 
@@ -34,16 +33,15 @@ const dbConfig: sql.config = {
     }
 };
 
-// --- 2. GLOBAL CONNECTION POOL ---
 // We connect ONCE when the server starts
 const appPool = new sql.ConnectionPool(dbConfig);
 
 const connectDB = async () => {
     try {
         await appPool.connect();
-        console.log('✅ Connected to SQL Server (Global Pool)');
+        console.log('Connected to SQL Server (Global Pool)');
     } catch (err) {
-        console.error('❌ Database Connection Failed:', err);
+        console.error(' Database Connection Failed:', err);
     }
 };
 
@@ -52,7 +50,9 @@ connectDB();
 // --- helper for generating ID ---
 const generateDormFixId = () => '#' + Math.floor(1000 + Math.random() * 9000);
 
-// --- 3. API ROUTES ---
+const generateDormCode = () => {
+    return '#' + Math.floor(100000 + Math.random() * 900000).toString();
+};
 
 // LOGIN ROUTE
 app.post('/api/login', async (req, res) => {
@@ -71,7 +71,6 @@ app.post('/api/login', async (req, res) => {
         }
 
         // CHECK PASSWORD (BCRYPT)
-        // If the user was created with the OLD method (plain text), this might fail.
         // Ideally, clean your DB or register a new user to test.
         const isMatch = await bcrypt.compare(password, user.password);
         
@@ -111,7 +110,7 @@ app.post('/api/register', async (req, res) => {
     try {
         await transaction.begin();
 
-        // 1. Check Email
+        // Check Email
         const checkRequest = new sql.Request(transaction);
         const checkResult = await checkRequest.input('email', sql.VarChar, email)
             .query('SELECT id FROM users WHERE email = @email');
@@ -120,7 +119,7 @@ app.post('/api/register', async (req, res) => {
             throw new Error("Email already registered");
         }
 
-        // 2. Prepare Data
+        // Prepare Data
         const userId = crypto.randomUUID();
         // HASH THE PASSWORD
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -128,11 +127,13 @@ app.post('/api/register', async (req, res) => {
         let myDormFixId = '';
         let landlordId = '';
 
+        let isApproved = role === 'landlord' ? 1 : 0;
+
         if (role === 'landlord') {
-            myDormFixId = generateDormFixId();
+            myDormFixId = generateDormCode();
         } else if (role === 'tenant') {
             myDormFixId = 'T-' + Math.floor(1000 + Math.random() * 9000);
-            
+
             if (!landlordCode) throw new Error("Landlord Code is required for Tenants");
             console.log(`Received Landlord Code directly: '${landlordCode}'`);
             
@@ -155,15 +156,16 @@ app.post('/api/register', async (req, res) => {
             .input('id', sql.VarChar, userId)
             .input('name', sql.VarChar, name)
             .input('email', sql.VarChar, email)
-            .input('password', sql.VarChar, hashedPassword) // Storing Hash
+            .input('password', sql.VarChar, hashedPassword)
             .input('role', sql.VarChar, role)
             .input('dormFixId', sql.VarChar, myDormFixId)
+            .input('isApproved', sql.Bit, isApproved) // New Field
             .query(`
-                INSERT INTO users (id, name, email, password, role, dorm_fix_id, created_at)
-                VALUES (@id, @name, @email, @password, @role, @dormFixId, GETDATE())
+                INSERT INTO users (id, name, email, password, role, dorm_fix_id, is_approved, created_at)
+                VALUES (@id, @name, @email, @password, @role, @dormFixId, @isApproved, GETDATE())
             `);
 
-        // 4. If Tenant, Create Assignment
+        // If Tenant, Create Assignment
         if (role === 'tenant') {
             const assignmentId = crypto.randomUUID();
             const assignRequest = new sql.Request(transaction);
@@ -188,7 +190,7 @@ app.post('/api/register', async (req, res) => {
         //     } catch (rollbackErr) {
         //         console.error("Rollback failed", rollbackErr);
         //     }
-        // }
+        // }w
         console.error("Register Error:", error.message);
         res.status(400).json({ error: error.message || "Registration failed" });
     }
@@ -197,3 +199,5 @@ app.post('/api/register', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
+
+// Note: In production, consider more robust error handling, input validation, and security measures.
