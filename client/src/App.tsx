@@ -1,46 +1,42 @@
 // src/App.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './components/UserContext';
 import Login from './components/Homepage';
-
-// 🛑 CORRECTED IMPORTS: Import from the separate files you created
+import Register from './components/Register'; 
 import { TenantDashboard } from './components/dashboards/TenantDashboard'; 
 import { LandlordDashboard } from './components/dashboards/LandlordDashboard';
 
-// The "Conductor" Component
 const AppContent: React.FC = () => {
     const { user, isLoading } = useAuth();
+    
+    // Track if we are on the Register screen
+    const [showRegister, setShowRegister] = useState(false);
 
-    // 1. Loading State
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600 font-medium">Loading DormFix...</p>
-                </div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
             </div>
         );
     }
-    
-    // 2. Unauthenticated State
+
+    // Unauthenticated View Logic
     if (!user) {
-        return <Login />;
+        if (showRegister) {
+            // Show Register component, pass a way to go back to Login
+            return <Register onToggleLogin={() => setShowRegister(false)} />;
+        }
+        // Show Login component, pass a way to go to Register
+        return <Login onToggleRegister={() => setShowRegister(true)} />;
     }
 
-    // 3. Authenticated State (Routing based on Role)
-    if (user.role === 'tenant') {
-        return <TenantDashboard />;
-    }
-
-    if (user.role === 'landlord') {
-        return <LandlordDashboard />;
-    }
+    // Authenticated View Logic
+    if (user.role === 'tenant') return <TenantDashboard />;
+    if (user.role === 'landlord') return <LandlordDashboard />;
 
     return null;
 };
 
-// The Root Component
 const App: React.FC = () => {
     return (
         <AuthProvider>
