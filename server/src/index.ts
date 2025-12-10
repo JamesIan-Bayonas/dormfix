@@ -150,7 +150,7 @@ app.post('/api/register', async (req, res) => {
         }
 
         // 3. Insert User
-        const createRequest = new sql.Request(transaction);
+        const createRequest = new sql.Request(transaction)
         await createRequest
             .input('id', sql.VarChar, userId)
             .input('name', sql.VarChar, name)
