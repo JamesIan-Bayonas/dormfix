@@ -2,16 +2,20 @@ import express from 'express';
 import cors from 'cors';
 import sql from 'mssql';
 import dotenv from 'dotenv';
+import crypto from 'crypto'; // Built-in Node module for UUIDs
+import bcrypt from 'bcrypt'; // For password hashing
 
 dotenv.config();
 
 const app = express();
 const PORT = 5000;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// DATABASE CONFIGURATION
+// --- 1. DATABASE CONFIGURATION ---
+// Using your specific SQL Server details
 const dbConfig: sql.config = {
     user: 'dormfix_admin', 
     password: 'sharingan', 
@@ -21,65 +25,172 @@ const dbConfig: sql.config = {
         encrypt: true, 
         trustServerCertificate: true, 
         instanceName: 'SQLEXPRESS' 
+    },
+    // Connection Pool Settings (Best Practice)
+    pool: {
+        max: 10,
+        min: 0,
+        idleTimeoutMillis: 30000
     }
 };
 
-// CONNECT TO DATABASE
+// --- 2. GLOBAL CONNECTION POOL ---
+// We connect ONCE when the server starts
+const appPool = new sql.ConnectionPool(dbConfig);
+
 const connectDB = async () => {
     try {
-        await sql.connect(dbConfig);
-        console.log('✅ Connected to SQL Server (SQLEXPRESS)');
+        await appPool.connect();
+        console.log('✅ Connected to SQL Server (Global Pool)');
     } catch (err) {
-        console.error('❌ Database connection failed. Check if SQL Browser service is running.', err);
+        console.error('❌ Database Connection Failed:', err);
     }
 };
 
 connectDB();
 
-// LOGIN API ROUTE
+// --- helper for generating ID ---
+const generateDormFixId = () => '#' + Math.floor(1000 + Math.random() * 9000);
+
+// --- 3. API ROUTES ---
+
+// LOGIN ROUTE
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        const pool = await sql.connect(dbConfig);
-
-        // Query the 'users' table
-        const result = await pool.request()
+        // Use the global pool
+        const result = await appPool.request()
             .input('email', sql.VarChar, email)
             .query('SELECT * FROM users WHERE email = @email');
 
         const user = result.recordset[0];
 
-        // Check if user exists
         if (!user) {
             return res.status(401).json({ error: "Invalid email or password" });
         }
 
-        // Simple Password Check (Plain text for now, match DB)
-        if (user.password !== password) {
+        // CHECK PASSWORD (BCRYPT)
+        // If the user was created with the OLD method (plain text), this might fail.
+        // Ideally, clean your DB or register a new user to test.
+        const isMatch = await bcrypt.compare(password, user.password);
+        
+        if (!isMatch) {
             return res.status(401).json({ error: "Invalid email or password" });
         }
 
-        // Sanitize (Remove password)
-        // We use the destructuring trick we learned!
+        // Sanitize
         const { password: _, ...safeUser } = user;
 
-        // Map Snake_Case to CamelCase
-        // Your React app expects 'dormFixId', but DB has 'dorm_fix_id'
-        const responseUser = {
-            id: safeUser.id,
-            name: safeUser.name,
-            email: safeUser.email,
-            role: safeUser.role,
-            dormFixId: safeUser.dorm_fix_id, // Mapping here
-            createdAt: safeUser.created_at
+        // Map snake_case to camelCase for React
+        const formattedUser = {
+            ...safeUser,
+            dormFixId: user.dorm_fix_id,
+            createdAt: user.created_at
         };
 
-        res.json(responseUser);
+        res.json(formattedUser);
 
     } catch (error) {
         console.error("Login error:", error);
         res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// REGISTER ROUTE
+app.post('/api/register', async (req, res) => {
+    const { name, email, password, role, landlordCode } = req.body;
+
+    if (!name || !email || !password || !role) {
+        return res.status(400).json({ error: "Missing required fields" });
+    }   
+
+    // Create a Transaction (Ensures User + Assignment are created together, or not at all)
+    const transaction = new sql.Transaction(appPool);
+    
+    try {
+        await transaction.begin();
+
+        // 1. Check Email
+        const checkRequest = new sql.Request(transaction);
+        const checkResult = await checkRequest.input('email', sql.VarChar, email)
+            .query('SELECT id FROM users WHERE email = @email');
+        
+        if (checkResult.recordset.length > 0) {
+            throw new Error("Email already registered");
+        }
+
+        // 2. Prepare Data
+        const userId = crypto.randomUUID();
+        // HASH THE PASSWORD
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        let myDormFixId = '';
+        let landlordId = '';
+
+        if (role === 'landlord') {
+            myDormFixId = generateDormFixId();
+        } else if (role === 'tenant') {
+            myDormFixId = 'T-' + Math.floor(1000 + Math.random() * 9000);
+            
+            if (!landlordCode) throw new Error("Landlord Code is required for Tenants");
+            console.log(`Received Landlord Code directly: '${landlordCode}'`);
+            
+            const landlordCheck = new sql.Request(transaction);
+            console.log('🔍 Looking for landlord with code:', landlordCode);
+            const landlordResult = await landlordCheck.input('code', sql.VarChar, landlordCode)
+                .query("SELECT id, dorm_fix_id, name FROM users WHERE dorm_fix_id = @code AND role = 'landlord'");
+            
+            console.log('🔍 Found landlords:', landlordResult.recordset);
+            
+            if (landlordResult.recordset.length === 0) {
+                throw new Error("Invalid Landlord Code");
+            }
+            landlordId = landlordResult.recordset[0].id;
+        }
+
+        // 3. Insert User
+        const createRequest = new sql.Request(transaction);
+        await createRequest
+            .input('id', sql.VarChar, userId)
+            .input('name', sql.VarChar, name)
+            .input('email', sql.VarChar, email)
+            .input('password', sql.VarChar, hashedPassword) // Storing Hash
+            .input('role', sql.VarChar, role)
+            .input('dormFixId', sql.VarChar, myDormFixId)
+            .query(`
+                INSERT INTO users (id, name, email, password, role, dorm_fix_id, created_at)
+                VALUES (@id, @name, @email, @password, @role, @dormFixId, GETDATE())
+            `);
+
+        // 4. If Tenant, Create Assignment
+        if (role === 'tenant') {
+            const assignmentId = crypto.randomUUID();
+            const assignRequest = new sql.Request(transaction);
+            await assignRequest
+                .input('id', sql.VarChar, assignmentId)
+                .input('tenantId', sql.VarChar, userId)
+                .input('landlordId', sql.VarChar, landlordId)
+                .query(`
+                    INSERT INTO dorm_assignments (id, tenant_id, landlord_id, room_number, move_in_date, created_at)
+                    VALUES (@id, @tenantId, @landlordId, 'Unassigned', GETDATE(), GETDATE())
+                `);
+        }
+
+        await transaction.commit();
+        res.status(201).json({ message: "Registration successful" });
+
+    } catch (error: any) {
+        // Safe Rollback logic
+        // if (transaction._aborted === false) {
+        //     try {
+        //         await transaction.rollback();
+        //     } catch (rollbackErr) {
+        //         console.error("Rollback failed", rollbackErr);
+        //     }
+        // }
+        console.error("Register Error:", error.message);
+        res.status(400).json({ error: error.message || "Registration failed" });
     }
 });
 
