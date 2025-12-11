@@ -6,6 +6,7 @@ export interface User {
   role: UserRole;
   email: string;
   dormFixId: string;
+  isApproved: boolean; // Add for Gate Keeper logic
   createdAt: string; // Add this to match SQL TIMESTAMP/DATETIME2
 }
 
@@ -14,10 +15,17 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<void>; 
   logout: () => void;
   isLoading: boolean;
-  error: string | null;
-  // For security purposes "role" is remove
+  error: string | null; 
 }
 
+export interface TenantRequest {
+  id: string;
+  name: string;
+  email: string;
+  is_approved: boolean; // often SQL returns snake_case for raw queries unless aliased
+  room_number: string;
+  joined_date: string;
+}
 
 // NEW: Maintenance specific types
 export type MaintenanceStatus = 'Pending' | 'In Progress' | 'Completed' | 'Rejected';
