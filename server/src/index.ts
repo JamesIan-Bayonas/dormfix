@@ -230,6 +230,82 @@ app.patch('/api/landlord/approve/:tenantId', async (req, res) => {
     }
 });
 
+// 5. SUBMIT MAINTENANCE REQUEST (Tenant)
+app.post('/api/maintenance', async (req, res) => {
+    const { tenantId, issueType, description, urgency } = req.body;
+
+    if (!tenantId || !issueType || !description || !urgency) {
+        return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    try {
+        const id = crypto.randomUUID();
+        
+        await appPool.request()
+            .input('id', sql.VarChar(36), id)
+            .input('tenantId', sql.VarChar(36), tenantId)
+            .input('issueType', sql.VarChar(50), issueType)
+            .input('description', sql.VarChar(sql.MAX), description)
+            .input('urgency', sql.VarChar(20), urgency)
+            // status and date_submitted have defaults in SQL, so we skip them
+            .query(`
+                INSERT INTO maintenance_requests (id, tenant_id, issue_type, description, urgency)
+                VALUES (@id, @tenantId, @issueType, @description, @urgency)
+            `);
+
+        res.status(201).json({ message: "Request submitted successfully" });
+    } catch (error) {
+        console.error("Maintenance Submit Error:", error);
+        res.status(500).json({ error: "Failed to submit request" });
+    }
+});
+
+// 6. FETCH MAINTENANCE REQUESTS (Universal Route)
+app.get('/api/maintenance/:userId', async (req, res) => {
+    const { userId } = req.params;
+    const { role } = req.query;
+
+    try {
+        let query = '';
+        // We define the input parameter once. The SQL variable is now named @userId
+        const request = appPool.request().input('userId', sql.VarChar, userId);
+
+        if (role === 'landlord') {
+            // Landlord View: See requests for THEIR tenants
+            query = `
+                SELECT 
+                    mr.id, mr.issue_type as issueType, mr.description, mr.urgency, mr.status, mr.date_submitted as dateSubmitted,
+                    u.name as tenantName, da.room_number as roomNumber
+                FROM maintenance_requests mr
+                JOIN dorm_assignments da ON mr.tenant_id = da.tenant_id
+                JOIN users u ON mr.tenant_id = u.id
+                -- FIX APPLIED HERE: Changed @landlordId to @userId to match the input above
+                WHERE da.landlord_id = @userId
+                ORDER BY 
+                    CASE WHEN mr.urgency = 'Emergency' THEN 1 WHEN mr.urgency = 'High' THEN 2 ELSE 3 END,
+                    mr.date_submitted DESC
+            `;
+        } else {
+            // Tenant View: Just their own requests
+            // This works perfectly because it also uses @userId
+            query = `
+                SELECT 
+                    id, issue_type as issueType, description, urgency, status, date_submitted as dateSubmitted, admin_remarks as adminRemarks
+                FROM maintenance_requests 
+                WHERE tenant_id = @userId
+                ORDER BY date_submitted DESC
+            `;
+        }
+
+        const result = await request.query(query);
+        res.json(result.recordset);
+
+    } catch (error) {
+        console.error("Fetch Maintenance Error:", error);
+        res.status(500).json({ error: "Failed to fetch requests" });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
