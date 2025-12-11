@@ -1,14 +1,20 @@
-// src/components/Login.tsx
+// src/components/Homepage.tsx
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, Home, User as UserIcon } from 'lucide-react';
 import { useAuth } from './UserContext';
 
-const Login: React.FC = () => {
+interface LoginProps {
+    onToggleRegister: () => void;
+}
+
+// 2. Accept the prop
+const Login: React.FC<LoginProps> = ({ onToggleRegister }) => {
     const { login, isLoading, error } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
+    
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault(); // Prevent the application from refreshing
@@ -19,14 +25,15 @@ const Login: React.FC = () => {
 
     return (
         <div className="min-h-screen flex w-full bg-emerald-950 overflow-hidden">
-            
-            {/* LEFT SIDE: "DormFix" panel (Green theme) */}
+            {/* Left Side */}
             <div className="hidden lg:flex w-1/2 bg-emerald-950 relative overflow-hidden justify-center items-center">
-                <div className="absolute inset-0 bg-linear-to-br from-emerald-900/90 to-emerald-550/90 z-10" /> 
+                {/* Your Image/Logo code */}
+                 <div className="absolute inset-0 bg-linear-to-br from-emerald-900/90 to-emerald-550/90 z-10" /> 
                 <img 
                     src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&q=80" 
                     alt="Dormitory Building" 
                     className="absolute inset-0 w-full h-full object-cover opacity-50"
+                    
                 />
                 <div className="relative z-20 text-white max-w-md px-8 text-center">
                     <div className="mb-6 flex justify-center">
@@ -41,7 +48,7 @@ const Login: React.FC = () => {
                 </div>
             </div>
 
-            {/* RIGHT SIDE: The Login Form (White background) */}
+            {/* RIGHT SIDE: The Login Form */}
             <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 sm:p-12 lg:p-24 bg-white">
                 <div className="w-full max-w-sm space-y-8">
                     <div className="text-center lg:text-left">
@@ -51,7 +58,7 @@ const Login: React.FC = () => {
 
                     <form onSubmit={handleSubmit} className="mt-8 space-y-6">
                          {/* handleSubmit contains preventDefault to avoid refreshing the stored email and pass */}
-                        <div className="space-y-5">
+                         <div className="space-y-5">
                             {/* Email Input */}
                             <div>
                                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email address</label>
@@ -101,7 +108,7 @@ const Login: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-                       <div className='text-xs text-left text-gray-500 bg-gray-100 p-3 rounded-lg mt-6'>
+                        <div className='text-xs text-left text-gray-500 bg-gray-100 p-3 rounded-lg mt-6'>
                             <p className="mb-1 font-semibold text-gray-800 flex items-center gap-1"><UserIcon size={14} /> Demo Accounts:</p>
                             <p className="ml-5">Tenant: <strong className="text-gray-700">tenant@dormfix.com</strong> (Pass: tenantpass)</p>
                             <p className="ml-5">Landlord: <strong className="text-gray-700">landlord@dormfix.com</strong> (Pass: adminpass)</p>
@@ -138,9 +145,12 @@ const Login: React.FC = () => {
                     <div className="mt-6 text-center">
                         <p className="text-sm text-gray-500">
                             Don't have an account?{' '}
-                            <a href="#" className="font-semibold text-emerald-600 hover:text-emerald-500 transition-colors">
+                            <button 
+                                onClick={onToggleRegister} 
+                                className="font-semibold text-emerald-600 hover:text-emerald-500 transition-colors hover:underline"
+                            >
                                 Register here
-                            </a>
+                            </button>
                         </p>
                     </div>
                 </div>
