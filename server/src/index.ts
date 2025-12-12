@@ -309,3 +309,61 @@ app.get('/api/maintenance/:userId', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
+
+// 7. REJECT TENANT (Delete Account & Assignment)
+app.delete('/api/landlord/reject/:tenantId', async (req, res) => {
+    const { tenantId } = req.params;
+
+    // We use a Transaction to ensure both delete cleanly or neither does
+    const transaction = new sql.Transaction(appPool);
+    let transactionStarted = false;
+
+    try {
+        await transaction.begin();
+        transactionStarted = true;
+
+        const request = new sql.Request(transaction);
+
+        // 1. First, delete the link to the dorm (Foreign Key Requirement)
+        await request.input('tenantId', sql.VarChar(36), tenantId)
+                     .query('DELETE FROM dorm_assignments WHERE tenant_id = @tenantId');
+
+        // 2. Then, delete the user account itself
+        // Note: We reuse the parameter @tenantId since it's already defined in the request scope
+        await request.query('DELETE FROM users WHERE id = @tenantId');
+
+        await transaction.commit();
+        res.json({ message: "Tenant rejected and removed successfully" });
+
+    } catch (error) {
+        if (transactionStarted) {
+            try { await transaction.rollback(); } catch (err) { console.error("Rollback error", err); }
+        }
+        console.error("Reject Error:", error);
+        res.status(500).json({ error: "Failed to reject tenant" });
+    }
+});
+
+// 8. UPDATE MAINTENANCE STATUS
+app.patch('/api/maintenance/status/:id', async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Validate against your SQL Check Constraints
+    const validStatuses = ['Pending', 'In Progress', 'Completed', 'Rejected'];
+    if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: "Invalid status value" });
+    }
+
+    try {
+        await appPool.request()
+            .input('id', sql.VarChar(36), id)
+            .input('status', sql.VarChar(20), status)
+            .query(`UPDATE maintenance_requests SET status = @status WHERE id = @id`);
+
+        res.json({ message: "Status updated successfully" });
+    } catch (error) {
+        console.error("Update Status Error:", error);
+        res.status(500).json({ error: "Failed to update status" });
+    }
+});
