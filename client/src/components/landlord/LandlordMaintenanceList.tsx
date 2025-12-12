@@ -34,16 +34,34 @@ export const LandlordMaintenanceList: React.FC = () => {
         }
     }, [user?.id]);
 
-    // 2. UPDATE STATUS ACTION (Connecting to Backend)
+    // 2. UPDATE STATUS ACTION (Now Fully Connected)
     const updateStatus = async (id: string, newStatus: MaintenanceStatus) => {
-        // Optimistic UI Update (Update screen instantly)
+        // 1. Optimistic Update (Instant feedback for user)
         setRequests(prev => prev.map(req => 
             req.id === id ? { ...req, status: newStatus } : req
         ));
 
-        // TODO: In the next step, we will implement this API route on the server
-        // await fetch(`http://localhost:5000/api/maintenance/status/${id}`, { ... })
-        console.log(`Sending update to server: Request ${id} -> ${newStatus}`);
+        try {
+            // 2. Network Request (Permanent Save)
+            const response = await fetch(`http://localhost:5000/api/maintenance/status/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: newStatus }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to save to database");
+            }
+            console.log("Saved to database successfully");
+
+        } catch (error) {
+            console.error("Save failed:", error);
+            // Optional: Revert the change if the server fails (Undo the optimistic update)
+            alert("Failed to save changes. Please check your connection.");
+            // You could trigger a re-fetch here to reset the UI to the truth
+        }
     };
 
     const getUrgencyBadge = (urgency: string) => {
