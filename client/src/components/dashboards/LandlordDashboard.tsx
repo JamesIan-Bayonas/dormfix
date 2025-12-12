@@ -1,14 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LogOut, Wrench, CreditCard, LayoutDashboard, Users } from 'lucide-react';
 import { useAuth } from '../UserContext';
-import { LandlordMaintenanceList } from '../LandlordMaintenanceList';
-import { LandlordTenantChecklist } from '../LandlordTenantChecklist';
+import { LandlordMaintenanceList } from '../landlord/LandlordMaintenanceList';
+import { LandlordTenantChecklist } from '../landlord/LandlordTenantChecklist';
 
 type DashboardView = 'home' | 'maintenance' | 'payments' | 'tenants';
 
 export const LandlordDashboard: React.FC = () => {
     const { user, logout } = useAuth();
-    const [currentView, setCurrentView] = useState<DashboardView>('home');
+
+    // 1. UPDATED STATE: Lazy Initialization
+    // Instead of just 'home', we check if there is a saved view in LocalStorage first.
+    const [currentView, setCurrentView] = useState<DashboardView>(() => {
+        const savedView = localStorage.getItem('landlord_current_view');
+        // We cast it to DashboardView if it exists, otherwise default to 'home'
+        return (savedView as DashboardView) || 'home';
+    });
+
+    // 2. NEW EFFECT: Persist State
+    // Whenever currentView changes (user clicks a button), we save it to storage.
+    useEffect(() => {
+        localStorage.setItem('landlord_current_view', currentView);
+    }, [currentView]);
 
     if (!user) return <div />; 
 
@@ -41,50 +54,67 @@ export const LandlordDashboard: React.FC = () => {
             {/* Main Content */}
             <main className="max-w-7xl mx-auto py-8 sm:px-6 lg:px-8">
                 <div className="px-4 sm:px-0">
-                    <div className="bg-white rounded-lg shadow-sm p-6 mb-8 border border-slate-200">
-                        <h2 className="text-2xl font-bold text-slate-900">Welcome, {user.name}</h2>
-                        <p className="text-slate-600 mt-1">Select a module to manage your dormitory.</p>
-                    </div>
+                    
+                    {/* Only show the Welcome Banner on the Home view */}
+                    {currentView === 'home' && (
+                        <div className="bg-white rounded-lg shadow-sm p-6 mb-8 border border-slate-200">
+                            <h2 className="text-2xl font-bold text-slate-900">Welcome, {user.name}</h2>
+                            <p className="text-slate-600 mt-1">Select a module to manage your dormitory.</p>
+                        </div>
+                    )}
 
-                    {/* Dashboard Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        
-                        {/* 1. Maintenance Module */}
-                        <button className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-indigo-200 transition-all">
-                            <div className="p-4 bg-indigo-50 rounded-full group-hover:bg-indigo-100 transition-colors mb-4">
-                                <Wrench size={32} className="text-indigo-600" />
-                            </div>
-                            <span className="text-lg font-bold text-slate-800">Maintenance</span>
-                            <span className="text-sm text-slate-500 mt-1">3 Requests Pending</span>
-                        </button>
+                    {/* Dashboard Grid - Only show on Home view */}
+                    {currentView === 'home' ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            
+                            {/* 1. Maintenance Module */}
+                            <button 
+                                onClick={() => setCurrentView('maintenance')} // Just sets state, doesn't navigate yet
+                                className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-indigo-200 transition-all"
+                            >
+                                <div className="p-4 bg-indigo-50 rounded-full group-hover:bg-indigo-100 transition-colors mb-4">
+                                    <Wrench size={32} className="text-indigo-600" />
+                                </div>
+                                <span className="text-lg font-bold text-slate-800">Maintenance</span>
+                                <span className="text-sm text-slate-500 mt-1">Manage Requests</span>
+                            </button>
 
-                        {/* 2. Payments Module */}
-                        <button className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-emerald-200 transition-all">
-                            <div className="p-4 bg-emerald-50 rounded-full group-hover:bg-emerald-100 transition-colors mb-4">
-                                <CreditCard size={32} className="text-emerald-600" />
-                            </div>
-                            <span className="text-lg font-bold text-slate-800">Payments</span>
-                            <span className="text-sm text-slate-500 mt-1">Verify Receipts</span>
-                        </button>
+                            {/* 2. Payments Module */}
+                            <button className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-emerald-200 transition-all">
+                                <div className="p-4 bg-emerald-50 rounded-full group-hover:bg-emerald-100 transition-colors mb-4">
+                                    <CreditCard size={32} className="text-emerald-600" />
+                                </div>
+                                <span className="text-lg font-bold text-slate-800">Payments</span>
+                                <span className="text-sm text-slate-500 mt-1">Verify Receipts</span>
+                            </button>
 
-                        {/* 3. Tenant Management Module (NEW) */}
-                        <button 
-                            onClick={() => setCurrentView('tenants')}
-                            className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-amber-200 transition-all"
-                        >
-                            <div className="p-4 bg-amber-50 rounded-full group-hover:bg-amber-100 transition-colors mb-4">
-                                <Users size={32} className="text-amber-600" />
-                            </div>
-                            <span className="text-lg font-bold text-slate-800">Tenants</span>
-                            <span className="text-sm text-slate-500 mt-1">Approve & Manage</span>
-                        </button>
+                            {/* 3. Tenant Management Module */}
+                            <button 
+                                onClick={() => setCurrentView('tenants')}
+                                className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-amber-200 transition-all"
+                            >
+                                <div className="p-4 bg-amber-50 rounded-full group-hover:bg-amber-100 transition-colors mb-4">
+                                    <Users size={32} className="text-amber-600" />
+                                </div>
+                                <span className="text-lg font-bold text-slate-800">Tenants</span>
+                                <span className="text-sm text-slate-500 mt-1">Approve & Manage</span>
+                            </button>
 
-                    </div>
+                        </div>
+                    ) : null}
 
-                    {/* Quick View Section (Existing List) */}
-                    <div className="mt-8">
-                        <LandlordMaintenanceList /> 
-                    </div>
+                    {/* Quick View Section (Show Maintenance List if view is 'home' or 'maintenance') */}
+                    {(currentView === 'home' || currentView === 'maintenance') && (
+                        <div className="mt-8">
+                            {/* Add a "Back" button if we are specifically in 'maintenance' view */}
+                            {currentView === 'maintenance' && (
+                                <button onClick={() => setCurrentView('home')} className="mb-4 text-sm text-slate-500 hover:text-indigo-600 font-medium">
+                                    ← Back to Dashboard
+                                </button>
+                            )}
+                            <LandlordMaintenanceList /> 
+                        </div>
+                    )}
                 </div>
             </main>
         </div>
