@@ -1,7 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { CheckCircle, XCircle, User, Clock, Search } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, CheckCircle, XCircle, Home, Calendar } from 'lucide-react';
 import { useAuth } from '../UserContext';
-import type { TenantRequest } from '../../types/types';
+
+interface Tenant {
+    id: string;
+    name: string;
+    email: string;
+    roomNumber?: string; // Optional: might be null if unassigned
+}
+
+interface RoomSimple {
+    room_number: string;
+    capacity: number;
+    currentOccupants: number;
+}
 
 interface ChecklistProps {
     onBack: () => void;
@@ -9,177 +21,117 @@ interface ChecklistProps {
 
 export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) => {
     const { user } = useAuth();
-    const [tenants, setTenants] = useState<TenantRequest[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [tenants, setTenants] = useState<Tenant[]>([]);
+    const [rooms, setRooms] = useState<RoomSimple[]>([]);
+    
+    // Modal State
+    const [isAssignModalOpen, setAssignModalOpen] = useState(false);
+    const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
+    const [selectedRoom, setSelectedRoom] = useState('');
 
-    // Fetch Data
+    // 1. Fetch Tenants and Rooms
     useEffect(() => {
         if (user?.id) {
-            fetch(`http://localhost:5000/api/landlord/tenants/${user.id}`)
+            // Fetch Tenants (Assuming you have a route for this, otherwise we mock/create it)
+            // Ideally: GET /api/landlord/tenants/:id
+            // For now, let's assume we are fetching users linked to this landlord
+            fetch(`http://localhost:5000/api/landlord/tenants/${user.id}`) // *See Note Below
                 .then(res => res.json())
-                .then(data => {
-                    setTenants(data);
-                    setIsLoading(false);
-                })
-                .catch(err => {
-                    console.error("Failed to load tenants", err);
-                    setIsLoading(false);
-                });
+                .then(setTenants)
+                .catch(err => console.error("Failed to load tenants", err));
+
+            // Fetch Rooms (Reusing the route we made in the previous step)
+            fetch(`http://localhost:5000/api/landlord/rooms/${user.id}`)
+                .then(res => res.json())
+                .then(setRooms)
+                .catch(err => console.error("Failed to load rooms", err));
         }
     }, [user?.id]);
 
-    // Approve Action
-    const handleApprove = async (tenantId: string) => {
-        try {
-            const res = await fetch(`http://localhost:5000/api/landlord/approve/${tenantId}`, {
-                method: 'PATCH'
-            });
-            
-            if (res.ok) {
-                // Optimistic Update: Update UI immediately without reload
-                setTenants(prev => prev.map(t => 
-                    t.id === tenantId ? { ...t, is_approved: true } : t
-                ));
-            }
-        } catch (error) {
-            console.error("Error approving tenant:", error);
-            alert("Failed to approve tenant. Please try again.");
-        }
-    };
-
-    const handleReject = async (tenantId: string) => {
-        // Good UX: Ask for confirmation before deleting data
-        if (!window.confirm("Are you sure you want to reject this tenant? This will remove their account.")) {
-            return;
-        }
+    const handleAssign = async () => {
+        if (!selectedTenant || !selectedRoom) return;
 
         try {
-            const res = await fetch(`http://localhost:5000/api/landlord/reject/${tenantId}`, {
-                method: 'DELETE'
+            const res = await fetch('http://localhost:5000/api/landlord/assign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tenantId: selectedTenant.id,
+                    landlordId: user?.id,
+                    roomNumber: selectedRoom,
+                    moveInDate: new Date()
+                })
             });
-            
+
+            const data = await res.json();
             if (res.ok) {
-                // Optimistic Update: Remove them from the list immediately
-                setTenants(prev => prev.filter(t => t.id !== tenantId));
+                alert("Assigned successfully!");
+                setAssignModalOpen(false);
+                window.location.reload(); // Refresh to show changes
             } else {
-                alert("Failed to reject tenant. Please try again.");
+                alert(data.error);
             }
         } catch (error) {
-            console.error("Error rejecting tenant:", error);
-            alert("Network error.");
+            console.error(error);
+            alert("Assignment failed.");
         }
     };
 
-    // Derived Lists
-    const pendingTenants = tenants.filter(t => !t.is_approved);
-    const activeTenants = tenants.filter(t => t.is_approved);
+    const openAssignModal = (tenant: Tenant) => {
+        setSelectedTenant(tenant);
+        setAssignModalOpen(true);
+        setSelectedRoom(''); // Reset selection
+    };
 
     return (
-        <div className="min-h-screen bg-slate-100 p-4 sm:p-8">
+        <div className="min-h-screen bg-slate-100 p-8">
             <div className="max-w-5xl mx-auto">
-                <button onClick={onBack} className="text-sm text-slate-500 hover:text-indigo-600 mb-4 font-medium">
+                <button onClick={onBack} className="mb-6 text-sm text-slate-500 hover:text-indigo-600">
                     ← Back to Dashboard
                 </button>
-                
-                <h1 className="text-2xl font-bold text-slate-900 mb-6">Tenant Management</h1>
 
-                {/* SECTION 1: PENDING (The "Lobby") */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-                    <div className="px-6 py-4 bg-amber-50 border-b border-amber-100 flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                            <Clock className="text-amber-600" size={20} />
-                            <h2 className="text-lg font-bold text-amber-900">Pending Approvals</h2>
-                        </div>
-                        <span className="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full">
-                            {pendingTenants.length} Waiting
-                        </span>
-                    </div>
-                    
-                    {isLoading ? (
-                        <div className="p-8 text-center text-slate-500">Loading...</div>
-                    ) : pendingTenants.length === 0 ? (
-                        <div className="p-8 text-center text-slate-400 italic">No new requests. All caught up!</div>
-                    ) : (
-                        <div className="divide-y divide-slate-100">
-                            {pendingTenants.map((tenant) => (
-                                <div key={tenant.id} className="p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold">
-                                            {tenant.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <h3 className="font-semibold text-slate-900">{tenant.name}</h3>
-                                            <p className="text-sm text-slate-500">{tenant.email}</p>
-                                            <p className="text-xs text-slate-400 mt-1">Requested: {new Date(tenant.joined_date).toLocaleDateString()}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        {/* Reject Button (For removing pending tenant) */}
-                                        <button 
-                                            onClick={() => handleReject(tenant.id)}
-                                            className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 text-sm font-medium transition-colors"
-                                        >
-                                            Ignore
-                                        </button>
-                                        <button 
-                                            onClick={() => handleApprove(tenant.id)}
-                                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium shadow-sm hover:shadow transition-all flex items-center gap-2"
-                                        >
-                                            <CheckCircle size={16} />
-                                            Approve Access
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                {/* SECTION 2: ACTIVE (The "List") */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-                        <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <User className="text-indigo-600" size={20} />
-                            Active Tenants
+                    <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+                        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                            <User className="text-indigo-600" /> Tenant Directory
                         </h2>
-                        <div className="relative hidden sm:block">
-                            <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
-                            <input type="text" placeholder="Search tenants..." className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
-                        </div>
                     </div>
-                    
+
                     <table className="min-w-full divide-y divide-slate-200">
-                        <thead className="bg-slate-50">
+                        <thead className="bg-white">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Name</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Room</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Name</th>
+                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Room Assignment</th>
+                                <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-slate-200">
-                            {activeTenants.map((tenant) => (
-                                <tr key={tenant.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
-                                            <div className="h-8 w-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs">
-                                                {tenant.name.charAt(0)}
-                                            </div>
-                                            <div className="ml-3">
-                                                <div className="text-sm font-medium text-slate-900">{tenant.name}</div>
-                                                <div className="text-sm text-slate-500">{tenant.email}</div>
-                                            </div>
-                                        </div>
+                        <tbody className="divide-y divide-slate-200">
+                            {tenants.map(tenant => (
+                                <tr key={tenant.id} className="hover:bg-slate-50">
+                                    <td className="px-6 py-4">
+                                        <div className="font-medium text-slate-900">{tenant.name}</div>
+                                        <div className="text-xs text-slate-500">{tenant.email}</div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
-                                            {tenant.room_number || "Unassigned"}
-                                        </span>
+                                    <td className="px-6 py-4">
+                                        {tenant.roomNumber ? (
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 gap-1">
+                                                <Home size={12} /> Room {tenant.roomNumber}
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                                                Unassigned
+                                            </span>
+                                        )}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-                                            Active
-                                        </span>
+                                    <td className="px-6 py-4 text-right">
+                                        {!tenant.roomNumber && (
+                                            <button 
+                                                onClick={() => openAssignModal(tenant)}
+                                                className="text-indigo-600 hover:text-indigo-900 text-sm font-medium hover:underline"
+                                            >
+                                                Assign Room
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
@@ -187,6 +139,52 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
                     </table>
                 </div>
             </div>
+
+            {/* ASSIGNMENT MODAL */}
+            {isAssignModalOpen && selectedTenant && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+                        <h3 className="text-lg font-bold text-slate-900 mb-2">Assign Room</h3>
+                        <p className="text-sm text-slate-500 mb-6">
+                            Select a room for <span className="font-semibold text-slate-800">{selectedTenant.name}</span>.
+                        </p>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Available Rooms</label>
+                                <select 
+                                    className="w-full p-3 border border-slate-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-indigo-500"
+                                    value={selectedRoom}
+                                    onChange={(e) => setSelectedRoom(e.target.value)}
+                                >
+                                    <option value="">-- Select a Room --</option>
+                                    {rooms.filter(r => r.currentOccupants < r.capacity).map(room => (
+                                        <option key={room.room_number} value={room.room_number}>
+                                            Room {room.room_number} ({room.capacity - room.currentOccupants} spots left)
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button 
+                                    onClick={() => setAssignModalOpen(false)}
+                                    className="flex-1 py-2 border border-slate-300 rounded-lg font-medium text-slate-600 hover:bg-slate-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    onClick={handleAssign}
+                                    disabled={!selectedRoom}
+                                    className="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Confirm Assignment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
