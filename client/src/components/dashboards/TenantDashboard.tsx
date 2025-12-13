@@ -1,13 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Home, LogOut, Wrench, CreditCard, Plus, X } from 'lucide-react';
+import { Home, LogOut, Wrench, CreditCard, Plus, X, User, Calendar, Mail } from 'lucide-react';
 import { useAuth } from '../UserContext';
-import { MaintenanceList } from '../MaintenanceList'; // Reuse your existing list component
+import { MaintenanceList } from '../MaintenanceList';
+
+// Define the shape of our new data
+interface HousingDetails {
+    landlordName: string;
+    landlordEmail: string;
+    roomNumber: string;
+    moveInDate: string;
+}
 
 export const TenantDashboard: React.FC = () => {
     const { user, logout } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     
-    // Form State
+    // NEW: State for Housing Profile
+    const [housing, setHousing] = useState<HousingDetails | null>(null);
+
+    // Form State for Maintenance
     const [formData, setFormData] = useState({
         issueType: 'Plumbing',
         urgency: 'Low',
@@ -15,7 +26,21 @@ export const TenantDashboard: React.FC = () => {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // 1. Submit Handler
+    // 1. FETCH HOUSING DETAILS ON LOAD
+    useEffect(() => {
+        if (user?.id) {
+            fetch(`http://localhost:5000/api/tenant/details/${user.id}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.error) {
+                        setHousing(data);
+                    }
+                })
+                .catch(err => console.error("Failed to load housing info", err));
+        }
+    }, [user?.id]);
+
+    // 2. Submit Handler (Maintenance)
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -35,7 +60,6 @@ export const TenantDashboard: React.FC = () => {
             alert("Request sent to landlord!");
             setIsModalOpen(false);
             setFormData({ issueType: 'Plumbing', urgency: 'Low', description: '' });
-            // Ideally, trigger a refresh of the list here
             window.location.reload(); 
 
         } catch (error) {
@@ -67,6 +91,40 @@ export const TenantDashboard: React.FC = () => {
             
             {/* Main Content */}
             <main className="max-w-7xl mx-auto py-8 px-4">
+                
+                {/* NEW SECTION: My Housing Profile */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+                    <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <User size={20} className="text-indigo-600"/> My Housing Profile
+                    </h2>
+                    
+                    {housing ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Managed By</span>
+                                <div className="font-medium text-slate-900 mt-1">{housing.landlordName}</div>
+                                <div className="text-sm text-indigo-600 flex items-center gap-1 mt-1">
+                                    <Mail size={12} /> {housing.landlordEmail}
+                                </div>
+                            </div>
+                            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Current Unit</span>
+                                <div className="font-medium text-slate-900 mt-1 text-lg">Room {housing.roomNumber}</div>
+                            </div>
+                            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tenancy Start</span>
+                                <div className="font-medium text-slate-900 mt-1 flex items-center gap-2">
+                                    <Calendar size={16} className="text-slate-400"/>
+                                    {new Date(housing.moveInDate).toLocaleDateString()}
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-slate-400 italic text-sm">Loading housing details...</div>
+                    )}
+                </div>
+
+                {/* Action Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     {/* Action Card: Maintenance */}
                     <button 
@@ -80,7 +138,7 @@ export const TenantDashboard: React.FC = () => {
                         <span className="text-sm text-slate-500 mt-1">Plumbing, Electric, etc.</span>
                     </button>
 
-                    {/* Action Card: Payment (Placeholder for now) */}
+                    {/* Action Card: Payment */}
                     <button className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-emerald-300 transition-all">
                         <div className="p-4 bg-emerald-50 rounded-full mb-4 group-hover:scale-110 transition-transform">
                             <CreditCard size={32} className="text-emerald-600" />
@@ -95,7 +153,7 @@ export const TenantDashboard: React.FC = () => {
                 <MaintenanceList /> 
             </main>
 
-            {/* --- THE MODAL --- */}
+            {/* --- MAINTENANCE MODAL --- */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
