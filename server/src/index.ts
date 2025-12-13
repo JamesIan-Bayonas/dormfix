@@ -4,6 +4,12 @@ import sql from 'mssql';
 import dotenv from 'dotenv';
 import crypto from 'crypto'; // Built-in Node module for UUIDs
 import bcrypt from 'bcrypt'; // For password hashing
+import multer from 'multer';
+//import multer, { FileFilterCallback } from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 dotenv.config();
 
@@ -49,6 +55,55 @@ connectDB();
 const generateDormCode = () => {
     return '#' + Math.floor(100000 + Math.random() * 900000).toString();
 };
+
+// --- FILE UPLOAD CONFIGURATION (Multer) ---
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// 1. Ensure the 'uploads' folder exists
+const uploadDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// 2. Define Storage Strategy (With Types)
+const storage = multer.diskStorage({
+    destination: (
+        req: express.Request, 
+        file: Express.Multer.File, 
+        cb: (error: Error | null, destination: string) => void
+    ) => {
+        cb(null, uploadDir); 
+    },
+    filename: (
+        req: express.Request, 
+        file: Express.Multer.File, 
+        cb: (error: Error | null, filename: string) => void
+    ) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+// 3. Initialize the "Bouncer" (With Types)
+const upload = multer({ 
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (
+        req: express.Request, 
+        file: Express.Multer.File, 
+        cb: multer.FileFilterCallback
+    ) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            // To be strictly type-safe with the Error, we just create a standard Error
+            cb(new Error('Only images are allowed')); 
+        }
+    }
+});
+
 
 // 1. LOGIN ROUTE
 app.post('/api/login', async (req, res) => {
@@ -365,5 +420,226 @@ app.patch('/api/maintenance/status/:id', async (req, res) => {
     } catch (error) {
         console.error("Update Status Error:", error);
         res.status(500).json({ error: "Failed to update status" });
+    }
+});
+
+// 9. GET TENANT HOUSING DETAILS (Profile Card)
+app.get('/api/tenant/details/:tenantId', async (req, res) => {
+    const { tenantId } = req.params;
+
+    try {
+        const result = await appPool.request()
+            .input('tenantId', sql.VarChar(36), tenantId)
+            .query(`
+                SELECT 
+                    u.name AS landlordName, 
+                    u.email AS landlordEmail, 
+                    da.room_number AS roomNumber, 
+                    da.move_in_date AS moveInDate
+                FROM dorm_assignments da
+                JOIN users u ON da.landlord_id = u.id
+                WHERE da.tenant_id = @tenantId
+            `);
+
+        if (result.recordset.length === 0) {
+            return res.status(404).json({ error: "Assignment not found" });
+        }
+
+        res.json(result.recordset[0]);
+    } catch (error) {
+        console.error("Fetch Housing Details Error:", error);
+        res.status(500).json({ error: "Failed to fetch details" });
+    }
+});
+
+// 10. GET LANDLORD ROOMS (Inventory & Occupancy Check)
+app.get('/api/landlord/rooms/:landlordId', async (req, res) => {
+    const { landlordId } = req.params;
+
+    try {
+        const result = await appPool.request()
+            .input('landlordId', sql.VarChar(36), landlordId)
+            .query(`
+                SELECT 
+                    r.id, 
+                    r.room_number, 
+                    r.capacity,
+                    -- Subquery to count active tenants in this room
+                    (SELECT COUNT(*) 
+                     FROM dorm_assignments da 
+                     WHERE da.room_number = r.room_number 
+                     AND da.landlord_id = r.landlord_id) as currentOccupants
+                FROM rooms r
+                WHERE r.landlord_id = @landlordId
+                ORDER BY r.room_number ASC
+            `);
+        
+        res.json(result.recordset);
+    } catch (error) {
+        console.error("Fetch Rooms Error:", error);
+        res.status(500).json({ error: "Failed to fetch rooms" });
+    }
+});
+
+// 11. ADD NEW ROOM
+app.post('/api/landlord/rooms', async (req, res) => {
+    const { landlordId, roomNumber, capacity } = req.body;
+
+    if (!landlordId || !roomNumber) {
+        return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    try {
+        // Check for duplicate room number for this landlord
+        const check = await appPool.request()
+            .input('lid', sql.VarChar(36), landlordId)
+            .input('rnum', sql.VarChar(50), roomNumber)
+            .query("SELECT id FROM rooms WHERE landlord_id = @lid AND room_number = @rnum");
+
+        if (check.recordset.length > 0) {
+            return res.status(400).json({ error: "Room number already exists" });
+        }
+
+        const id = crypto.randomUUID();
+        
+        await appPool.request()
+            .input('id', sql.VarChar(36), id)
+            .input('landlordId', sql.VarChar(36), landlordId)
+            .input('roomNumber', sql.VarChar(50), roomNumber)
+            .input('capacity', sql.Int, capacity || 1) // Default to 1 if empty
+            .query(`
+                INSERT INTO rooms (id, landlord_id, room_number, capacity)
+                VALUES (@id, @landlordId, @roomNumber, @capacity)
+            `);
+
+        res.status(201).json({ message: "Room added successfully" });
+    } catch (error) {
+        console.error("Add Room Error:", error);
+        res.status(500).json({ error: "Failed to add room" });
+    }
+});
+
+// 12. UPLOAD PROOF OF PAYMENT
+// 'image' matches the name attribute in the frontend form data
+app.post('/api/upload', upload.single('image'), (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: "No file uploaded" });
+        }
+
+        // Return the file path so the frontend can save it to the SQL database later
+        // Result: "/uploads/172948332-9483.jpg"
+        const filePath = `/uploads/${req.file.filename}`;
+        res.json({ url: filePath });
+
+    } catch (error) {
+        console.error("Upload Error:", error);
+        res.status(500).json({ error: "File upload failed" });
+    }
+});
+
+// 13. ASSIGN TENANT TO ROOM (With Capacity Check)
+app.post('/api/landlord/assign', async (req, res) => {
+    const { tenantId, landlordId, roomNumber, moveInDate } = req.body;
+
+    if (!tenantId || !landlordId || !roomNumber) {
+        return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const transaction = new sql.Transaction(appPool);
+
+    try {
+        await transaction.begin();
+
+        // 1. Check if the room exists and get its capacity
+        const roomCheck = await transaction.request()
+            .input('lid', sql.VarChar(36), landlordId)
+            .input('rnum', sql.VarChar(50), roomNumber)
+            .query(`SELECT capacity FROM rooms WHERE landlord_id = @lid AND room_number = @rnum`);
+
+        if (roomCheck.recordset.length === 0) {
+            throw new Error("Room does not exist.");
+        }
+        const capacity = roomCheck.recordset[0].capacity;
+
+        // 2. Count current occupants
+        const countCheck = await transaction.request()
+            .input('lid', sql.VarChar(36), landlordId)
+            .input('rnum', sql.VarChar(50), roomNumber)
+            .query(`SELECT COUNT(*) as count FROM dorm_assignments WHERE landlord_id = @lid AND room_number = @rnum`);
+        
+        if (countCheck.recordset[0].count >= capacity) {
+            throw new Error("Room is already at full capacity.");
+        }
+
+        // 3. Create the Assignment
+        const id = crypto.randomUUID();
+        await transaction.request()
+            .input('id', sql.VarChar(36), id)
+            .input('tenantId', sql.VarChar(36), tenantId)
+            .input('landlordId', sql.VarChar(36), landlordId)
+            .input('roomNumber', sql.VarChar(50), roomNumber)
+            .input('moveInDate', sql.Date, moveInDate || new Date())
+            .query(`
+                INSERT INTO dorm_assignments (id, tenant_id, landlord_id, room_number, move_in_date)
+                VALUES (@id, @tenantId, @landlordId, @roomNumber, @moveInDate)
+            `);
+
+        await transaction.commit();
+        res.json({ message: "Tenant assigned successfully" });
+
+    } catch (error: any) {
+        await transaction.rollback();
+        console.error("Assignment Error:", error);
+        res.status(400).json({ error: error.message || "Failed to assign room" });
+    }
+});
+
+// 14. GET ALL TENANTS FOR LANDLORD (Fixed: Added isApproved)
+app.get('/api/landlord/tenants/:landlordId', async (req, res) => {
+    const { landlordId } = req.params;
+    try {
+        const result = await appPool.request()
+            .input('lid', sql.VarChar(36), landlordId)
+            .query(`
+                SELECT 
+                    u.id, 
+                    u.name, 
+                    u.email, 
+                    u.is_approved as isApproved, -- <--- THIS WAS MISSING
+                    da.room_number as roomNumber
+                FROM users u
+                LEFT JOIN dorm_assignments da ON u.id = da.tenant_id
+                WHERE u.role = 'tenant' 
+                -- AND u.linked_landlord_id = @lid (Uncomment if you use this)
+            `);
+        
+        res.json(result.recordset);
+    } catch (err) {
+        console.error("Fetch Tenants Error:", err); // Added error logging
+        res.status(500).json({ error: "Failed to fetch tenants" });
+    }
+});
+
+// 15. UPDATE USER STATUS (Approve/Reject Application)
+app.patch('/api/users/:id/status', async (req, res) => {
+    const { id } = req.params;
+    const { isApproved } = req.body; 
+
+    // Debug Log: Use this to see exactly what the frontend sent
+    console.log(`Attempting to update User ${id} to Approved: ${isApproved}`);
+
+    try {
+        await appPool.request()
+            .input('id', sql.VarChar(36), id)
+            // Explicitly force it to 1 or 0 to satisfy SQL BIT
+            .input('isApproved', sql.Bit, isApproved === true ? 1 : 0) 
+            .query(`UPDATE users SET is_approved = @isApproved WHERE id = @id`);
+
+        res.json({ message: "Status updated successfully" });
+    } catch (error) {
+        // This is the log you need to read in your terminal!
+        console.error("Status Update Error Detailed:", error);
+        res.status(500).json({ error: "Failed to update status. Check server logs." });
     }
 });
