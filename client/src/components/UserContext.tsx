@@ -1,18 +1,28 @@
-import React, { createContext, useState, useContext, type ReactNode } from 'react';
+import React, { createContext, useState, useContext, useEffect, type ReactNode } from 'react';
 import type { User, AuthContextType } from '../types/types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined); 
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<User | null>(() => {
+        const savedUser = localStorage.getItem('dormfixUser');
+        return savedUser ? JSON.parse(savedUser) : null;
+    });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // 🛑 UPDATED LOGIN: Now fetches from Real API
+    useEffect(() => {
+        if (user) {
+            localStorage.setItem('dormfixUser', JSON.stringify(user));
+        } else {
+            localStorage.removeItem('dormfixUser');
+        }
+    }, [user]);
+
     const login = async (email: string, password: string) => {
         setIsLoading(true); 
         setError(null);
-
+        
         try {
             const response = await fetch('http://localhost:5000/api/login', {
                 method: 'POST',
@@ -20,7 +30,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ email, password }),
-            });
+    });
 
             const data = await response.json();
 
