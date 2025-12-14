@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Wrench, CreditCard, LayoutDashboard, Users } from 'lucide-react';
+import { LogOut, Wrench, CreditCard, LayoutDashboard, Users, Home } from 'lucide-react';
 import { useAuth } from '../UserContext';
 import { LandlordMaintenanceList } from '../landlord/LandlordMaintenanceList';
 import { LandlordTenantChecklist } from '../landlord/LandlordTenantChecklist';
+import { LandlordRoomList } from '../landlord/LandlordRoomList';
 
-type DashboardView = 'home' | 'maintenance' | 'payments' | 'tenants';
+type DashboardView = 'home' | 'maintenance' | 'payments' | 'tenants' | 'rooms';
 
 export const LandlordDashboard: React.FC = () => {
     const { user, logout } = useAuth();
@@ -28,6 +29,11 @@ export const LandlordDashboard: React.FC = () => {
     // Render Sub-Components based on state
     if (currentView === 'tenants') {
         return <LandlordTenantChecklist onBack={() => setCurrentView('home')} />;
+    }
+
+    // ... inside the component logic
+    if (currentView === 'rooms') {
+        return <LandlordRoomList onBack={() => setCurrentView('home')} />;
     }
     // (Note: You can wrap MaintenanceList similarly later if you want full navigation)
 
@@ -65,7 +71,7 @@ export const LandlordDashboard: React.FC = () => {
 
                     {/* Dashboard Grid - Only show on Home view */}
                     {currentView === 'home' ? (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             
                             {/* 1. Maintenance Module */}
                             <button 
@@ -98,6 +104,18 @@ export const LandlordDashboard: React.FC = () => {
                                 </div>
                                 <span className="text-lg font-bold text-slate-800">Tenants</span>
                                 <span className="text-sm text-slate-500 mt-1">Approve & Manage</span>
+                            </button>
+
+                            {/* 4. Rooms Module */}
+                            <button 
+                                onClick={() => setCurrentView('rooms')}
+                                className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-purple-200 transition-all"
+                            >
+                                <div className="p-4 bg-purple-50 rounded-full group-hover:bg-purple-100 transition-colors mb-4">
+                                    <Home size={32} className="text-purple-600" />
+                                </div>
+                                <span className="text-lg font-bold text-slate-800">Rooms</span>
+                                <span className="text-sm text-slate-500 mt-1">Inventory & Status</span>
                             </button>
 
                         </div>
