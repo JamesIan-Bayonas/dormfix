@@ -17,6 +17,14 @@ export interface AuthContextType {
   isLoading: boolean;
   error: string | null; 
 }
+// --- NEW: Added Room Interface ---
+// Matches the SQL query: SELECT id, room_number, capacity, currentOccupants...
+export interface Room {
+    id: string;
+    room_number: string;
+    capacity: number;
+    currentOccupants: number; 
+}
 
 export interface TenantRequest {
   id: string;
@@ -41,4 +49,21 @@ export interface MaintenanceRequest {
   urgency: UrgencyLevel;
   status: MaintenanceStatus;
   adminRemarks?: string; // Optional: For landlord feedback (Transparency)
+}
+
+export interface Payment {
+    id: string;
+    tenantName: string;
+    roomNumber: string;
+    amount: number;
+    paymentType: string;
+    datePaid: string;
+    status: 'Pending' | 'Verified' | 'Rejected';
+    proofImage: string;
+    remarks?: string;
+}
+
+export interface LandlordMaintenanceRequest extends MaintenanceRequest {
+    tenantName: string;
+    roomNumber: string;
 }
