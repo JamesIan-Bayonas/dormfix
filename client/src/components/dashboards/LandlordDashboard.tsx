@@ -4,22 +4,20 @@ import { useAuth } from '../UserContext';
 import { LandlordMaintenanceList } from '../landlord/LandlordMaintenanceList';
 import { LandlordTenantChecklist } from '../landlord/LandlordTenantChecklist';
 import { LandlordRoomList } from '../landlord/LandlordRoomList';
+import { LandlordPaymentHistory } from '../landlord/LandlordPaymentHistory';
 
 type DashboardView = 'home' | 'maintenance' | 'payments' | 'tenants' | 'rooms';
 
 export const LandlordDashboard: React.FC = () => {
     const { user, logout } = useAuth();
 
-    // 1. UPDATED STATE: Lazy Initialization
-    // Instead of just 'home', we check if there is a saved view in LocalStorage first.
+    // In default 'home', we check if there is a saved view in LocalStorage first.
     const [currentView, setCurrentView] = useState<DashboardView>(() => {
         const savedView = localStorage.getItem('landlord_current_view');
-        // We cast it to DashboardView if it exists, otherwise default to 'home'
         return (savedView as DashboardView) || 'home';
     });
 
-    // 2. NEW EFFECT: Persist State
-    // Whenever currentView changes (user clicks a button), we save it to storage.
+    // Whenever currentView changes (via button clicks), we save it to storage.
     useEffect(() => {
         localStorage.setItem('landlord_current_view', currentView);
     }, [currentView]);
@@ -35,7 +33,10 @@ export const LandlordDashboard: React.FC = () => {
     if (currentView === 'rooms') {
         return <LandlordRoomList onBack={() => setCurrentView('home')} />;
     }
-    // (Note: You can wrap MaintenanceList similarly later if you want full navigation)
+
+    if (currentView === 'payments') {
+    return <LandlordPaymentHistory onBack={() => setCurrentView('home')} />;
+}
 
     return (
         <div className="min-h-screen bg-slate-100">
@@ -73,7 +74,7 @@ export const LandlordDashboard: React.FC = () => {
                     {currentView === 'home' ? (
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             
-                            {/* 1. Maintenance Module */}
+                            {/* Maintenance Module */}
                             <button 
                                 onClick={() => setCurrentView('maintenance')} // Just sets state, doesn't navigate yet
                                 className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-indigo-200 transition-all"
@@ -85,8 +86,11 @@ export const LandlordDashboard: React.FC = () => {
                                 <span className="text-sm text-slate-500 mt-1">Manage Requests</span>
                             </button>
 
-                            {/* 2. Payments Module */}
-                            <button className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-emerald-200 transition-all">
+                            {/* Payments Module */}
+                            <button 
+                                onClick={() => setCurrentView('payments')}
+                                className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-emerald-200 transition-all"
+                            >
                                 <div className="p-4 bg-emerald-50 rounded-full group-hover:bg-emerald-100 transition-colors mb-4">
                                     <CreditCard size={32} className="text-emerald-600" />
                                 </div>
@@ -94,7 +98,7 @@ export const LandlordDashboard: React.FC = () => {
                                 <span className="text-sm text-slate-500 mt-1">Verify Receipts</span>
                             </button>
 
-                            {/* 3. Tenant Management Module */}
+                            {/* Tenant Management Module */}
                             <button 
                                 onClick={() => setCurrentView('tenants')}
                                 className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-amber-200 transition-all"
@@ -106,7 +110,7 @@ export const LandlordDashboard: React.FC = () => {
                                 <span className="text-sm text-slate-500 mt-1">Approve & Manage</span>
                             </button>
 
-                            {/* 4. Rooms Module */}
+                            {/* Rooms Module */}
                             <button 
                                 onClick={() => setCurrentView('rooms')}
                                 className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-purple-200 transition-all"

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Upload, DollarSign, Calendar, FileText, CheckCircle, AlertCircle } from 'lucide-react';
-import { useAuth } from '../UserContext'; // Assuming you have this context
+import { Upload, DollarSign, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { useAuth } from '../UserContext';
 
 interface PaymentFormProps {
-    landlordId: string; // We pass this in because the tenant needs to know who to pay
+    landlordId: string; // Type this for tenant needs to know who to pay
     onSuccess?: () => void;
 }
 
@@ -21,14 +21,14 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-    // 1. Handle File Selection
+    // Handle File Selection
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             setSelectedFile(e.target.files[0]);
         }
     };
 
-    // 2. Handle Submission (The "Envelope" Logic)
+    // Handle Submission (The "Envelope" Logic)
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         

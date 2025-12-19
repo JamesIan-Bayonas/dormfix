@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Home, LogOut, Wrench, CreditCard, X, User, Calendar, Mail } from 'lucide-react';
 import { useAuth } from '../UserContext';
 import { MaintenanceList } from '../MaintenanceList';
-import { TenantPaymentForm } from '../tenant/TenantPaymentForm'; // Ensure this is imported
+import { TenantPaymentForm } from '../tenant/TenantPaymentForm'; 
+import { TenantPaymentHistory } from '../tenant/TenantPaymentHistory';
 
-// Define the shape of our new data
+// Define definately typed housing details
 interface HousingDetails {
     landlordId: string;
     landlordName: string;
@@ -15,13 +16,10 @@ interface HousingDetails {
 
 export const TenantDashboard: React.FC = () => {
     const { user, logout } = useAuth();
-    
-    // UI State
     const [activeModal, setActiveModal] = useState<'maintenance' | 'payment' | null>(null);
-    
-    // Data State
+    const [showHistory, setShowHistory] = useState(false);
     const [housing, setHousing] = useState<HousingDetails | null>(null);
-
+    
     // Form State for Maintenance
     const [formData, setFormData] = useState({
         issueType: 'Plumbing',
@@ -30,7 +28,7 @@ export const TenantDashboard: React.FC = () => {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // 1. FETCH HOUSING DETAILS ON LOAD
+    // FETCH HOUSING DETAILS ON LOAD
     useEffect(() => {
         if (user?.id) {
             fetch(`http://localhost:5000/api/tenant/details/${user.id}`)
@@ -44,7 +42,7 @@ export const TenantDashboard: React.FC = () => {
         }
     }, [user?.id]);
 
-    // 2. Submit Handler (Maintenance)
+    // Submit Handler (Maintenance)
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -75,6 +73,17 @@ export const TenantDashboard: React.FC = () => {
     };
 
     if (!user) return null;
+
+    // --- Intercept Render for History View ---
+    if (showHistory) {
+        return (
+            <div className="min-h-screen bg-slate-100 p-4">
+                <div className="max-w-4xl mx-auto py-8">
+                    <TenantPaymentHistory onBack={() => setShowHistory(false)} />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-100 relative">
@@ -129,7 +138,7 @@ export const TenantDashboard: React.FC = () => {
                 </div>
 
                 {/* Action Cards (Buttons to Open Modals) */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <button 
                         onClick={() => setActiveModal('maintenance')} 
                         className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-indigo-300 transition-all"
@@ -141,16 +150,27 @@ export const TenantDashboard: React.FC = () => {
                         <span className="text-sm text-slate-500 mt-1">Plumbing, Electric, etc.</span>
                     </button>
 
-                    <button 
-                        onClick={() => setActiveModal('payment')}
-                        className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-emerald-300 transition-all"
-                    >
-                        <div className="p-4 bg-emerald-50 rounded-full mb-4 group-hover:scale-110 transition-transform">
-                            <CreditCard size={32} className="text-emerald-600" />
-                        </div>
-                        <span className="text-lg font-bold text-slate-800">Pay Rent</span>
-                        <span className="text-sm text-slate-500 mt-1">Upload Receipt</span>
-                    </button>
+                    {/* --- UPDATED PAYMENT CARD --- */}
+                    <div className="flex flex-col gap-2">
+                        <button 
+                            onClick={() => setActiveModal('payment')}
+                            className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-emerald-300 transition-all h-full"
+                        >
+                            <div className="p-4 bg-emerald-50 rounded-full mb-4 group-hover:scale-110 transition-transform">
+                                <CreditCard size={32} className="text-emerald-600" />
+                            </div>
+                            <span className="text-lg font-bold text-slate-800">Pay Rent</span>
+                            <span className="text-sm text-slate-500 mt-1">Upload Receipt</span>
+                        </button>
+                        
+                        {/* THE NEW BUTTON IS HERE */}
+                        <button 
+                            onClick={() => setShowHistory(true)}
+                            className="text-xs text-center text-emerald-600 font-medium hover:underline py-2"
+                        >
+                            View Payment History
+                        </button>
+                    </div>
                 </div>
 
                 {/* History List */}
@@ -158,7 +178,7 @@ export const TenantDashboard: React.FC = () => {
                 <MaintenanceList /> 
             </main>
 
-            {/* --- 1. MAINTENANCE MODAL (THIS WAS MISSING) --- */}
+            {/*  MAINTENANCE MODAL  */}
             {activeModal === 'maintenance' && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -173,7 +193,7 @@ export const TenantDashboard: React.FC = () => {
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Issue Category</label>
                                 <select 
-                                    className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none"
                                     value={formData.issueType}
                                     onChange={e => setFormData({...formData, issueType: e.target.value})}
                                 >
@@ -187,7 +207,7 @@ export const TenantDashboard: React.FC = () => {
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Urgency Level</label>
                                 <select 
-                                    className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none"
                                     value={formData.urgency}
                                     onChange={e => setFormData({...formData, urgency: e.target.value})}
                                 >
@@ -201,7 +221,7 @@ export const TenantDashboard: React.FC = () => {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
                                 <textarea 
                                     required
-                                    className="w-full p-3 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none min-h-[100px]"
+                                    className="w-full p-3 bg-white border border-slate-300 rounded-lg text-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 outline-none min-h-[100px]"
                                     placeholder="Describe the issue clearly..."
                                     value={formData.description}
                                     onChange={e => setFormData({...formData, description: e.target.value})}
@@ -219,9 +239,9 @@ export const TenantDashboard: React.FC = () => {
                 </div>
             )}
 
-            {/* --- 2. PAYMENT MODAL (THIS WAS MISSING) --- */}
+            {/* PAYMENT MODAL */}
             {activeModal === 'payment' && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+                <div className="fixed inset-0 bg-black/50 flex text-gray-800 items-center justify-center z-50 p-4 backdrop-blur-sm">
                     <div className="relative w-full max-w-lg">
                         <button 
                             onClick={() => setActiveModal(null)} 

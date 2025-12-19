@@ -1,16 +1,20 @@
-import express from 'express';
-import cors from 'cors';
+import { submitPayment, getPayments, updatePaymentStatus, getTenantPayments } from './controllers/paymentController.ts';
+import { assignUserToRoom } from './controllers/roomController.ts';
+import { poolPromise } from './dbConfig.ts';
 import sql from 'mssql';
 import dotenv from 'dotenv';
 import crypto from 'crypto'; // Built-in Node module for UUIDs
 import bcrypt from 'bcrypt'; // For password hashing
 import multer from 'multer';
+import express from 'express';
+import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { assignUserToRoom } from './controllers/roomController.ts';
-import { poolPromise } from './dbConfig.ts';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 dotenv.config();
 
@@ -18,17 +22,17 @@ const app = express();
 const PORT = 5000;
 
 // Middleware
+app.use(express.json());    
 app.use(cors());
-app.use(express.json());
+
+// This makes the 'uploads' folder public
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // --- Helpers ---
 const generateDormCode = () => {
     return '#' + Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// --- FILE UPLOAD CONFIGURATION (Multer) ---
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // 1. Ensure the 'uploads' folder exists
 const uploadDir = path.join(__dirname, '../uploads');
@@ -350,6 +354,7 @@ app.get('/api/tenant/details/:tenantId', async (req, res) => {
             .input('tenantId', sql.VarChar(36), tenantId)
             .query(`
                 SELECT 
+                    da.landlord_id AS landlordId,
                     u.name AS landlordName, 
                     u.email AS landlordEmail, 
                     da.room_number AS roomNumber, 
@@ -568,3 +573,14 @@ app.post('/api/assign-room', assignUserToRoom);
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
+
+// 17. PAYMENT ROUTE
+// Usage: upload.single('proofImage') looks for a form field named "proofImage"
+app.post('/api/payments/submit', upload.single('proofImage'), submitPayment);
+
+// NEW: Get history
+app.get('/api/landlord/payments/:landlordId', getPayments);
+// NEW: Approve/Reject
+app.patch('/api/payments/:id/status', updatePaymentStatus);
+
+app.get('/api/tenant/payments/:tenantId', getTenantPayments);

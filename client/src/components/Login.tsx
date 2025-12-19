@@ -7,7 +7,6 @@ interface LoginProps {
     onToggleRegister: () => void;
 }
 
-// 2. Accept the prop
 const Login: React.FC<LoginProps> = ({ onToggleRegister }) => {
     const { login, isLoading, error } = useAuth();
     const [email, setEmail] = useState('');
@@ -108,11 +107,11 @@ const Login: React.FC<LoginProps> = ({ onToggleRegister }) => {
                                 </div>
                             </div>
                         </div>
-                        <div className='text-xs text-left text-gray-500 bg-gray-100 p-3 rounded-lg mt-6'>
+                        {/* <div className='text-xs text-left text-gray-500 bg-gray-100 p-3 rounded-lg mt-6'>
                             <p className="mb-1 font-semibold text-gray-800 flex items-center gap-1"><UserIcon size={14} /> Demo Accounts:</p>
                             <p className="ml-5">Tenant: <strong className="text-gray-700">tenant@dormfix.com</strong> (Pass: tenantpass)</p>
                             <p className="ml-5">Landlord: <strong className="text-gray-700">landlord@dormfix.com</strong> (Pass: adminpass)</p>
-                        </div>
+                        </div> */}
 
                         {/* Error Message */}
                         {error && (

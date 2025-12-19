@@ -5,7 +5,7 @@ export const apiClient = async <T>(endpoint: string, options: RequestInit = {}):
     const response = await fetch(`${BASE_URL}${endpoint}`, {
         headers: {
             'Content-Type': 'application/json',
-            // In the future, you can add Authorization headers here automatically
+            // You can add Authorization headers here automatically
             ...options.headers,
         },
         ...options,

@@ -11,5 +11,9 @@ export const paymentService = {
             method: 'PATCH',
             body: JSON.stringify({ status }),
         });
+    },
+
+    getMyPayments: async (tenantId: string): Promise<Payment[]> => {
+        return apiClient<Payment[]>(`/tenant/payments/${tenantId}`);
     }
-};
+};                  

@@ -1,13 +1,14 @@
 // src/App.tsx
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './components/UserContext';
-import Login from './components/Homepage';
-import Register from './components/Register'; 
+import Login from './components/Login';
+import Register from './components/dashboards/Register'; 
 import { TenantDashboard } from './components/dashboards/TenantDashboard'; 
 import { LandlordDashboard } from './components/dashboards/LandlordDashboard';
+import { PendingApproval } from './components/tenant/PendingApproval';
 
 const AppContent: React.FC = () => {
-    const { user, isLoading } = useAuth();
+    const { user, isLoading} = useAuth();
     
     // Track if we are on the Register screen
     const [showRegister, setShowRegister] = useState(false);
@@ -28,6 +29,10 @@ const AppContent: React.FC = () => {
         }
         // Show Login component, pass a way to go to Register
         return <Login onToggleRegister={() => setShowRegister(true)} />;
+    }
+
+    if (!user.isApproved) {
+        return <PendingApproval />;
     }
 
     // Authenticated View Logic

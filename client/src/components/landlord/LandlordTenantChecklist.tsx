@@ -1,4 +1,5 @@
 // LandlordTenantChecklist.tsx
+//This is where you have left of.
 import React, { useState, useEffect } from 'react';
 import { User, CheckCircle, XCircle, Home, AlertCircle, UserPlus } from 'lucide-react';
 import { useAuth } from '../UserContext';
