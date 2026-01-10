@@ -6,7 +6,7 @@ dotenv.config();
 // I have placed your ACTUAL credentials here so it works immediately.
 // Ideally, you put these in a .env file later, but for the deadline, this works.
 const sqlConfig: sql.config = {
-    user: process.env.DB_USER || 'dormfix_admin', 
+    user: process.env.DB_USER || 'sa', 
     password: process.env.DB_PASSWORD || 'sharingan', 
     server: process.env.DB_SERVER || 'localhost', 
     database: process.env.DB_NAME || 'dormfix',
