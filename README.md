@@ -17,7 +17,7 @@ Built to address the specific needs of local boarding houses, DormFix ensures tr
 * **Room Management:** Manage room inventory, set capacity limits, and assign tenants.
 * **Maintenance Tracking:** Triage reported issues (Plumbing, Electrical) and update repair status.
 
-![Landlord Dashboard](./screenshots/landlord.png)
+![Landlord Dashboard](./client/public/landlord.png)
 
 ## For Tenants
 * **Housing Profile:** View assigned room details, landlord contact info, and move-in dates.
@@ -25,7 +25,7 @@ Built to address the specific needs of local boarding houses, DormFix ensures tr
 * **Issue Reporting:** File maintenance requests with urgency levels and descriptions.
 * **History Log:** Access a permanent record of past payments and maintenance tickets.
 
-![Tenant Dashboard](./screenshots/tenant.png)
+![Tenant Dashboard](./client/public/tenant.png)
 
 ## Tech Stack
 
