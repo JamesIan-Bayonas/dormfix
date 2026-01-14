@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   LayoutDashboard, Users, Wrench, CreditCard, LogOut, Bell, Search, Menu, 
   Home, BedDouble, Zap, Clock, AlertTriangle, CheckCircle2, AlertCircle, 
-  X, ArrowRight, DollarSign, TrendingUp, TrendingDown 
+  X, ArrowRight, DollarSign, TrendingUp, TrendingDown, Eye, FileX, Check 
 } from 'lucide-react';
 import { useAuth } from '../UserContext';
 
@@ -34,7 +34,7 @@ export const LandlordDashboard: React.FC = () => {
     const { user, logout } = useAuth();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     
-    // DATA FETCHING 
+    // 1. DATA FETCHING
     const { rooms, isLoading: roomsLoading } = useRooms(user?.id);
     const { requests, changeStatus: updateMaintenanceStatus } = useMaintenance(user?.id, 'landlord');
     const { payments, verifyPayment } = usePayments(user?.id);
@@ -60,34 +60,46 @@ export const LandlordDashboard: React.FC = () => {
         }
     }, [user?.id]);
 
-    // VIEW & SEARCH STATE 
+    // 2. VIEW & SEARCH STATE
     const [currentView, setCurrentView] = useState<DashboardView>(() => {
         return (localStorage.getItem('landlord_current_view') as DashboardView) || 'home';
     });
     
     // Search Query State
     const [searchQuery, setSearchQuery] = useState('');
+    
+    // Modal States
     const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+    const [reviewPaymentId, setReviewPaymentId] = useState<string | null>(null);
 
     useEffect(() => {
         localStorage.setItem('landlord_current_view', currentView);
     }, [currentView]);
 
-    // INTELLIGENT DATA MERGING & DERIVATIONS 
+    // 3. INTELLIGENT DATA MERGING
     
-    // HELPER: Get current month stats
+    // Helper: Urgency Colors
+    const getUrgencyStyles = (urgency: string) => {
+        switch(urgency) {
+            case 'Emergency':
+            case 'High': return "bg-red-50 border-red-200 text-red-700";
+            case 'Medium': return "bg-orange-50 border-orange-200 text-orange-700";
+            case 'Low': return "bg-slate-50 border-slate-200 text-slate-700";
+            default: return "bg-gray-50 border-gray-200 text-gray-700";
+        }
+    };
+
+    // Helper: Current Month Stats
     const currentMonthStats = useMemo(() => {
         const now = new Date();
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
         
-        // Filter payments for THIS month
         const thisMonthPayments = payments.filter(p => {
             const pDate = new Date(p.datePaid);
             return pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear;
         });
 
-        // Filter payments for LAST month (for trend calculation)
         const lastMonthPayments = payments.filter(p => {
             const pDate = new Date(p.datePaid);
             const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -98,12 +110,11 @@ export const LandlordDashboard: React.FC = () => {
         const lastMonthRevenue = lastMonthPayments.filter(p => p.status === 'Verified').reduce((sum, p) => sum + Number(p.amount), 0);
         const pendingRevenue = thisMonthPayments.filter(p => p.status === 'Pending').reduce((sum, p) => sum + Number(p.amount), 0);
 
-        // Trend Calculation
         let trend = 0;
         if (lastMonthRevenue > 0) {
             trend = Math.round(((verifiedRevenue - lastMonthRevenue) / lastMonthRevenue) * 100);
         } else if (verifiedRevenue > 0) {
-            trend = 100; // 100% growth if last month was 0
+            trend = 100;
         }
 
         const collectionRate = (verifiedRevenue + pendingRevenue) > 0 
@@ -118,7 +129,6 @@ export const LandlordDashboard: React.FC = () => {
 
     // MATRIX: Filtered by Search
     const filteredRoomMatrix = useMemo(() => {
-        // First, build the full matrix
         const fullMatrix = rooms.map(room => {
             const occupants = tenants.filter(t => t.roomNumber === room.room_number);
             const roomRequests = requests.filter(r => r.roomNumber === room.room_number && r.status !== 'Completed' && r.status !== 'Rejected');
@@ -126,14 +136,17 @@ export const LandlordDashboard: React.FC = () => {
             
             const occupantPaymentStatus = occupants.map(occ => {
                 const tenantPayments = payments.filter(p => p.tenantName === occ.name);
-                const hasPending = tenantPayments.some(p => p.status === 'Pending');
+                const pendingPay = tenantPayments.find(p => p.status === 'Pending');
                 const latestVerified = tenantPayments.find(p => p.status === 'Verified');
                 return {
                     name: occ.name,
                     id: occ.id,
-                    hasPendingPayment: hasPending,
-                    paymentId: tenantPayments.find(p => p.status === 'Pending')?.id,
-                    status: hasPending ? 'Pending' : (latestVerified ? 'Verified' : 'No Record')
+                    hasPendingPayment: !!pendingPay,
+                    paymentId: pendingPay?.id,
+                    paymentAmount: pendingPay?.amount,
+                    paymentDate: pendingPay?.datePaid,
+                    paymentProof: pendingPay?.proofImage,
+                    status: pendingPay ? 'Pending' : (latestVerified ? 'Verified' : 'No Record')
                 };
             });
 
@@ -148,9 +161,7 @@ export const LandlordDashboard: React.FC = () => {
             };
         });
 
-        // SEARCH Filter
         if (!searchQuery) return fullMatrix;
-
         const lowerQuery = searchQuery.toLowerCase();
         return fullMatrix.filter(room => 
             room.room_number.toLowerCase().includes(lowerQuery) || 
@@ -158,9 +169,9 @@ export const LandlordDashboard: React.FC = () => {
         );
     }, [rooms, tenants, requests, payments, searchQuery]);
 
+    // Activity Feed
     const activityFeed = useMemo(() => {
         const feed: { id: string; type: string; message: string; sub: string; amount?: string; time: string; rawTime: number; roomId: string | null | undefined; priority?: UrgencyLevel; }[] = [];
-        // Helper to find roomId for linking
         const findRoomId = (num: string) => rooms.find(r => r.room_number === num)?.id;
 
         payments.forEach(p => feed.push({ 
@@ -171,7 +182,7 @@ export const LandlordDashboard: React.FC = () => {
             amount: `₱${p.amount}`, 
             time: p.datePaid, 
             rawTime: new Date(p.datePaid).getTime(),
-            roomId: findRoomId(p.roomNumber) // Link to room
+            roomId: findRoomId(p.roomNumber) 
         }));
         
         requests.forEach(r => feed.push({ 
@@ -182,7 +193,7 @@ export const LandlordDashboard: React.FC = () => {
             priority: r.urgency, 
             time: r.dateSubmitted, 
             rawTime: new Date(r.dateSubmitted).getTime(),
-            roomId: findRoomId(r.roomNumber) // Link to room
+            roomId: findRoomId(r.roomNumber) 
         }));
         
         tenants.forEach(t => feed.push({ 
@@ -199,28 +210,21 @@ export const LandlordDashboard: React.FC = () => {
     }, [payments, requests, tenants, rooms]);
 
     // ACTIONS
+    const handleNavigationToRoom = (roomNumber: string) => {
+        setSearchQuery(roomNumber); 
+        setSelectedRoomId(null);    
+        setCurrentView('rooms');    
+    };
+
+    const handleVerify = async (paymentId: string, status: 'Verified' | 'Rejected') => {
+        await verifyPayment(paymentId, status);
+        setReviewPaymentId(null); 
+    };
+
     const handleQuickResolve = async (issueId: string) => {
         if (confirm("Mark this issue as Completed?")) await updateMaintenanceStatus(issueId, 'Completed');
     };
-    const handleQuickVerify = async (paymentId: string) => {
-        if (confirm("Verify this payment?")) await verifyPayment(paymentId, 'Verified');
-    };
 
-    // Derived Selection Data
-    const selectedRoomData = useMemo(() => filteredRoomMatrix.find(r => r.id === selectedRoomId) || rooms.find(r => r.id === selectedRoomId) /* Fallback if filtered out */, [filteredRoomMatrix, rooms, selectedRoomId]);
-    
-    // Helper: Urgency Colors
-    const getUrgencyStyles = (urgency: string) => {
-        switch(urgency) {
-            case 'Emergency':
-            case 'High': return "bg-red-50 border-red-200 text-red-700";
-            case 'Medium': return "bg-orange-50 border-orange-200 text-orange-700";
-            case 'Low': return "bg-slate-50 border-slate-200 text-slate-700";
-            default: return "bg-gray-50 border-gray-200 text-gray-700";
-        }
-    };
-
-    // RENDER HELPERS 
     const getLinkClass = (view: DashboardView) => `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer group ${currentView === view ? 'bg-emerald-900 text-white shadow-lg shadow-emerald-900/20' : 'text-emerald-100/70 hover:bg-emerald-900/50 hover:text-white'}`;
     const formatDate = (d: string) => { try { return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); } catch { return d; }};
 
@@ -256,7 +260,6 @@ export const LandlordDashboard: React.FC = () => {
                 <header className="bg-white border-b border-gray-100 h-20 flex items-center justify-between px-8 sticky top-0 z-10 shrink-0">
                     <div className="flex items-center gap-4"><button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-gray-50 rounded-lg lg:hidden text-gray-500"><Menu size={24} /></button><h2 className="text-xl font-display font-bold text-gray-800 hidden sm:block capitalize">{currentView === 'home' ? 'Control Tower' : currentView}</h2></div>
                     <div className="flex items-center gap-4">
-                        {/* FUNCTIONAL SEARCH BAR */}
                         <div className="hidden md:flex items-center gap-3 px-4 py-2.5 bg-gray-50 rounded-xl w-64 border border-transparent focus-within:bg-white focus-within:border-emerald-200 focus-within:ring-2 focus-within:ring-emerald-100/50 transition-all">
                             <Search size={18} className="text-gray-400" />
                             <input 
@@ -284,17 +287,15 @@ export const LandlordDashboard: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* STATS ROW (MONTHLY CONTEXT) */}
+                            {/* STATS ROW */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 <StatCard title="Total Tenants" value={tenants.length.toString()} icon={<Users size={24} />} color="emerald" onClick={() => setCurrentView('tenants')} />
                                 <StatCard title="Total Rooms" value={rooms.length.toString()} icon={<BedDouble size={24} />} color="blue" onClick={() => setCurrentView('rooms')} />
                                 <StatCard title="Active Issues" value={activeIssuesCount.toString()} icon={<Wrench size={24} />} color="amber" onClick={() => setCurrentView('maintenance')} alert={activeIssuesCount > 0} />
                                 
-                                {/* REVENUE (This Month) */}
                                 <div onClick={() => setCurrentView('payments')} className="group bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden">
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="p-3 rounded-xl bg-violet-50 text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-colors"><DollarSign size={24} /></div>
-                                        {/* Trend Indicator */}
                                         <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${currentMonthStats.trend >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                             {currentMonthStats.trend >= 0 ? <TrendingUp size={12}/> : <TrendingDown size={12}/>}
                                             {Math.abs(currentMonthStats.trend)}%
@@ -302,8 +303,6 @@ export const LandlordDashboard: React.FC = () => {
                                     </div>
                                     <h4 className="text-gray-500 text-sm font-medium mb-1 font-display">Revenue (This Month)</h4>
                                     <p className="text-2xl font-display font-bold text-gray-900 mb-2">₱{currentMonthStats.verifiedRevenue.toLocaleString()}</p>
-                                    
-                                    {/* Collection Bar */}
                                     <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
                                         <div className="h-full bg-violet-500 rounded-full transition-all duration-1000" style={{ width: `${currentMonthStats.collectionRate}%` }}></div>
                                     </div>
@@ -317,7 +316,7 @@ export const LandlordDashboard: React.FC = () => {
                             {/* CONTROL TOWER */}
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                 
-                                {/* LEFT: FILTERABLE MATRIX */}
+                                {/* ROOM MATRIX */}
                                 <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                                     <div className="flex justify-between items-center mb-6">
                                         <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2"><BedDouble size={20} className="text-emerald-600"/> Room Matrix</h3>
@@ -369,7 +368,7 @@ export const LandlordDashboard: React.FC = () => {
                                     )}
                                 </div>
 
-                                {/* RIGHT: CLICKABLE FEED */}
+                                {/* ACTIVITY FEED */}
                                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col h-full">
                                     <div className="flex justify-between items-center mb-6"><h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2"><Zap size={20} className="text-amber-500"/> Activity</h3></div>
                                     {activityFeed.length > 0 ? (
@@ -409,62 +408,95 @@ export const LandlordDashboard: React.FC = () => {
             {/* ACTION MODAL */}
             {selectedRoomId && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-slide-up">
-                        {/* We use a temporary helper to render content safely even if selectedRoomData is undefined initially (rare but safe) */}
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-slide-up">
                         {(() => {
-                            // Find inside the loop to be safe against search filtering hiding the room
                             const room = rooms.find(r => r.id === selectedRoomId);
                             if (!room) return null;
-                            
-                            // Re-calculate local stats for the modal (to ensure up-to-date data)
-                            const occupants = tenants.filter(t => t.roomNumber === room.room_number);
-                            const issues = requests.filter(r => r.roomNumber === room.room_number && r.status !== 'Completed' && r.status !== 'Rejected');
-                            
+                            const roomData = filteredRoomMatrix.find(r => r.id === room.id); 
+
+                            // PAYMENT REVIEW SUB-MODAL 
+                            if (reviewPaymentId && roomData) {
+                                const occWithPay = roomData.occupantPaymentStatus.find(o => o.paymentId === reviewPaymentId);
+                                return (
+                                    <div className="p-6 bg-white">
+                                        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2"><CreditCard size={20}/> Review Payment</h3>
+                                        <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-200">
+                                            <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                                                <div><p className="text-gray-500">Tenant</p><p className="font-bold">{occWithPay?.name}</p></div>
+                                                <div><p className="text-gray-500">Amount</p><p className="font-bold text-emerald-600">₱{occWithPay?.paymentAmount}</p></div>
+                                                <div><p className="text-gray-500">Date</p><p className="font-bold">{formatDate(occWithPay?.paymentDate || '')}</p></div>
+                                            </div>
+                                            <div className="relative aspect-video bg-gray-200 rounded-lg overflow-hidden border border-gray-300">
+                                                <img src={occWithPay?.paymentProof || "https://placehold.co/600x400?text=Receipt+Image"} alt="Proof" className="w-full h-full object-cover"/>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <button onClick={() => setReviewPaymentId(null)} className="flex-1 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg">Cancel</button>
+                                            <button onClick={() => handleVerify(reviewPaymentId, 'Rejected')} className="flex-1 py-2 bg-red-50 text-red-600 font-bold rounded-lg border border-red-200 hover:bg-red-100 flex items-center justify-center gap-2"><FileX size={18}/> Reject</button>
+                                            <button onClick={() => handleVerify(reviewPaymentId, 'Verified')} className="flex-1 py-2 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 flex items-center justify-center gap-2"><Check size={18}/> Verify</button>
+                                        </div>
+                                    </div>
+                                )
+                            }
+
                             return (
                                 <>
                                 <div className="bg-emerald-950 p-6 flex justify-between items-center text-white">
                                     <div><h3 className="text-2xl font-display font-bold">Room {room.room_number}</h3><p className="text-emerald-300 text-sm">{room.currentOccupants === 0 ? 'Vacant Unit' : 'Occupied Unit'}</p></div>
                                     <button onClick={() => setSelectedRoomId(null)} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"><X size={20} /></button>
                                 </div>
-                                <div className="p-6 space-y-6">
+                                <div className="p-6 space-y-6 overflow-y-auto">
                                     <div>
                                         <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Occupants & Payments</h4>
-                                        {occupants.length > 0 ? (
-                                            <div className="space-y-3">
-                                                {occupants.map((occ, idx) => {
-                                                    const pendingPay = payments.find(p => p.tenantName === occ.name && p.status === 'Pending');
-                                                    return (
-                                                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                                            <div className="flex items-center gap-3"><div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">{occ.name.charAt(0)}</div><div><p className="text-sm font-bold text-gray-900">{occ.name}</p></div></div>
-                                                            {pendingPay ? <button onClick={() => handleQuickVerify(pendingPay.id)} className="px-3 py-1.5 bg-violet-600 text-white text-xs font-bold rounded-lg hover:bg-violet-700 shadow-sm">Verify Pay</button> : <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">Paid</span>}
+                                        {/* SCROLLABLE CONTAINER FOR OCCUPANTS */}
+                                        <div className="max-h-[245px] overflow-y-auto pr-2 custom-scrollbar border border-gray-100 rounded-xl bg-gray-50/50 p-3">
+                                            {roomData && roomData.occupants.length > 0 ? (
+                                                <div className="space-y-3">
+                                                    {roomData.occupantPaymentStatus.map((occ, idx) => (
+                                                        <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
+                                                            <div className="flex items-center gap-3"><div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">{occ.name.charAt(0)}</div><p className="text-sm font-bold text-gray-900">{occ.name}</p></div>
+                                                            {occ.hasPendingPayment ? (
+                                                                <button onClick={() => setReviewPaymentId(occ.paymentId || null)} className="px-3 py-1.5 bg-violet-600 text-white text-xs font-bold rounded-lg hover:bg-violet-700 shadow-sm flex items-center gap-1"><Eye size={12}/> Review</button>
+                                                            ) : (
+                                                                <span className={`px-2 py-1 rounded text-xs font-bold ${occ.status === 'Verified' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>{occ.status}</span>
+                                                            )}
                                                         </div>
-                                                    )
-                                                })}
-                                            </div>
-                                        ) : (
-                                            <div className="text-center p-6 bg-gray-50 rounded-xl border border-dashed border-gray-300"><p className="text-gray-500 text-sm mb-3">Room is empty.</p><button onClick={() => { setSelectedRoomId(null); setCurrentView('tenants'); }} className="px-4 py-2 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700">Assign Tenant</button></div>
-                                        )}
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center p-6 bg-white rounded-xl border border-dashed border-gray-300"><p className="text-gray-500 text-sm mb-3">Room is empty.</p><button onClick={() => { setSelectedRoomId(null); setCurrentView('tenants'); }} className="px-4 py-2 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700">Assign Tenant</button></div>
+                                            )}
+                                        </div>
                                     </div>
-                                    {issues.length > 0 && (
+
+                                    {/* SCROLLABLE CONTAINER FOR ISSUES */}
+                                    {roomData && roomData.activeIssues.length > 0 && (
                                         <div>
                                             <h4 className="text-xs font-bold text-red-400 uppercase tracking-wider mb-3">Active Issues</h4>
-                                            <div className="space-y-2">{issues.map(issue => (
-                                                <div key={issue.id} className={`p-3 rounded-xl flex justify-between items-center border ${getUrgencyStyles(issue.urgency)}`}>
-                                                    <div>
-                                                        <p className="text-sm font-bold">{issue.issueType}</p>
-                                                        <p className="text-xs opacity-80">{issue.description}</p>
-                                                        <span className="inline-block mt-1 px-1.5 py-0.5 bg-white/50 text-current text-[10px] font-bold rounded uppercase">{issue.urgency}</span>
-                                                    </div>
-                                                    <button onClick={() => handleQuickResolve(issue.id)} className={`p-2 bg-white/80 rounded-lg hover:bg-white transition-colors text-current border border-current/20`}><CheckCircle2 size={18} /></button>
+                                            <div className="max-h-[245px] overflow-y-auto pr-2 custom-scrollbar border border-red-100 rounded-xl bg-red-50/30 p-3">
+                                                <div className="space-y-2">
+                                                    {roomData.activeIssues.map(issue => (
+                                                        <div key={issue.id} className={`p-3 rounded-xl flex justify-between items-center border bg-white shadow-sm ${getUrgencyStyles(issue.urgency)}`}>
+                                                            <div>
+                                                                <p className="text-sm font-bold">{issue.issueType}</p>
+                                                                <p className="text-xs opacity-80 line-clamp-1">{issue.description}</p>
+                                                                <span className="inline-block mt-1 px-1.5 py-0.5 bg-black/5 text-current text-[10px] font-bold rounded uppercase">{issue.urgency}</span>
+                                                            </div>
+                                                            <button onClick={() => handleQuickResolve(issue.id)} className={`p-2 bg-white/80 rounded-lg hover:bg-white transition-colors text-current border border-current/20`}><CheckCircle2 size={18} /></button>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            ))}</div>
+                                            </div>
                                         </div>
                                     )}
+                                </div>
+                                <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+                                    <button onClick={() => setSelectedRoomId(null)} className="px-4 py-2 text-gray-600 font-medium hover:bg-gray-200 rounded-lg">Close</button>
+                                    <button onClick={() => handleNavigationToRoom(room.room_number)} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-100 flex items-center gap-2">Full Details <ArrowRight size={16}/></button>
                                 </div>
                                 </>
                             );
                         })()}
-                        <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3"><button onClick={() => setSelectedRoomId(null)} className="px-4 py-2 text-gray-600 font-medium hover:bg-gray-200 rounded-lg">Close</button><button onClick={() => { setSelectedRoomId(null); setCurrentView('rooms'); }} className="px-4 py-2 bg-white border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-100 flex items-center gap-2">Full Details <ArrowRight size={16}/></button></div>
                     </div>
                 </div>
             )}
