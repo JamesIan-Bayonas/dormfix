@@ -1,6 +1,6 @@
-// src/components/Homepage.tsx
+// src/components/Login.tsx
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, AlertCircle, Home, User as UserIcon } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, Home, ArrowRight } from 'lucide-react';
 import { useAuth } from './UserContext';
 
 interface LoginProps {
@@ -13,57 +13,65 @@ const Login: React.FC<LoginProps> = ({ onToggleRegister }) => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
-    
-
     const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault(); // Prevent the application from refreshing
-
-        // Login: first fetches the email and pass and contain them herein
+        e.preventDefault();
         login(email, password); 
     };
 
     return (
-        <div className="min-h-screen flex w-full bg-emerald-950 overflow-hidden">
-            {/* Left Side */}
-            <div className="hidden lg:flex w-1/2 bg-emerald-950 relative overflow-hidden justify-center items-center">
-                {/* Your Image/Logo code */}
-                 <div className="absolute inset-0 bg-linear-to-br from-emerald-900/90 to-emerald-550/90 z-10" /> 
-                <img 
-                    src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&q=80" 
-                    alt="Dormitory Building" 
-                    className="absolute inset-0 w-full h-full object-cover opacity-50"
-                    
-                />
-                <div className="relative z-20 text-white max-w-md px-8 text-center">
-                    <div className="mb-6 flex justify-center">
-                        <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
-                            <Home size={48} className="text-emerald-300" />
-                        </div>
+        // Added 'font-sans' here to apply Inter globally
+        <div className="min-h-screen flex w-full bg-white overflow-hidden font-sans">
+            
+            {/* LEFT SIDE: The Brand Hero */}
+            <div className="hidden lg:flex w-1/2 relative justify-center items-center bg-emerald-950">
+                
+                {/* Background Image with Modern Gradient Overlay */}
+                <div className="absolute inset-0 z-0">
+                    <img 
+                        src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&q=80" 
+                        alt="Dormitory Building" 
+                        className="w-full h-full object-cover opacity-40"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/95 via-emerald-800/80 to-emerald-600/60 mix-blend-multiply" />
+                </div>
+
+                {/* Content Overlay */}
+                <div className="relative z-10 p-12 text-center max-w-lg">
+                    <div className="mx-auto bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl w-20 h-20 flex items-center justify-center mb-8 shadow-2xl">
+                        <Home size={40} className="text-white" />
                     </div>
-                    <h1 className="text-4xl font-bold mb-4 tracking-tight">DormFix</h1>
-                    <p className="text-lg text-emerald-100 font-light leading-relaxed">
+                    {/* font-display applies Plus Jakarta Sans */}
+                    <h1 className="text-5xl font-display font-bold text-white mb-6 tracking-tight drop-shadow-lg">
+                        DormFix
+                    </h1>
+                    <p className="text-xl text-emerald-50 font-light leading-relaxed opacity-90">
                         Streamlining student housing with efficiency, transparency, and accountability.
                     </p>
                 </div>
             </div>
 
             {/* RIGHT SIDE: The Login Form */}
-            <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 sm:p-12 lg:p-24 bg-white">
-                <div className="w-full max-w-sm space-y-8">
+            <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 sm:p-12 bg-white">
+                <div className="w-full max-w-md space-y-8">
+                    
+                    {/* Header */}
                     <div className="text-center lg:text-left">
-                        <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Welcome</h2>
-                        <p className="mt-2 text-sm text-gray-500">Please sign in to your DormFix account.</p>
+                        <h2 className="text-3xl font-display font-bold text-gray-900 tracking-tight">Welcome Back</h2>
+                        <p className="mt-2 text-gray-500">
+                            Enter your credentials to access your dashboard.
+                        </p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-                         {/* handleSubmit contains preventDefault to avoid refreshing the stored email and pass */}
-                         <div className="space-y-5">
+                        <div className="space-y-5">
                             {/* Email Input */}
                             <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email address</label>
-                                <div className="relative">
+                                <label htmlFor="email" className="block text-sm font-display font-semibold text-gray-700 mb-1">
+                                    Email Address
+                                </label>
+                                <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Mail size={18} className="text-gray-400" />
+                                        <Mail size={18} className="text-gray-400 group-focus-within:text-emerald-600 transition-colors" />
                                     </div>
                                     <input
                                         id="email"
@@ -71,8 +79,10 @@ const Login: React.FC<LoginProps> = ({ onToggleRegister }) => {
                                         type="email"
                                         autoComplete="email"
                                         required
-                                        className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-emerald-600 focus:border-transparent transition-all duration-200 sm:text-sm bg-gray-50 focus:bg-white"
-                                        placeholder="you@example.com"
+                                        className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 
+                                        bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 
+                                        transition-all duration-200 outline-none sm:text-sm"
+                                        placeholder="you@university.edu"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                     />
@@ -81,10 +91,17 @@ const Login: React.FC<LoginProps> = ({ onToggleRegister }) => {
 
                             {/* Password Input */}
                             <div>
-                                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                                <div className="relative">
+                                <div className="flex justify-between items-center mb-1">
+                                    <label htmlFor="password" className="block text-sm font-display font-semibold text-gray-700">
+                                        Password
+                                    </label>
+                                    <a href="#" className="text-xs font-medium text-emerald-600 hover:text-emerald-500">
+                                        Forgot password?
+                                    </a>
+                                </div>
+                                <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Lock size={18} className="text-gray-400" />
+                                        <Lock size={18} className="text-gray-400 group-focus-within:text-emerald-600 transition-colors" />
                                     </div>
                                     <input
                                         id="password"
@@ -92,7 +109,9 @@ const Login: React.FC<LoginProps> = ({ onToggleRegister }) => {
                                         type={showPassword ? "text" : "password"}
                                         autoComplete="current-password"
                                         required
-                                        className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-emerald-600 focus:border-transparent transition-all duration-200 sm:text-sm bg-gray-50 focus:bg-white"
+                                        className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 
+                                        bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 
+                                        transition-all duration-200 outline-none sm:text-sm"
                                         placeholder="••••••••"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
@@ -100,23 +119,18 @@ const Login: React.FC<LoginProps> = ({ onToggleRegister }) => {
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
                                     >
                                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
                                 </div>
                             </div>
                         </div>
-                        {/* <div className='text-xs text-left text-gray-500 bg-gray-100 p-3 rounded-lg mt-6'>
-                            <p className="mb-1 font-semibold text-gray-800 flex items-center gap-1"><UserIcon size={14} /> Demo Accounts:</p>
-                            <p className="ml-5">Tenant: <strong className="text-gray-700">tenant@dormfix.com</strong> (Pass: tenantpass)</p>
-                            <p className="ml-5">Landlord: <strong className="text-gray-700">landlord@dormfix.com</strong> (Pass: adminpass)</p>
-                        </div> */}
 
                         {/* Error Message */}
                         {error && (
-                            <div className="flex items-center p-3 rounded-lg bg-red-50 border border-red-300 text-red-700">
-                                <AlertCircle size={18} className="mr-2 flex-shrink-0" />
+                            <div className="flex items-center p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
+                                <AlertCircle size={18} className="mr-3 flex-shrink-0" />
                                 <p className="text-sm font-medium">{error}</p>
                             </div>
                         )}
@@ -125,7 +139,10 @@ const Login: React.FC<LoginProps> = ({ onToggleRegister }) => {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                            className="w-full flex justify-center items-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-600/20 
+                            text-sm font-display font-bold text-white bg-emerald-600 hover:bg-emerald-700 hover:shadow-emerald-600/30
+                            focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 
+                            transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed transform active:scale-[0.99]"
                         >
                             {isLoading ? (
                                 <span className="flex items-center gap-2">
@@ -133,22 +150,25 @@ const Login: React.FC<LoginProps> = ({ onToggleRegister }) => {
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                    Signing in...
+                                    Verifying...
                                 </span>
                             ) : (
-                                "Sign in"
+                                <span className="flex items-center">
+                                    Sign In <ArrowRight size={16} className="ml-2" />
+                                </span>
                             )}
                         </button>
                     </form>
 
-                    <div className="mt-6 text-center">
+                    {/* Footer */}
+                    <div className="mt-8 text-center border-t border-gray-100 pt-6">
                         <p className="text-sm text-gray-500">
                             Don't have an account?{' '}
                             <button 
                                 onClick={onToggleRegister} 
-                                className="font-semibold text-emerald-600 hover:text-emerald-500 transition-colors hover:underline"
+                                className="font-semibold text-emerald-600 hover:text-emerald-700 transition-colors hover:underline"
                             >
-                                Register here
+                                Create an account
                             </button>
                         </p>
                     </div>
