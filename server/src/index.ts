@@ -1,6 +1,6 @@
 import { submitPayment, getPayments, updatePaymentStatus, getTenantPayments } from './controllers/paymentController.ts';
 import { assignUserToRoom } from './controllers/roomController.ts';
-import { poolPromise } from './dbConfig.ts';
+import { poolPromise } from './config/dbConfig.ts';
 import sql from 'mssql';
 import dotenv from 'dotenv';
 import crypto from 'crypto'; // Built-in Node module for UUIDs
