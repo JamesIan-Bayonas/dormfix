@@ -279,16 +279,27 @@ export const LandlordDashboard: React.FC = () => {
                     {currentView === 'home' && (
                         <div className="space-y-8 animate-fade-in">
                             
-                            {/* ALERTS: UNASSIGNED TENANTS */}
+                            {/* ALERTS: UNASSIGNED TENANTS (SLIM VERSION) */}
                             {unassignedTenantsCount > 0 && (
-                                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between shadow-sm animate-bounce-in">
-                                    <div className="flex items-center gap-3"><AlertCircle className="text-amber-600" size={24} /><div><h3 className="font-bold text-amber-900">Unassigned Approved Tenants</h3><p className="text-sm text-amber-700">{unassignedTenantsCount} tenants approved but homeless.</p></div></div>
-                                    <button onClick={() => setCurrentView('tenants')} className="px-4 py-2 bg-white text-amber-700 font-bold rounded-lg border border-amber-200 hover:bg-amber-50 shadow-sm transition-colors">Assign Now</button>
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg py-2.5 px-4 flex items-center justify-between shadow-sm animate-bounce-in">
+                                    <div className="flex items-center gap-3">
+                                        <AlertCircle className="text-amber-600" size={18} />
+                                        <p className="text-sm text-amber-800">
+                                            <span className="font-bold mr-1">Action Needed:</span> 
+                                            {unassignedTenantsCount} approved tenants need room assignments.
+                                        </p>
+                                    </div>
+                                    <button 
+                                        onClick={() => setCurrentView('tenants')} 
+                                        className="px-3 py-1.5 bg-white text-amber-700 text-xs font-bold rounded-md border border-amber-200 hover:bg-amber-50 shadow-sm transition-colors"
+                                    >
+                                        Assign Now
+                                    </button>
                                 </div>
                             )}
 
                             {/* STATS ROW */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 <StatCard title="Total Tenants" value={tenants.length.toString()} icon={<Users size={24} />} color="emerald" onClick={() => setCurrentView('tenants')} />
                                 <StatCard title="Total Rooms" value={rooms.length.toString()} icon={<BedDouble size={24} />} color="blue" onClick={() => setCurrentView('rooms')} />
                                 <StatCard title="Active Issues" value={activeIssuesCount.toString()} icon={<Wrench size={24} />} color="amber" onClick={() => setCurrentView('maintenance')} alert={activeIssuesCount > 0} />
@@ -509,7 +520,7 @@ interface StatCardProps { title: string; value: string; icon: React.ReactNode; c
 const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, onClick, alert }) => {
     const colorStyles = { emerald: "bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white", blue: "bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white", amber: "bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white", violet: "bg-violet-50 text-violet-600 group-hover:bg-violet-600 group-hover:text-white" };
     return (
-        <button onClick={onClick} className="group bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all text-left w-full relative overflow-hidden">
+        <button onClick={onClick} className=" h-40 group bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all text-left w-full relative overflow-hidden">
             <div className="flex justify-between items-start mb-4"><div className={`p-3 rounded-xl transition-colors ${colorStyles[color]}`}>{icon}</div>{alert && <span className="flex h-3 w-3 relative"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>}</div>
             <div><h4 className="text-gray-500 text-sm font-medium mb-1 font-display">{title}</h4><p className="text-2xl font-display font-bold text-gray-900 group-hover:text-emerald-950 transition-colors">{value}</p></div>
         </button>
