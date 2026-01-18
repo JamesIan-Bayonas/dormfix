@@ -52,23 +52,28 @@ Ensure you have the following installed:
 2.  Create a new database named `dormfix`.
 3.  Create a Login/User named `sa` with the password `sharingan`.
     * *Note: Ensure TCP/IP is enabled in SQL Server Configuration Manager.*
-4.  Run the SQL scripts provided in the `database/` folder to create the necessary tables (`users`, `rooms`, `payments`, `dorm_assignments`, `maintenance_requests`).
+4.  **Initialize the Database Schema**
+    * Navigate to the `database/` folder in the project source.
+    * Open the file named `schema.sql` (or `setup.sql`) inside **SQL Server Management Studio (SSMS)**.
+    * **CRITICAL:** In the SSMS toolbar, ensure the target database dropdown is set to `dormfix` (it defaults to `master`).
+    * Click the **Execute** button (or press `F5`) to run the script.
+    * *Verification:* Refresh the "Tables" folder in the Object Explorer. You should see `dbo.users`, `dbo.rooms`, `dbo.payments`, etc.
 
 ### 3. Backend Installation
 This project uses environment variables for configuration. You must create a `.env` file in the `server` directory before running the application.
 
-1.  Navigate to the server directory:
+* Navigate to the server directory:
 ```bash
 cd server
 ```
 
-2. Create a file named `.env`:
+* Create a file named `.env`:
 
 ```bash
 touch .env
 ```
 
-3. Add your database credentials to `.env`:
+* Add this exact database credentials to `.env` to run the application:
 
 ```env
 DB_USER=sa
@@ -77,7 +82,7 @@ DB_SERVER=localhost
 DB_NAME=dormfix
 ```
 
-4. Start the backend server:
+* Start the backend server:
 
 ```bash
 npm install
@@ -86,16 +91,17 @@ npm run dev
 ##### You should see: Server running on http://localhost:5000
 
 ---
+
 ### 4. Frontend Installation
 
-Open a new terminal window and navigate to the client directory:
+Open a terminal window and navigate to the client directory:
 
 ```bash
 cd client
 npm install
 ```
 
-#### Start the React application:
+##### Start the React application:
 
 ```bash
 npm run dev
