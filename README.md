@@ -55,19 +55,35 @@ Ensure you have the following installed:
 4.  Run the SQL scripts provided in the `database/` folder to create the necessary tables (`users`, `rooms`, `payments`, `dorm_assignments`, `maintenance_requests`).
 
 ### 3. Backend Installation
-Open a terminal and navigate to the server directory:
+This project uses environment variables for configuration. You must create a `.env` file in the `server` directory before running the application.
 
+1.  Navigate to the server directory:
 ```bash
 cd server
-npm install
 ```
 
-#### Start the backend server:
+2. Create a file named `.env`:
 
 ```bash
+touch .env
+```
+
+3. Add your database credentials to `.env`:
+
+```env
+DB_USER=sa
+DB_PASSWORD=your_secure_password
+DB_SERVER=localhost
+DB_NAME=dormfix
+```
+
+4. Start the backend server:
+
+```bash
+npm install
 npm run dev
 ```
-You should see: Server running on http://localhost:5000
+##### You should see: Server running on http://localhost:5000
 
 ---
 ### 4. Frontend Installation
@@ -84,4 +100,4 @@ npm install
 ```bash
 npm run dev
 ```
-Click the link provided (usually http://localhost:5173) to launch the application.
+##### Click the link provided (usually http://localhost:5173) to launch the application.
