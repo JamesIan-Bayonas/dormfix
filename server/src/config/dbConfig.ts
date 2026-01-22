@@ -15,10 +15,9 @@ if (missingVars.length > 0) {
 const sqlConfig: sql.config = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    server: 'localhost', // Just use localhost
+    server: 'localhost\\SQLEXPRESS',
     database: process.env.DB_NAME,
     options: {
-        instanceName: 'SQLEXPRESS', // Let the driver handle the connection details
         encrypt: false, 
         trustServerCertificate: true,
         enableArithAbort: true
