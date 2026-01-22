@@ -275,13 +275,13 @@ export const LandlordDashboard: React.FC = () => {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-y-auto bg-gray-50/50 p-6 lg:p-10 relative">
+                <main className="flex-1 overflow-y-auto bg-gray-50/50 -mt-3 lg:p-10 relative">
                     {currentView === 'home' && (
                         <div className="space-y-8 animate-fade-in">
                             
-                            {/* ALERTS: UNASSIGNED TENANTS (SLIM VERSION) */}
+                            {/* ALERTS: UNASSIGNED TENANTS */}
                             {unassignedTenantsCount > 0 && (
-                                <div className="bg-amber-50 border border-amber-200 rounded-lg py-2.5 px-4 flex items-center justify-between shadow-sm animate-bounce-in">
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg py-3 px-4 flex items-center justify-between shadow-sm animate-bounce-in mb-4">
                                     <div className="flex items-center gap-3">
                                         <AlertCircle className="text-amber-600" size={18} />
                                         <p className="text-sm text-amber-800">
@@ -325,7 +325,7 @@ export const LandlordDashboard: React.FC = () => {
                             </div>
 
                             {/* CONTROL TOWER */}
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 ">
                                 
                                 {/* ROOM MATRIX */}
                                 <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">

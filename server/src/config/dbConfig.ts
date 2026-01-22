@@ -15,29 +15,39 @@ if (missingVars.length > 0) {
 const sqlConfig: sql.config = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    server: process.env.DB_SERVER || 'localhost',
+    server: 'localhost', // Just use localhost
     database: process.env.DB_NAME,
-    pool: {
-        max: 10,
-        min: 0,
-        idleTimeoutMillis: 30000
-    },
     options: {
-        encrypt: true, 
-        trustServerCertificate: true, // Set to false in Production if you have valid certs
-        instanceName: 'SQLEXPRESS' 
+        instanceName: 'SQLEXPRESS', // Let the driver handle the connection details
+        encrypt: false, 
+        trustServerCertificate: true,
+        enableArithAbort: true
     }
 };
+
+console.log('🔌 Attempting to connect to SQL Server...');
+console.log(`   Server: ${sqlConfig.server}`);
+console.log(`   Database: ${sqlConfig.database}`);
+console.log(`   User: ${sqlConfig.user}`);
 
 export const poolPromise = new sql.ConnectionPool(sqlConfig)
     .connect()
     .then(pool => {
-        console.log('Connected to SQL Server');
+        console.log('✅ Connected to SQL Server successfully!');
         return pool;
     })
     .catch(err => {
-        console.error('Database Connection Failed!', err);
-        process.exit(1);
+        console.error('❌ Database Connection Failed!');
+        console.error('   Error Code:', err.code);
+        console.error('   Error Message:', err.message);
+        console.error('\n💡 Troubleshooting tips:');
+        console.error('   1. Verify SQL Server is running');
+        console.error('   2. Check if SQL Server Authentication is enabled (not just Windows Auth)');
+        console.error('   3. Verify the password for user "sa" is correct');
+        console.error('   4. Ensure the database "dormfix" exists');
+        console.error('   5. Try connecting with SQL Server Management Studio first\n');
+        console.log(`   Server: ${sqlConfig.server}`);
+        process.exit(1);``
     });
 
 export { sql };

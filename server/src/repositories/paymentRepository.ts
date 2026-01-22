@@ -1,4 +1,4 @@
-import { sql, poolPromise } from '../dbConfig';
+import { sql, poolPromise } from '../config/dbConfig';
 
 export const paymentRepository = {
     // 1. Create a new payment

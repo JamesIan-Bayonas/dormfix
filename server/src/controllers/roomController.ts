@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express'; // explicit type import
-import { sql, poolPromise } from '../dbConfig.ts'; // .ts extension for ESM
+import { sql, poolPromise } from '../config/dbConfig.ts'; // .ts extension for ESM
 
 export const assignUserToRoom = async (req: Request, res: Response) => {
     // 1. EXTRACT DATA
