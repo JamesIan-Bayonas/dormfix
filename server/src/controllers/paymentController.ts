@@ -1,9 +1,14 @@
 import type { Request, Response } from 'express';
-import { sql, poolPromise } from '../dbConfig.ts';
+import multer from 'multer';
+import { sql, poolPromise } from '../config/dbConfig.ts';
 import { randomUUID } from 'crypto';
 
+interface MulterRequest extends Request {   
+    file?: Express.Multer.File; 
+}
+
 // 1. SUBMIT PAYMENT (Tenant)
-export const submitPayment = async (req: Request, res: Response) => {
+export const submitPayment = async (req: MulterRequest, res: Response) => {
     const { tenantId, landlordId, amount, paymentType, datePaid, remarks } = req.body;
     const proofImage = req.file ? `/uploads/${req.file.filename}` : null;
 
