@@ -13,13 +13,11 @@ import { usePayments } from '../../hooks/usePayments';
 
 // COMPONENTS
 import { LandlordMaintenanceList } from '../landlord/LandlordMaintenanceList';
-// import { LandlordMaintenanceList } from '../landlord/LandlordMaintenanceList';
 import { LandlordTenantChecklist } from '../landlord/LandlordTenantChecklist';
 import { LandlordRoomList } from '../landlord/LandlordRoomList';
 import { LandlordPaymentHistory } from '../landlord/LandlordPaymentHistory';
 import { RoomDetailDrawer, type RoomDetailData } from '../landlord/RoomDetailDrawer'; // NEW IMPORT
 
-// ... (Keep your TenantData and DashboardView types same as before) ...
 interface TenantData {
     id: string;
     name: string;
@@ -40,7 +38,7 @@ export const LandlordDashboard: React.FC = () => {
     const { payments, verifyPayment } = usePayments(user?.id);
     const [tenants, setTenants] = useState<TenantData[]>([]);
 
-    // ... (Keep your useEffect for fetching tenants same as before) ...
+    
     useEffect(() => {
         if (user?.id) {
             fetch(`http://localhost:5000/api/landlord/tenants/${user.id}`)
@@ -67,12 +65,60 @@ export const LandlordDashboard: React.FC = () => {
     // DRAWER STATE (Replaces Modal State)
     const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
 
-    // ... (Keep your currentMonthStats logic same as before) ...
     const currentMonthStats = useMemo(() => {
-        // ... (Keep logic) ...
-        return { verifiedRevenue: 0, pendingRevenue: 0, collectionRate: 0, trend: 0 }; // Placeholder for brevity
-    }, [payments]);
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        
+        // DEBUGGER: Check if we are receiving data
+        console.log("--- DASHBOARD REVENUE CALC ---");
+        console.log(`Total Raw Payments: ${payments.length}`);
 
+        const thisMonthPayments = payments.filter(p => {
+            const pDate = new Date(p.datePaid);
+            const isSameMonth = pDate.getMonth() === currentMonth;
+            const isSameYear = pDate.getFullYear() === currentYear;
+            return isSameMonth && isSameYear;
+        });
+
+        console.log(`Payments identified for this month: ${thisMonthPayments.length}`);
+
+        //  Verified Revenue
+        const verifiedRevenue = thisMonthPayments
+            .filter(p => p.status.toLowerCase() === 'verified') // Fixes 'Verified' vs 'verified'
+            .reduce((sum, p) => sum + Number(p.amount), 0);
+
+        // Pending Revenue
+        const pendingRevenue = thisMonthPayments
+            .filter(p => p.status.toLowerCase() === 'pending')
+            .reduce((sum, p) => sum + Number(p.amount), 0);
+
+        // Collection Rate
+        const totalPotential = verifiedRevenue + pendingRevenue;
+        const collectionRate = totalPotential > 0 
+            ? Math.round((verifiedRevenue / totalPotential) * 100) 
+            : 0;
+
+        // Trend (vs Last Month)
+        const lastMonthPayments = payments.filter(p => {
+            const pDate = new Date(p.datePaid);
+            const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            return pDate.getMonth() === lastMonthDate.getMonth() && 
+                   pDate.getFullYear() === lastMonthDate.getFullYear();
+        });
+        const lastMonthRevenue = lastMonthPayments
+            .filter(p => p.status.toLowerCase() === 'verified')
+            .reduce((sum, p) => sum + Number(p.amount), 0);
+
+        let trend = 0;
+        if (lastMonthRevenue > 0) {
+            trend = Math.round(((verifiedRevenue - lastMonthRevenue) / lastMonthRevenue) * 100);
+        } else if (verifiedRevenue > 0) {
+            trend = 100; // 100% growth if last month was 0
+        }
+
+        return { verifiedRevenue, pendingRevenue, collectionRate, trend };
+    }, [payments]);
     const activeIssuesCount = useMemo(() => requests.filter(r => r.status === 'Pending' || r.status === 'In Progress').length, [requests]);
     const unassignedTenantsCount = useMemo(() => tenants.filter(t => t.isApproved && (!t.roomNumber || t.roomNumber === 'Unassigned')).length, [tenants]);
 
@@ -138,12 +184,7 @@ export const LandlordDashboard: React.FC = () => {
         if (confirm("Mark this issue as Completed?")) await updateMaintenanceStatus(issueId, 'Completed');
     }, [updateMaintenanceStatus]);
 
-    // ... (Keep activityFeed and render logic) ...
-
     if (!user) return null;
-
-    // ... inside LandlordDashboard.tsx
-
     return (
         <div className="min-h-screen bg-gray-50 font-sans flex">
             
