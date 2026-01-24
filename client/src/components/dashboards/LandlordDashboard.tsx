@@ -184,6 +184,64 @@ export const LandlordDashboard: React.FC = () => {
         if (confirm("Mark this issue as Completed?")) await updateMaintenanceStatus(issueId, 'Completed');
     }, [updateMaintenanceStatus]);
 
+    // 4. ACTIVITY FEED
+    const activityFeed = useMemo(() => {
+        const feed: any[] = [];
+        const findRoomId = (num: string) => rooms.find(r => r.room_number === num)?.id;
+
+        // Payments 
+        payments.forEach(p => {
+            if (!p.datePaid) return;
+            feed.push({
+                id: `pay-${p.id}`,
+                type: 'payment',
+                message: `${p.tenantName || 'Unknown'} paid`,
+                sub: p.status, 
+                amount: `₱${p.amount}`, // This text appears in the feed item
+                time: p.datePaid,
+                rawTime: new Date(p.datePaid).getTime(),
+                roomId: findRoomId(p.roomNumber)
+            });
+        });
+
+        // Maintenance
+        requests.forEach(r => {
+            if (!r.dateSubmitted) return;
+            feed.push({
+                id: `req-${r.id}`,
+                type: 'issue',
+                message: `${r.issueType} in Room ${r.roomNumber}`,
+                sub: r.status,
+                priority: r.urgency,
+                time: r.dateSubmitted,
+                rawTime: new Date(r.dateSubmitted).getTime(),
+                roomId: findRoomId(r.roomNumber)
+            });
+        });
+
+        // New Tenants
+        tenants.forEach(t => {
+            const dateStr = t.joinedDate || new Date().toISOString();
+            feed.push({
+                id: `new-${t.id}`,
+                type: 'tenant',
+                message: `${t.name} joined`,
+                sub: t.isApproved ? 'Approved' : 'Pending',
+                time: dateStr,
+                rawTime: new Date(dateStr).getTime(),
+                roomId: t.roomNumber ? findRoomId(t.roomNumber) : null
+            });
+        });
+
+        // Sort by Newest
+        return feed.sort((a, b) => (b.rawTime || 0) - (a.rawTime || 0)).slice(0, 10);
+    }, [payments, requests, tenants, rooms]);
+
+    const formatDate = (d: string) => { 
+        try { return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); } 
+        catch { return d; }
+    };
+        
     if (!user) return null;
     return (
         <div className="min-h-screen bg-gray-50 font-sans flex">
@@ -353,19 +411,70 @@ export const LandlordDashboard: React.FC = () => {
                                 </div>
 
                                 {/* Activity Feed (Uses Zap, Clock) */}
-                                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col h-full">
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2">
-                                            <Zap size={20} className="text-amber-500"/> Activity
-                                        </h3>
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col h-full">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2">
+                                        <Zap size={20} className="text-amber-500"/> Activity
+                                    </h3>
+                                </div>
+
+                                {activityFeed.length > 0 ? (
+                                    <div className="space-y-6 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
+                                        {activityFeed.map((activity) => (
+                                            <div 
+                                                key={activity.id} 
+                                                onClick={() => activity.roomId && setSelectedRoomId(activity.roomId)}
+                                                className={`flex gap-4 group ${activity.roomId ? 'cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded-lg transition-colors' : ''}`}
+                                            >
+                                                {/* ICON COLUMN */}
+                                                <div className="relative flex flex-col items-center">
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10 border-2 border-white shadow-sm 
+                                                        ${activity.type === 'payment' ? 'bg-violet-100 text-violet-600' : ''} 
+                                                        ${activity.type === 'issue' ? 'bg-red-100 text-red-600' : ''} 
+                                                        ${activity.type === 'tenant' ? 'bg-blue-100 text-blue-600' : ''}
+                                                    `}>
+                                                        {activity.type === 'payment' && <CreditCard size={14} />}
+                                                        {activity.type === 'issue' && <Wrench size={14} />}
+                                                        {activity.type === 'tenant' && <Users size={14} />}
+                                                    </div>
+                                                    <div className="w-0.5 h-full bg-gray-100 absolute top-8 -bottom-6 group-last:hidden"></div>
+                                                </div>
+                                                
+                                                {/* TEXT COLUMN */}
+                                                <div className="pb-2">
+                                                    <p className="text-sm font-medium text-gray-900 group-hover:text-emerald-700 transition-colors">
+                                                        {activity.message}
+                                                    </p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <Clock size={12} className="text-gray-400"/>
+                                                        <span className="text-xs text-gray-500">{formatDate(activity.time)}</span>
+                                                        
+                                                        {activity.sub && (
+                                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase
+                                                                ${activity.sub === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}
+                                                            `}>
+                                                                {activity.sub}
+                                                            </span>
+                                                        )}
+                                                        {activity.amount && (
+                                                            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                                                                {activity.amount}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                    {/* (Activity feed mapping - simplified for brevity, assume activityFeed exists) */}
+                                ) : (
+                                    // EMPTY STATE
                                     <div className="flex flex-col items-center justify-center h-full text-center p-4">
                                         <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                                             <Bell size={24} className="text-gray-300" />
                                         </div>
-                                        <p className="text-gray-900 font-medium">Check recent updates</p>
+                                        <p className="text-gray-900 font-medium">No recent activity</p>
                                     </div>
+                                )}
                                 </div>
                             </div>
                         </div>
