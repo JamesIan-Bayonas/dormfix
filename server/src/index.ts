@@ -526,7 +526,7 @@ app.post('/api/landlord/assign', async (req, res) => {
 app.get('/api/landlord/tenants/:landlordId', async (req, res) => {
     const { landlordId } = req.params;
     try {
-        const pool = await poolPromise; // FIX APPLIED
+        const pool = await poolPromise;
         const result = await pool.request()
             .input('lid', sql.VarChar(36), landlordId) 
             .query(`
@@ -535,10 +535,11 @@ app.get('/api/landlord/tenants/:landlordId', async (req, res) => {
                     u.name, 
                     u.email, 
                     u.is_approved as isApproved,
+                    u.created_at as createdAt,
                     da.room_number as roomNumber
                 FROM users u
-                LEFT JOIN dorm_assignments da ON u.id = da.tenant_id
-                WHERE u.role = 'tenant' 
+                INNER JOIN dorm_assignments da ON u.id = da.tenant_id
+                WHERE u.role = 'tenant' AND da.landlord_id = @lid
             `);
         
         res.json(result.recordset);
