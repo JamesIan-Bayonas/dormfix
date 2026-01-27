@@ -16,9 +16,9 @@ import { LandlordMaintenanceList } from '../landlord/LandlordMaintenanceList';
 import { LandlordTenantChecklist } from '../landlord/LandlordTenantChecklist';
 import { LandlordRoomList } from '../landlord/LandlordRoomList';
 import { LandlordPaymentHistory } from '../landlord/LandlordPaymentHistory';
-import { RoomDetailDrawer, type RoomDetailData } from '../landlord/RoomDetailDrawer'; // NEW IMPORT
+import { RoomDetailDrawer} from '../landlord/RoomDetailDrawer';
 
-interface TenantData {
+interface TenantData {  
     id: string;
     name: string;
     email: string;
@@ -50,9 +50,9 @@ export const LandlordDashboard: React.FC = () => {
                         email: t.email,
                         roomNumber: t.roomNumber,
                         isApproved: t.isApproved,
-                        joinedDate: t.createdAt || new Date().toISOString()
+                        joinedDate: t.createdAt ? new Date(t.createdAt).toISOString() : new Date().toISOString()
                     }));
-                    setTenants(formatted);
+                    setTenants(formatted);  
                 })
                 .catch(err => console.error("Failed to fetch tenants:", err));
         }
@@ -137,6 +137,7 @@ export const LandlordDashboard: React.FC = () => {
                 return {
                     name: occ.name,
                     id: occ.id,
+                    joinedDate: occ.joinedDate,
                     hasPendingPayment: !!pendingPay,
                     paymentId: pendingPay?.id,
                     paymentAmount: pendingPay?.amount,
@@ -358,7 +359,7 @@ export const LandlordDashboard: React.FC = () => {
                                 <StatCard title="Total Rooms" value={rooms.length.toString()} icon={<BedDouble size={24} />} color="blue" onClick={() => setCurrentView('rooms')} />
                                 <StatCard title="Active Issues" value={activeIssuesCount.toString()} icon={<Wrench size={24} />} color="amber" onClick={() => setCurrentView('maintenance')} alert={activeIssuesCount > 0} />
                                 
-                                <div onClick={() => setCurrentView('payments')} className="group bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden">
+                                <div onClick={() => setCurrentView('payments')} className="group bg-white p-6 r ounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden">
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="p-3 rounded-xl bg-violet-50 text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-colors">
                                             <DollarSign size={24} />
