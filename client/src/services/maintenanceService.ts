@@ -1,17 +1,16 @@
-import { apiClient } from '../api/client';
+import api from '../api/client';
 import type { MaintenanceStatus, LandlordMaintenanceRequest } from '../types/types';
 
 export const maintenanceService = {
-    // Fetch requests (supports both landlord and tenant via the 'role' param)
+    // Fetch requests supports both landlords and tenants
     getRequests: async (userId: string, role: 'landlord' | 'tenant'): Promise<LandlordMaintenanceRequest[]> => {
-        return apiClient<LandlordMaintenanceRequest[]>(`/maintenance/${userId}?role=${role}`);
+        const response = await api.get(`/maintenance/${userId}?role=${role}`);
+        return response.data;
     },
 
     // Update the status of a request
     updateStatus: async (id: string, status: MaintenanceStatus): Promise<{ message: string }> => {
-        return apiClient<{ message: string }>(`/maintenance/status/${id}`, {
-            method: 'PATCH',
-            body: JSON.stringify({ status }),
-        });
+        const response = await api.patch(`/maintenance/status/${id}`, { status });
+        return response.data;
     }
 };

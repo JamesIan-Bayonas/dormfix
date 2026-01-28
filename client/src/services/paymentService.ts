@@ -1,19 +1,28 @@
-import { apiClient } from '../api/client';
-import type { Payment } from '../types/types';
+import api from '../api/client';
 
 export const paymentService = {
-    getPayments: async (landlordId: string): Promise<Payment[]> => {
-        return apiClient<Payment[]>(`/landlord/payments/${landlordId}`);
+    
+    // Submit Payment
+    create: async (formData: FormData) => {
+        const response = await api.post('/payments/submit', formData);
+        return response.data;
     },
 
-    updateStatus: async (id: string, status: 'Verified' | 'Rejected'): Promise<void> => {
-        return apiClient(`/payments/${id}/status`, {
-            method: 'PATCH',
-            body: JSON.stringify({ status }),
-        });
+    // Get Payments (Landlord)
+    getByLandlord: async (landlordId: string) => {
+        const response = await api.get(`/landlord/payments/${landlordId}`);
+        return response.data;
     },
 
-    getMyPayments: async (tenantId: string): Promise<Payment[]> => {
-        return apiClient<Payment[]>(`/tenant/payments/${tenantId}`);
+    // Update Status (Landlord)
+    updateStatus: async (id: string, status: string, rejectionReason?: string) => {
+        const response = await api.patch(`/payments/${id}/status`, { status, rejectionReason });
+        return response.data;
+    },
+
+    // Get Payment History
+    getByTenant: async (tenantId: string) => {
+        const response = await api.get(`/tenant/payments/${tenantId}`);
+        return response.data;
     }
-};                  
+};
