@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { 
-    X, User, CreditCard, Wrench, CheckCircle2, 
-    AlertTriangle, FileX, Check, Eye, ArrowRight 
+    X, User, CreditCard, Wrench, CheckCircle2, Eye  
 } from 'lucide-react';
 
 // Define the shape of data this drawer expects (Extracted from your matrix logic)
@@ -74,7 +73,7 @@ export const RoomDetailDrawer: React.FC<RoomDetailDrawerProps> = React.memo(({
                             <User size={16}/> Occupants
                         </h3>
                         
-                        {roomData.occupants.length > 0 ? (
+                        {roomData.occupants.length > 0 ? (      
                             <div className="space-y-3">
                                 {roomData.occupantPaymentStatus.map((occ, idx) => (
                                     <div key={idx} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
@@ -101,14 +100,25 @@ export const RoomDetailDrawer: React.FC<RoomDetailDrawerProps> = React.memo(({
                                                     <span className="text-xs font-bold text-violet-600 flex items-center gap-1">
                                                         <CreditCard size={12}/> Pending Payment
                                                     </span>
-                                                    <span className="text-xs font-bold">₱{occ.paymentAmount}</span>
+                                                    <span className="text-emerald-600">₱{occ.paymentAmount}</span>
                                                 </div>
                                                 
                                                 {reviewPaymentId === occ.paymentId ? (
                                                     // EXPANDED PAYMENT REVIEW (Inline)
-                                                    <div className="mt-3 pt-3 border-t border-gray-100 animate-fade-in">
-                                                        <div className="aspect-video bg-gray-100 rounded mb-3 overflow-hidden">
-                                                             <img src={occ.paymentProof || "https://placehold.co/600x400"} alt="Proof" className="w-full h-full object-cover"/>
+                                                    <div className="mt-3 pt-3 border-t border-gray-100   animate-fade-in">
+                                                        <div className="aspect-video bg-gray-100 rounded mb-3 overflow-hidden relative">
+                                                            <img 
+                                                                src={occ.paymentProof 
+                                                                    ? `http://localhost:5000${occ.paymentProof}` 
+                                                                    : "https://placehold.co/600x400"
+                                                                } 
+                                                                alt="Proof" 
+                                                                className="w-full h-full object-cover"
+
+                                                                onError={(e) => {
+                                                                    (e.target as HTMLImageElement).src = "https://placehold.co/600x400?text=Broken+Image";
+                                                                }}
+                                                            />
                                                         </div>
                                                         <div className="flex gap-2">
                                                             <button onClick={() => onVerifyPayment(occ.paymentId, 'Rejected')} className="flex-1 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded hover:bg-red-100 border border-red-200">Reject</button>
