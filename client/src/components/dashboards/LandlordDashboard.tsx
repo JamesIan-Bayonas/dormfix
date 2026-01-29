@@ -2,9 +2,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   LayoutDashboard, Users, Wrench, CreditCard, LogOut, Bell, Search, Menu, 
-  Home, BedDouble, Zap, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, AlertCircle, X
+  Home, BedDouble, Zap, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, AlertCircle, X,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../UserContext';
+
+
 
 // HOOKS
 import { useRooms } from '../../hooks/useRooms';
@@ -17,6 +20,7 @@ import { LandlordTenantChecklist } from '../landlord/LandlordTenantChecklist';
 import { LandlordRoomList } from '../landlord/LandlordRoomList';
 import { LandlordPaymentHistory } from '../landlord/LandlordPaymentHistory';
 import { RoomDetailDrawer} from '../landlord/RoomDetailDrawer';
+import { LandlordRules } from '../landlord/LandlordRules';
 
 interface TenantData {  
     id: string;
@@ -26,7 +30,7 @@ interface TenantData {
     isApproved: boolean;
     joinedDate: string;
 }
-type DashboardView = 'home' | 'maintenance' | 'payments' | 'tenants' | 'rooms';
+type DashboardView = 'home' | 'maintenance' | 'payments' | 'tenants' | 'rooms' | 'rules';
 
 export const LandlordDashboard: React.FC = () => {
     const { user, logout } = useAuth();
@@ -175,10 +179,10 @@ export const LandlordDashboard: React.FC = () => {
         return fullRoomMatrix.find(r => r.id === selectedRoomId) || null;
     }, [selectedRoomId, fullRoomMatrix]);
 
-    // HANDLERS (Callback optimized)
-    const handleVerify = useCallback(async (paymentId: string, status: 'Verified' | 'Rejected') => {
-        await verifyPayment(paymentId, status);
-        // We don't need to close the drawer, the data will update automatically due to React state
+    // HANDLERS
+    const handleVerify = useCallback(async (paymentId: string, status: 'Verified' | 'Rejected', reason?: string) => {
+        // Note: You might need to update usePayments.ts to actually send this 'reason' to the API!
+        await verifyPayment(paymentId, status, reason); 
     }, [verifyPayment]);
 
     const handleQuickResolve = useCallback(async (issueId: string) => {
@@ -276,6 +280,9 @@ export const LandlordDashboard: React.FC = () => {
                     </button>
                     <button onClick={() => setCurrentView('payments')} className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-colors ${currentView === 'payments' ? 'bg-emerald-900 text-white shadow-lg' : 'text-emerald-100/70 hover:bg-emerald-900/50'}`}>
                         <CreditCard size={20} /><span className="font-medium">Payments</span>
+                    </button>
+                    <button onClick={() => setCurrentView('rules' as any)} className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-colors ${currentView === 'rules' as any ? 'bg-emerald-900 text-white shadow-lg' : 'text-emerald-100/70 hover:bg-emerald-900/50'}`}>
+                        <ShieldCheck size={20} /><span className="font-medium">House Rules</span>
                     </button>
                 </nav>
 
@@ -503,6 +510,12 @@ export const LandlordDashboard: React.FC = () => {
                     {currentView === 'payments' && (
                         <div className="animate-fade-in">
                             <LandlordPaymentHistory onBack={() => setCurrentView('home')} />
+                        </div>
+                    )}
+
+                    {currentView === 'rules' && (
+                        <div className="animate-fade-in">
+                            <LandlordRules />
                         </div>
                     )}
 
