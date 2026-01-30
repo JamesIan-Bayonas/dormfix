@@ -1,28 +1,33 @@
-import api from '../api/client';
+// 1. Correct the import to use the Named Export
+import { apiClient } from '../api/client';
 
 export const paymentService = {
     
-    // Submit Payment
+    // Submit Payment (FormData)
     create: async (formData: FormData) => {
-        const response = await api.post('/payments/submit', formData);
-        return response.data;
+        return apiClient<any>('/payments/submit', {
+            method: 'POST',
+            body: formData,
+            headers: {
+            } 
+        });
     },
 
     // Get Payments (Landlord)
     getByLandlord: async (landlordId: string) => {
-        const response = await api.get(`/landlord/payments/${landlordId}`);
-        return response.data;
+        return apiClient<any>(`/landlord/payments/${landlordId}`);
     },
 
     // Update Status (Landlord)
     updateStatus: async (id: string, status: string, rejectionReason?: string) => {
-        const response = await api.patch(`/payments/${id}/status`, { status, rejectionReason });
-        return response.data;
+        return apiClient<any>(`/payments/${id}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status, rejectionReason })
+        });
     },
 
     // Get Payment History
     getByTenant: async (tenantId: string) => {
-        const response = await api.get(`/tenant/payments/${tenantId}`);
-        return response.data;
+        return apiClient<any>(`/tenant/payments/${tenantId}`);
     }
 };

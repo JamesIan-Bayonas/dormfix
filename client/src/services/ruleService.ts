@@ -1,5 +1,4 @@
-import api from '../api/client';
-import { poolPromise } from '../config/dbConfig.js';
+import { apiClient } from '../api/client';
 
 export interface HouseRule {
     id: string;
@@ -8,17 +7,19 @@ export interface HouseRule {
 
 export const ruleService = {
     getRules: async (landlordId: string): Promise<HouseRule[]> => {
-        const response = await api.get(`/rules/${landlordId}`);
-        return response.data;
+        return apiClient<HouseRule[]>(`/rules/${landlordId}`);
     },
 
     addRule: async (landlordId: string, ruleText: string) => {
-        const response = await api.post('/rules', { landlordId, ruleText });
-        return response.data;
+        return apiClient<any>('/rules', {
+            method: 'POST',
+            body: JSON.stringify({ landlordId, ruleText }) // ⚠️ Manual Stringify
+        });
     },
 
     deleteRule: async (id: string) => {
-        const response = await api.delete(`/rules/${id}`);
-        return response.data;
+        return apiClient<any>(`/rules/${id}`, {
+            method: 'DELETE'
+        });
     }
 };
