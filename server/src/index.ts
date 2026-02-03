@@ -585,3 +585,62 @@ app.get('/api/landlord/payments/:landlordId', getPayments);
 app.patch('/api/payments/:id/status', updatePaymentStatus);
 
 app.get('/api/tenant/payments/:tenantId', getTenantPayments);
+
+// GET Rules
+app.get('/api/rules/:landlordId', async (req, res) => {
+    const { landlordId } = req.params;
+    try {
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('lid', sql.VarChar(36), landlordId)
+            .query(`
+                SELECT id, rule_text, target_room_number 
+                FROM house_rules 
+                WHERE landlord_id = @lid 
+                ORDER BY created_at DESC
+            `);
+        res.json(result.recordset);
+    } catch (error) {
+        console.error("Get Rules Error:", error);
+        res.status(500).json({ error: "Failed to fetch rules" });
+    }
+});
+
+// ADD Rule
+app.post('/api/rules', async (req, res) => {
+    const { landlordId, ruleText, roomNumber } = req.body;
+    if (!landlordId || !ruleText) return res.status(400).json({ error: "Missing fields" });
+
+    try {
+        const id = crypto.randomUUID();
+        const pool = await poolPromise;
+        
+        await pool.request()
+            .input('id', sql.VarChar(36), id)
+            .input('lid', sql.VarChar(36), landlordId)
+            .input('text', sql.NVarChar(sql.MAX), ruleText)
+            .input('target', sql.VarChar(50), roomNumber || null) // Handle Scope
+            .query(`
+                INSERT INTO house_rules (id, landlord_id, rule_text, target_room_number)
+                VALUES (@id, @lid, @text, @target)
+            `);
+            
+        res.status(201).json({ message: "Rule added" });
+    } catch (error) {
+        console.error("Add Rule Error:", error);
+        res.status(500).json({ error: "Failed to add rule" });
+    }
+});
+
+// DELETE Rule
+app.delete('/api/rules/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const pool = await poolPromise;
+        await pool.request().input('id', sql.VarChar(36), id)
+            .query('DELETE FROM house_rules WHERE id = @id');
+        res.json({ message: "Rule deleted" });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to delete rule" });
+    }
+});
