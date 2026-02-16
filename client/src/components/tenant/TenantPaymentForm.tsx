@@ -52,11 +52,11 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
             formData.append('remarks', remarks);
             
             // Append the actual binary file
-            // 'proofImage' must match the name used in multer: upload.single('proofImage')
-            formData.append('proofImage', selectedFile);
+            // 'proof' must match the name used in multer: upload.single('proof')
+            formData.append('proof', selectedFile);
 
             // --- Send to Backend ---
-            const response = await fetch('http://localhost:5000/api/payments/submit', {
+            const response = await fetch('http://localhost:5000/api/payments', {
                 method: 'POST',
                 // NOTE: Do NOT set 'Content-Type': 'application/json'
                 // The browser sets the correct multipart boundary automatically.

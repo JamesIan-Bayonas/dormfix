@@ -7,8 +7,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../UserContext';
 
-
-
 // HOOKS
 import { useRooms } from '../../hooks/useRooms';
 import { useMaintenance } from '../../hooks/useMaintenance';
@@ -42,7 +40,6 @@ export const LandlordDashboard: React.FC = () => {
     const { payments, verifyPayment } = usePayments(user?.id);
     const [tenants, setTenants] = useState<TenantData[]>([]);
 
-    
     useEffect(() => {
         if (user?.id) {
             fetch(`http://localhost:5000/api/landlord/tenants/${user.id}`)
@@ -205,7 +202,7 @@ export const LandlordDashboard: React.FC = () => {
                 amount: `₱${p.amount}`, // This text appears in the feed item
                 time: p.datePaid,
                 rawTime: new Date(p.datePaid).getTime(),
-                roomId: findRoomId(p.roomNumber)
+                roomId: findRoomId(p.roomNumber || '')
             });
         });
 

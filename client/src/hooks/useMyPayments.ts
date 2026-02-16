@@ -13,7 +13,7 @@ export const useMyPayments = (tenantId: string | undefined) => {
         }
         setIsLoading(true);
         try {
-            const data = await paymentService.getByTenant(tenantId);
+            const data = await paymentService.getMyPayments(tenantId);
             setPayments(data);
         } catch (error) {
             console.error("Failed to load payment history", error);

@@ -53,8 +53,8 @@ export interface MaintenanceRequest {
 
 export interface Payment {
     id: string;
-    tenantName: string;
-    roomNumber: string;
+    tenantName?: string;
+    roomNumber?: string;
     amount: number;
     paymentType: string;
     datePaid: string;

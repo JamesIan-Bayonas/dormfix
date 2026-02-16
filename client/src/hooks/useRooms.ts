@@ -32,7 +32,7 @@ export const useRooms = (landlordId: string | undefined) => {
     const addRoom = async (roomNumber: string, capacity: number) => {
         if (!landlordId) return;
         try {
-            await roomService.addRoom({ landlordId, roomNumber, capacity });
+            await roomService.addRoom(landlordId, roomNumber, capacity);
             // Refresh the list after successful addition
             await fetchRooms();
             return true; // Indicate success
