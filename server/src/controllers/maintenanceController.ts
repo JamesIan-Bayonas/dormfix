@@ -33,7 +33,7 @@ export const submitMaintenance = async (req: Request, res: Response) => {
         res.status(500).json({ error: "Failed to submit request" });
     }
 };
-
+ 
 // 2. FETCH REQUESTS (Landlord & Tenant Logic)
 export const getMaintenance = async (req: Request, res: Response) => {
     const { userId } = req.params;
@@ -47,11 +47,18 @@ export const getMaintenance = async (req: Request, res: Response) => {
         if (role === 'landlord') {
             query = `
                 SELECT 
-                    mr.id, mr.issue_type as issueType, mr.description, mr.urgency, mr.status, mr.date_submitted as dateSubmitted,
-                    u.name as tenantName, da.room_number as roomNumber
+                    mr.id, 
+                    mr.tenant_id as tenantId,
+                    mr.issue_type as issueType, 
+                    mr.description, 
+                    mr.urgency, 
+                    mr.status, 
+                    mr.date_submitted as dateSubmitted,
+                    ISNULL(u.name, 'Unknown Tenant') as tenantName, 
+                    ISNULL(da.room_number, 'N/A') as roomNumber
                 FROM maintenance_requests mr
-                JOIN dorm_assignments da ON mr.tenant_id = da.tenant_id
-                JOIN users u ON mr.tenant_id = u.id
+                INNER JOIN dorm_assignments da ON mr.tenant_id = da.tenant_id
+                INNER JOIN users u ON mr.tenant_id = u.id
                 WHERE da.landlord_id = @userId
                 ORDER BY 
                     CASE WHEN mr.urgency = 'Emergency' THEN 1 WHEN mr.urgency = 'High' THEN 2 ELSE 3 END,
@@ -60,7 +67,14 @@ export const getMaintenance = async (req: Request, res: Response) => {
         } else {
             query = `
                 SELECT 
-                    id, issue_type as issueType, description, urgency, status, date_submitted as dateSubmitted, admin_remarks as adminRemarks
+                    id, 
+                    tenant_id as tenantId, -- <--- Added here too for consistency
+                    issue_type as issueType, 
+                    description, 
+                    urgency, 
+                    status, 
+                    date_submitted as dateSubmitted, 
+                    admin_remarks as adminRemarks
                 FROM maintenance_requests 
                 WHERE tenant_id = @userId
                 ORDER BY date_submitted DESC

@@ -1,17 +1,29 @@
 import { apiClient } from '../api/client';
-import type { MaintenanceStatus, LandlordMaintenanceRequest } from '../types/types';
+import type { LandlordMaintenanceRequest, MaintenanceRequest as BaseMaintenanceRequest } from '../types/types';
+
+// For backward compatibility, re-export the base type
+export type MaintenanceRequest = BaseMaintenanceRequest;
 
 export const maintenanceService = {
-    // Fetch requests supports both landlords and tenants
+    // 1. GET REQUESTS - Returns different types based on role
     getRequests: async (userId: string, role: 'landlord' | 'tenant'): Promise<LandlordMaintenanceRequest[]> => {
-        return apiClient<LandlordMaintenanceRequest[]>(`/maintenance/${userId}?role=${role}`);
+        const { data } = await apiClient.get<LandlordMaintenanceRequest[]>(`/api/maintenance/${userId}?role=${role}`);
+        return data;
     },
 
-    // Update the status of a request
-    updateStatus: async (id: string, status: MaintenanceStatus): Promise<{ message: string }> => {
-        return apiClient<{ message: string }>(`/maintenance/status/${id}`, {
-            method: 'PATCH',
-            body: JSON.stringify({ status }) // Stringify the body
+    // ... rest of the file stays the same
+    submitRequest: async (tenantId: string, issueType: string, description: string, urgency: string) => {
+        const { data } = await apiClient.post('/api/maintenance', {
+            tenantId,
+            issueType,
+            description,
+            urgency
         });
+        return data;
+    },
+
+    updateStatus: async (id: string, status: string) => {
+        const { data } = await apiClient.patch(`/api/maintenance/status/${id}`, { status });
+        return data;
     }
 };
