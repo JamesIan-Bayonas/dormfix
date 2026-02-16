@@ -1,24 +1,40 @@
 import { apiClient } from '../api/client';
-import type { Room } from '../types/types';
 
-// Define the type for adding a room
-interface AddRoomPayload {
-    landlordId: string;
-    roomNumber: string;
+export interface Room {
+    id: string;
+    room_number: string;
     capacity: number;
+    currentOccupants: number;
+    landlord_id: string;
 }
 
 export const roomService = {
-    // Fetch all rooms for a specific landlord
+    // 1. GET ROOMS
     getRooms: async (landlordId: string): Promise<Room[]> => {
-        return apiClient<Room[]>(`/landlord/rooms/${landlordId}`);
+        // OLD: await apiClient(...)
+        // NEW: await apiClient.get(...)
+        const { data } = await apiClient.get<Room[]>(`/api/landlord/rooms/${landlordId}`);
+        return data;
     },
 
-    // Add a new room
-    addRoom: async (data: AddRoomPayload): Promise<{ message: string }> => {
-        return apiClient<{ message: string }>('/landlord/rooms', {
-            method: 'POST',
-            body: JSON.stringify(data)
+    // 2. ADD ROOM
+    addRoom: async (landlordId: string, roomNumber: string, capacity: number) => {
+        const { data } = await apiClient.post('/api/landlord/rooms', { 
+            landlordId, 
+            roomNumber, 
+            capacity 
         });
+        return data;
+    },
+
+    // 3. ASSIGN TENANT
+    assignTenant: async (tenantId: string, landlordId: string, roomNumber: string, moveInDate: string) => {
+        const { data } = await apiClient.post('/api/landlord/assign', {
+            tenantId,
+            landlordId,
+            roomNumber,
+            moveInDate
+        });
+        return data;
     }
 };
