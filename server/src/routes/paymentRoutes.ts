@@ -1,12 +1,23 @@
-import { Router } from 'express';
-import { submitPayment, getPayments, updatePaymentStatus, getTenantPayments } from '../controllers/paymentController';
-import { upload } from '../middleware/uploadMiddleware';
+import express from 'express';
+import { upload } from '../middleware/uploadMiddleware.ts'; // Import your Multer config
+import { 
+    submitPayment, 
+    getLandlordPayments, 
+    getTenantHistory, 
+    verifyPayment 
+} from '../controllers/paymentController.ts'; // Note .ts extension
 
-const router = Router();
+const router = express.Router();
 
-router.post('/submit', upload.single('proofImage'), submitPayment);
-router.get('/landlord/:landlordId', getPayments);
-router.get('/tenant/:tenantId', getTenantPayments);
-router.patch('/:id/status', updatePaymentStatus);
+// Define routes
+// The middleware 'upload.single("proof")' handles the file logic before the controller runs
+router.post('/', upload.single('proof'), submitPayment);
+
+router.get('/landlord/:landlordId', getLandlordPayments);
+
+router.get('/history/:tenantId', getTenantHistory);
+
+router.patch('/:id/verify', verifyPayment);
+
 
 export default router;
