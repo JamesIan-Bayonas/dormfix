@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { poolPromise } from '../config/dbConfig.ts';
 import sql from 'mssql';
 import crypto from 'crypto';
+import { analyzePaymentImage } from '../services/aiService.ts';
 
 interface MulterFile {
     filename: string;
@@ -11,9 +12,7 @@ interface MulterFile {
     size: number;
 }
 
-// 1. SUBMIT PAYMENT (Tenant)
 export const submitPayment = async (req: Request & { file?: MulterFile }, res: Response) => {
-    // Note: 'req.file' comes from the Multer middleware we will use in the route
     const file = req.file;
     const { tenantId, amount, paymentType, roomNumber, remarks } = req.body;
 
@@ -24,17 +23,37 @@ export const submitPayment = async (req: Request & { file?: MulterFile }, res: R
 
     try {
         const id = crypto.randomUUID();
-        // Construct the file path to save in DB
         const proofImage = `/uploads/${file.filename}`;
         
-        const pool = await poolPromise;
+        //  START AI INTEGRATION SECTION
+        console.log("AI is analyzing payment...");
         
-        // Use a Transaction for safety
+        // Run the AI analysis on the file path
+        // note: file.path is the full path on your disk (e.g., C:/.../uploads/image.jpg)
+        const aiAnalysis = await analyzePaymentImage(file.path);
+        
+        console.log(" AI Result:", aiAnalysis);
+        
+        // Prepare the remarks to save in the database
+        // We take the user's remarks and append the AI's findings
+        let finalRemarks = remarks || '';
+        
+        if (aiAnalysis) {
+            // Append a readable summary of the AI findings
+            const aiNote = `[AI Verified: ${aiAnalysis.is_valid_receipt ? 'YES' : 'NO'}] ` +
+                           `[Extracted Amount: ${aiAnalysis.extracted_amount}] ` +
+                           `[Ref: ${aiAnalysis.reference_number}]`;
+            
+            finalRemarks = finalRemarks ? `${finalRemarks}\n\n${aiNote}` : aiNote;
+        }
+
+        //  END AI INTEGRATION SECTION
+
+        const pool = await poolPromise;
         const transaction = new sql.Transaction(pool);
         await transaction.begin();
 
         try {
-            // Get Landlord ID for this tenant
             const landlordResult = await transaction.request()
                 .input('tid', sql.VarChar(36), tenantId)
                 .query(`SELECT landlord_id FROM dorm_assignments WHERE tenant_id = @tid`);
@@ -50,14 +69,21 @@ export const submitPayment = async (req: Request & { file?: MulterFile }, res: R
                 .input('amount', sql.Decimal(10, 2), amount)
                 .input('type', sql.VarChar(50), paymentType)
                 .input('proof', sql.VarChar(255), proofImage)
-                .input('remarks', sql.NVarChar(sql.MAX), remarks || '')
+                
+                // UPDATED: Use 'finalRemarks' instead of just 'remarks'
+                .input('remarks', sql.NVarChar(sql.MAX), finalRemarks) 
+                
                 .query(`
                     INSERT INTO payments (id, tenant_id, landlord_id, amount, payment_type, proof_image, remarks, status, date_paid, created_at)
                     VALUES (@id, @tid, @lid, @amount, @type, @proof, @remarks, 'Pending', GETDATE(), GETDATE())
                 `);
 
             await transaction.commit();
-            res.status(201).json({ message: "Payment submitted successfully" });
+            res.status(201).json({ 
+                message: "Payment submitted successfully",
+                // Optional: Send AI result back to frontend immediately so user sees it
+                aiAnalysis: aiAnalysis 
+            });
 
         } catch (err: any) {
             await transaction.rollback();
