@@ -29,6 +29,7 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
     };
 
     // Handle Submission (The "Envelope" Logic)
+    // Handle Submission (The "Envelope" Logic)
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
@@ -41,8 +42,6 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
         setMessage(null);
 
         try {
-            // --- CRITICAL STEP: Create FormData ---
-            // We cannot use JSON.stringify here. We must use FormData.
             const formData = new FormData();
             formData.append('tenantId', user.id);
             formData.append('landlordId', landlordId);
@@ -50,30 +49,39 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
             formData.append('paymentType', paymentType);
             formData.append('datePaid', datePaid);
             formData.append('remarks', remarks);
-            
-            // Append the actual binary file
-            // 'proof' must match the name used in multer: upload.single('proof')
             formData.append('proof', selectedFile);
 
-            // --- Send to Backend ---
             const response = await fetch('http://localhost:5000/api/payments', {
                 method: 'POST',
-                // NOTE: Do NOT set 'Content-Type': 'application/json'
-                // The browser sets the correct multipart boundary automatically.
                 body: formData, 
             });
 
             const data = await response.json();
 
             if (response.ok) {
-                setMessage({ type: 'success', text: "Payment submitted successfully!" });
+                // --- 🤖 NEW AI FEEDBACK LOGIC ---
+                // If the backend sent back the AI analysis, show it to the user!
+                let successMsg = "Payment submitted successfully!";
+                if (data.aiAnalysis) {
+                    const status = data.aiAnalysis.is_valid_receipt ? "Verified ✅" : "Flagged for Manual Review ⚠️";
+                    successMsg = `Success! AI Analysis: ${status}. Extracted Amount: ₱${data.aiAnalysis.extracted_amount || 'Unknown'}`;
+                    alert(successMsg); // Use an alert for maximum visibility of the AI result
+                } else {
+                    setMessage({ type: 'success', text: successMsg });
+                }
+
                 // Reset form
                 setAmount('');
                 setRemarks('');
                 setSelectedFile(null);
-                if (onSuccess) onSuccess();
+                
+                // Wait a tiny bit so the user can read the success message/alert before closing
+                setTimeout(() => {
+                    if (onSuccess) onSuccess();
+                }, 1000);
+
             } else {
-                setMessage({ type: 'error', text: data.message || "Upload failed." });
+                setMessage({ type: 'error', text: data.error || "Upload failed." });
             }
 
         } catch (error) {
@@ -194,7 +202,14 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
                     disabled={isSubmitting || !selectedFile || !amount}
                     className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
                 >
-                    {isSubmitting ? 'Uploading...' : 'Submit Payment'}
+                    {isSubmitting ? (
+                        <>
+                            <span className="animate-spin mr-2">⏳</span>
+                            🤖 AI is verifying receipt...
+                        </>
+                    ) : (
+                        'Submit Payment'
+                    )}
                 </button>
             </form>
         </div>
