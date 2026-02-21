@@ -1,17 +1,15 @@
-import fs from 'fs';
 import OpenAI from 'openai';
 import { z } from 'zod';
 import { zodResponseFormat } from 'openai/helpers/zod';
+import Tesseract from 'tesseract.js'; 
 
-// 1. Setup the Connection to Local Ollama
-// Ollama runs on port 11434 by default
+// Setup the Connection to Local Ollama
 const openai = new OpenAI({
     baseURL: 'http://localhost:11434/v1',
-    apiKey: 'ollama', // Required but unused for local
+    apiKey: 'ollama', 
 });
 
-// 2. Define the Output Structure (Schema)
-// We want the AI to return strictly this format
+// Define the Output Structure
 const PaymentAnalysisSchema = z.object({
     is_valid_receipt: z.boolean(),
     extracted_amount: z.number().nullable(),
@@ -23,42 +21,49 @@ const PaymentAnalysisSchema = z.object({
 
 export const analyzePaymentImage = async (filePath: string) => {
     try {
-        // 3. Prepare the Image
-        const imageBuffer = fs.readFileSync(filePath);
-        const base64Image = imageBuffer.toString('base64');
-        const dataUrl = `data:image/jpeg;base64,${base64Image}`;
+        
+        // EXACT TEXT EXTRACTION (OCR)
+        console.log("Step 1: Running OCR to extract raw text...");
+        // Tesseract scans the image and pulls out the exact characters
+        const { data: { text } } = await Tesseract.recognize(filePath, 'eng');
+        
+        console.log("Extracted Text Preview:\n", text.substring(0, 200) + "...\n");
 
-        // 4. Send to AI (Llava or Llama 3.2 Vision)
+        // AI DATA PARSING 
+        console.log("Step 2: Asking AI to organize the text...");
+        
         const response = await openai.chat.completions.create({
-            model: 'llava', // Make sure you ran 'ollama run llava'
+            model: 'llava', // We use the same model, but only feed it text now
+            temperature: 0.0, // Strict, no-guessing mode
             messages: [
                 {
                     role: "system",
-                    content: "You are a payment auditor. Analyze the image to verify if it is a valid proof of payment (like a bank receipt or GCash screenshot). Extract the amount, date, and reference number."
+                    content: `You are a strict data parsing algorithm. I will provide you with raw, messy text scanned from a utility bill, a bank receipt, or an e-wallet screenshot.
+                    
+                    RULES:
+                    1. Extract the exact Amount. Look for "Total Amount Due:", "AMOUNT", or numbers near "PHP".
+                    2. Extract the Date.
+                    3. Extract the Account Number or Reference Number.
+                    4. Do NOT invent data. If a field is completely missing, return null.
+                    5. Ignore background noise text.`
                 },
                 {
                     role: "user",
-                    content: [
-                        { type: "text", text: "Analyze this payment receipt." },
-                        {
-                            type: "image_url",
-                            image_url: { url: dataUrl }
-                        }
-                    ]
+                    // NOTE: We send the raw TEXT here, not the image URL!
+                    content: `Here is the raw text scanned from the document:\n\n${text}` 
                 }
             ],
-            // 5. Enforce JSON Format (Structured Output)
             response_format: zodResponseFormat(PaymentAnalysisSchema, "payment_analysis"),
         });
 
-        // 6. Parse the Result
+        // Parse the Result
         const content = response.choices[0].message.content;
         if (!content) return null;
 
         return JSON.parse(content);
 
     } catch (error) {
-        console.error("AI Analysis Failed:", error);
-        return null; // Fail gracefully if AI is down
+        console.error("Analysis Pipeline Failed:", error);
+        return null; 
     }
 };
