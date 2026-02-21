@@ -1,8 +1,22 @@
 import React, { useState } from 'react';
 import { 
     X, User, CreditCard, Wrench, CheckCircle2, 
-    AlertTriangle, Eye, AlertCircle 
+    AlertTriangle, Eye
 } from 'lucide-react';
+import { BASE_URL } from '../../api/client';
+import type { LandlordMaintenanceRequest } from '../../types/types';
+
+export interface OccupantPaymentStatus {
+    name: string;
+    id: string;
+    joinedDate: string;
+    hasPendingPayment: boolean;
+    paymentId?: string;
+    paymentAmount?: number;
+    paymentDate?: string;
+    paymentProof?: string;
+    status: string;
+}
 
 // Define the shape of data this drawer expects
 export interface RoomDetailData {
@@ -11,9 +25,9 @@ export interface RoomDetailData {
     status: 'vacant' | 'occupied' | 'maintenance';
     currentOccupants: number;
     capacity: number;
-    occupants: any[]; 
-    occupantPaymentStatus: any[];
-    activeIssues: any[];
+    occupants: { id: string; name: string; joinedDate?: string }[];
+    occupantPaymentStatus: OccupantPaymentStatus[];
+    activeIssues: LandlordMaintenanceRequest[];
     hasIssue: boolean;  
     isCritical: boolean;
 }
@@ -133,7 +147,7 @@ export const RoomDetailDrawer: React.FC<RoomDetailDrawerProps> = React.memo(({
                                                         <div className="mt-3 pt-3 border-t border-gray-100 animate-fade-in">
                                                             <div className="aspect-video bg-gray-100 rounded mb-3 overflow-hidden relative">
                                                                 <img 
-                                                                    src={occ.paymentProof ? `http://localhost:5000${occ.paymentProof}` : "https://placehold.co/600x400"} 
+                                                                    src={occ.paymentProof ? `${BASE_URL}${occ.paymentProof}` : "https://placehold.co/600x400"} 
                                                                     alt="Proof" 
                                                                     className="w-full h-full object-cover"
                                                                     onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/600x400?text=Image+Not+Found"; }}
@@ -141,13 +155,13 @@ export const RoomDetailDrawer: React.FC<RoomDetailDrawerProps> = React.memo(({
                                                             </div>
                                                             <div className="flex gap-2">
                                                                 <button 
-                                                                    onClick={() => handleRejectClick(occ.paymentId)} 
+                                                                    onClick={() => handleRejectClick(occ.paymentId!)} 
                                                                     className="flex-1 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded hover:bg-red-100 border border-red-200"
                                                                 >
                                                                     Reject
                                                                 </button>
                                                                 <button 
-                                                                    onClick={() => onVerifyPayment(occ.paymentId, 'Verified')} 
+                                                                    onClick={() => onVerifyPayment(occ.paymentId!, 'Verified')} 
                                                                     className="flex-1 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded hover:bg-emerald-700"
                                                                 >
                                                                     Verify
@@ -156,7 +170,7 @@ export const RoomDetailDrawer: React.FC<RoomDetailDrawerProps> = React.memo(({
                                                             <button onClick={() => setReviewPaymentId(null)} className="w-full mt-2 text-[10px] text-gray-400 hover:text-gray-600">Cancel Review</button>
                                                         </div>
                                                     ) : (
-                                                        <button onClick={() => setReviewPaymentId(occ.paymentId)} className="w-full py-2 bg-violet-600 text-white text-xs font-bold rounded hover:bg-violet-700 transition-colors flex items-center justify-center gap-2">
+                                                        <button onClick={() => setReviewPaymentId(occ.paymentId ?? null)} className="w-full py-2 bg-violet-600 text-white text-xs font-bold rounded hover:bg-violet-700 transition-colors flex items-center justify-center gap-2">
                                                             <Eye size={14}/> Review Receipt
                                                         </button>
                                                     )}

@@ -4,6 +4,7 @@ import { useAuth } from '../UserContext';
 import { MaintenanceList } from '../MaintenanceList';
 import { TenantPaymentForm } from '../tenant/TenantPaymentForm'; 
 import { TenantPaymentHistory } from '../tenant/TenantPaymentHistory';
+import { BASE_URL } from '../../api/client';
 
 // Define definately typed housing details
 interface HousingDetails {
@@ -31,7 +32,7 @@ export const TenantDashboard: React.FC = () => {
     // FETCH HOUSING DETAILS ON LOAD
     useEffect(() => {
         if (user?.id) {
-            fetch(`http://localhost:5000/api/tenant/details/${user.id}`)
+            fetch(`${BASE_URL}/api/tenant/details/${user.id}`)
                 .then(res => res.json())
                 .then(data => {
                     if (!data.error) {
@@ -48,7 +49,7 @@ export const TenantDashboard: React.FC = () => {
         setIsSubmitting(true);
 
         try {
-            const res = await fetch('http://localhost:5000/api/maintenance', {
+            const res = await fetch(`${BASE_URL}/api/maintenance`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

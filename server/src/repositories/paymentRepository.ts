@@ -1,8 +1,19 @@
 import { sql, poolPromise } from '../config/dbConfig';
 
+interface PaymentData {
+    paymentId: string;
+    tenantId: string;
+    landlordId: string;
+    amount: number;
+    paymentType: string;
+    proofImage: string;
+    datePaid: Date | string;
+    remarks?: string;
+}
+
 export const paymentRepository = {
     // 1. Create a new payment
-    create: async (paymentData: any) => {
+    create: async (paymentData: PaymentData) => {
         const pool = await poolPromise;
         const query = `
             INSERT INTO payments 

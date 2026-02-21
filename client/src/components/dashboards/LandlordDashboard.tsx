@@ -6,6 +6,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../UserContext';
+import { apiClient } from '../../api/client';
 
 // HOOKS
 import { useRooms } from '../../hooks/useRooms';
@@ -28,6 +29,19 @@ interface TenantData {
     isApproved: boolean;
     joinedDate: string;
 }
+
+interface ActivityFeedItem {
+    id: string;
+    type: 'payment' | 'issue' | 'tenant';
+    message: string;
+    sub: string;
+    time: string;
+    rawTime: number;
+    roomId?: string | null;
+    amount?: string;
+    priority?: string;
+}
+
 type DashboardView = 'home' | 'maintenance' | 'payments' | 'tenants' | 'rooms' | 'rules';
 
 export const LandlordDashboard: React.FC = () => {
@@ -42,16 +56,15 @@ export const LandlordDashboard: React.FC = () => {
 
     useEffect(() => {
         if (user?.id) {
-            fetch(`http://localhost:5000/api/landlord/tenants/${user.id}`)
-                .then(res => res.json())
-                .then(data => {
-                    const formatted = data.map((t: any) => ({
+            apiClient.get<TenantData[]>(`/api/landlord/tenants/${user.id}`)
+                .then(({ data }) => {
+                    const formatted = data.map((t) => ({
                         id: t.id,
                         name: t.name,
                         email: t.email,
                         roomNumber: t.roomNumber,
                         isApproved: t.isApproved,
-                        joinedDate: t.createdAt ? new Date(t.createdAt).toISOString() : new Date().toISOString()
+                        joinedDate: t.joinedDate ? new Date(t.joinedDate).toISOString() : new Date().toISOString()
                     }));
                     setTenants(formatted);  
                 })
@@ -70,10 +83,6 @@ export const LandlordDashboard: React.FC = () => {
         const now = new Date();
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
-        
-        // DEBUGGER: Check if we are receiving data
-        console.log("--- DASHBOARD REVENUE CALC ---");
-        console.log(`Total Raw Payments: ${payments.length}`);
 
         const thisMonthPayments = payments.filter(p => {
             const pDate = new Date(p.datePaid);
@@ -81,8 +90,6 @@ export const LandlordDashboard: React.FC = () => {
             const isSameYear = pDate.getFullYear() === currentYear;
             return isSameMonth && isSameYear;
         });
-
-        console.log(`Payments identified for this month: ${thisMonthPayments.length}`);
 
         //  Verified Revenue
         const verifiedRevenue = thisMonthPayments
@@ -155,7 +162,7 @@ export const LandlordDashboard: React.FC = () => {
                 activeIssues: roomRequests,
                 hasIssue: roomRequests.length > 0,
                 isCritical: !!criticalIssue,
-                status: (room.currentOccupants === 0 ? 'vacant' : (roomRequests.length > 0 ? 'maintenance' : 'occupied')) as any // Type cast safe here
+                status: (room.currentOccupants === 0 ? 'vacant' : (roomRequests.length > 0 ? 'maintenance' : 'occupied')) as 'vacant' | 'occupied' | 'maintenance'
             };
         });
     }, [rooms, tenants, requests, payments]);
@@ -188,7 +195,7 @@ export const LandlordDashboard: React.FC = () => {
 
     // 4. ACTIVITY FEED
     const activityFeed = useMemo(() => {
-        const feed: any[] = [];
+        const feed: ActivityFeedItem[] = [];
         const findRoomId = (num: string) => rooms.find(r => r.room_number === num)?.id;
 
         // Payments 
@@ -278,7 +285,7 @@ export const LandlordDashboard: React.FC = () => {
                     <button onClick={() => setCurrentView('payments')} className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-colors ${currentView === 'payments' ? 'bg-emerald-900 text-white shadow-lg' : 'text-emerald-100/70 hover:bg-emerald-900/50'}`}>
                         <CreditCard size={20} /><span className="font-medium">Payments</span>
                     </button>
-                    <button onClick={() => setCurrentView('rules' as any)} className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-colors ${currentView === 'rules' as any ? 'bg-emerald-900 text-white shadow-lg' : 'text-emerald-100/70 hover:bg-emerald-900/50'}`}>
+                    <button onClick={() => setCurrentView('rules')} className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-colors ${currentView === 'rules' ? 'bg-emerald-900 text-white shadow-lg' : 'text-emerald-100/70 hover:bg-emerald-900/50'}`}>
                         <ShieldCheck size={20} /><span className="font-medium">House Rules</span>
                     </button>
                 </nav>

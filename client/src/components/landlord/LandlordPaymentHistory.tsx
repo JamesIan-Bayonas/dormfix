@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { CheckCircle, XCircle, Eye, DollarSign, Calendar, MessageSquare } from 'lucide-react';
 import { useAuth } from '../UserContext';
 import { usePayments } from '../../hooks/usePayments';
+import { BASE_URL } from '../../api/client';
 
 interface Props {
     onBack: () => void;
@@ -86,7 +87,7 @@ export const LandlordPaymentHistory: React.FC<Props> = ({ onBack }) => {
                                                 </td>
                                                 <td className="px-6 py-4 text-right flex justify-end gap-2">
                                                     <button 
-                                                        onClick={() => setViewImage(`http://localhost:5000${payment.proofImage}`)}
+                                                        onClick={() => setViewImage(`${BASE_URL}${payment.proofImage}`)}
                                                         className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg transition-colors" title="View Proof"
                                                     >
                                                         <Eye size={18} />

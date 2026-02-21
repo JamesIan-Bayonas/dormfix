@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, DollarSign, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../UserContext';
+import { BASE_URL } from '../../api/client';
 
 interface PaymentFormProps {
     landlordId: string; // Type this for tenant needs to know who to pay
@@ -51,7 +52,7 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
             formData.append('remarks', remarks);
             formData.append('proof', selectedFile);
 
-            const response = await fetch('http://localhost:5000/api/payments', {
+            const response = await fetch(`${BASE_URL}/api/payments`, {
                 method: 'POST',
                 body: formData, 
             });

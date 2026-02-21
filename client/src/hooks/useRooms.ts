@@ -15,9 +15,9 @@ export const useRooms = (landlordId: string | undefined) => {
             const data = await roomService.getRooms(landlordId);
             setRooms(data);
             setError(null);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            setError(err.message || "Failed to load rooms");
+            setError(err instanceof Error ? err.message : "Failed to load rooms");
         } finally {
             setIsLoading(false);
         }
@@ -36,8 +36,8 @@ export const useRooms = (landlordId: string | undefined) => {
             // Refresh the list after successful addition
             await fetchRooms();
             return true; // Indicate success
-        } catch (err: any) {
-            alert(err.message);
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : "Failed to add room");
             return false; // Indicate failure
         }
     };

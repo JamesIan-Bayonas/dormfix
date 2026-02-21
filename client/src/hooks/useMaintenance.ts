@@ -41,7 +41,6 @@ export const useMaintenance = (userId: string | undefined, role: UserRole) => {
         try {
             // Send to API
             await maintenanceService.updateStatus(id, newStatus);
-            console.log("Status saved successfully");
         } catch (error) {
             console.error("Save failed:", error);
             // Revert if API fails

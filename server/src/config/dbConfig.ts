@@ -40,7 +40,7 @@ export const poolPromise = new sql.ConnectionPool(sqlConfig)
         console.error('Error Code:', err.code);
         console.error('Error Message:', err.message);
         console.log(`Server: ${sqlConfig.server}`);
-        process.exit(1);``
+        process.exit(1);
     });
 
 export { sql };

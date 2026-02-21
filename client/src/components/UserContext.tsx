@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, type ReactNode } from 'react';
 import type { User, AuthContextType } from '../types/types';
+import { BASE_URL } from '../api/client';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined); 
 
@@ -24,7 +25,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setError(null);
         
         try {
-            const response = await fetch('http://localhost:5000/api/login', {
+            const response = await fetch(`${BASE_URL}/api/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

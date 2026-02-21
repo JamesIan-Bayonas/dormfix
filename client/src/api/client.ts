@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:5000'; 
+export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // Helper to handle the actual fetch logic
 const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<{ data: T }> => {
@@ -9,7 +9,7 @@ const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<
 
     // 1. Auto-detect JSON vs FormData
     if (body && !(body instanceof FormData)) { 
-        (configHeaders as any)['Content-Type'] = 'application/json';
+        (configHeaders as Record<string, string>)['Content-Type'] = 'application/json';
         configBody = JSON.stringify(body);
     } 
 
@@ -35,14 +35,14 @@ const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<
 export const apiClient = {
     get: <T>(url: string) => request<T>(url, { method: 'GET' }),
     
-    post: <T>(url: string, body?: any, options: RequestInit = {}) => 
-        request<T>(url, { method: 'POST', body, ...options }),
+    post: <T, B extends object = Record<string, unknown>>(url: string, body?: B, options: RequestInit = {}) => 
+        request<T>(url, { method: 'POST', body: body as unknown as BodyInit, ...options }),
     
-    put: <T>(url: string, body?: any, options: RequestInit = {}) => 
-        request<T>(url, { method: 'PUT', body, ...options }),
+    put: <T, B extends object = Record<string, unknown>>(url: string, body?: B, options: RequestInit = {}) => 
+        request<T>(url, { method: 'PUT', body: body as unknown as BodyInit, ...options }),
     
-    patch: <T>(url: string, body?: any, options: RequestInit = {}) => 
-        request<T>(url, { method: 'PATCH', body, ...options }),
+    patch: <T, B extends object = Record<string, unknown>>(url: string, body?: B, options: RequestInit = {}) => 
+        request<T>(url, { method: 'PATCH', body: body as unknown as BodyInit, ...options }),
     
     delete: <T>(url: string, options: RequestInit = {}) => 
         request<T>(url, { method: 'DELETE', ...options }),

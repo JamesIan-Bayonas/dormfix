@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, CheckCircle, XCircle, Home, AlertCircle, UserPlus } from 'lucide-react';
 import { useAuth } from '../UserContext';
+import { BASE_URL } from '../../api/client';
 
 interface Tenant {
     id: string;
@@ -37,12 +38,12 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
     }, [user?.id]);
 
     const refreshData = () => {
-        fetch(`http://localhost:5000/api/landlord/tenants/${user?.id}`)
+        fetch(`${BASE_URL}/api/landlord/tenants/${user?.id}`)
             .then(res => res.json())
             .then(data => setTenants(data))
             .catch(err => console.error("Failed to load tenants", err));
 
-        fetch(`http://localhost:5000/api/landlord/rooms/${user?.id}`)
+        fetch(`${BASE_URL}/api/landlord/rooms/${user?.id}`)
             .then(res => res.json())
             .then(setRooms)
             .catch(err => console.error("Failed to load rooms", err));
@@ -50,7 +51,7 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
 
     const handleStatusUpdate = async (tenantId: string, status: 'approved' | 'rejected') => {
         try {
-            const res = await fetch(`http://localhost:5000/api/users/${tenantId}/status`, {
+            const res = await fetch(`${BASE_URL}/api/users/${tenantId}/status`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ isApproved: status === 'approved' })
@@ -66,7 +67,7 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
         if (!selectedTenant || !selectedRoom) return;
 
         try {
-            const res = await fetch('http://localhost:5000/api/assign-room', {
+            const res = await fetch(`${BASE_URL}/api/assign-room`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

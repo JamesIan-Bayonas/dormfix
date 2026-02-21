@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Clock, CheckCircle, AlertTriangle, XCircle, FileText } from 'lucide-react';
 import { useAuth } from './UserContext';
 import type { MaintenanceRequest, MaintenanceStatus } from '../types/types';
+import { BASE_URL } from '../api/client';
 
 // Helper to get status badge color and icon
 const getStatusBadge = (status: MaintenanceStatus) => {
@@ -28,7 +29,7 @@ export const MaintenanceList: React.FC = () => {
     // FETCH REAL DATA
     useEffect(() => {
         if (user?.id) {
-            fetch(`http://localhost:5000/api/maintenance/${user.id}`)
+            fetch(`${BASE_URL}/api/maintenance/${user.id}`)
                 .then(res => {
                     if (!res.ok) throw new Error("Failed to fetch");
                     return res.json();

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Home, Mail, Lock, Key, AlertCircle } from 'lucide-react';
+import { BASE_URL } from '../../api/client';
 
 interface RegisterProps {
     onToggleLogin: () => void;
@@ -22,7 +23,7 @@ const Register: React.FC<RegisterProps> = ({ onToggleLogin }) => {
         setError(null);
 
         try {
-            const response = await fetch('http://localhost:5000/api/register', {
+            const response = await fetch(`${BASE_URL}/api/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
@@ -35,8 +36,8 @@ const Register: React.FC<RegisterProps> = ({ onToggleLogin }) => {
             alert('Registration Successful! Please login.');
             onToggleLogin(); // Switch back to login view
 
-        } catch (err: any) {
-            setError(err.message || 'An unexpected error occurred.');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
         } finally {
             setIsLoading(false);
         }

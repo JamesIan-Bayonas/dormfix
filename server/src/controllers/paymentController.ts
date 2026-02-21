@@ -85,7 +85,7 @@ export const submitPayment = async (req: Request & { file?: MulterFile }, res: R
                 aiAnalysis: aiAnalysis 
             });
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             await transaction.rollback();
             throw err;
         }
