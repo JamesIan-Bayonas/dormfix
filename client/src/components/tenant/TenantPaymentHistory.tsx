@@ -1,11 +1,38 @@
 import React, { useState } from 'react';
-import { Clock, CheckCircle, XCircle, Eye } from 'lucide-react'; // Added 'Eye' icon
+import { Clock, CheckCircle, XCircle, Eye } from 'lucide-react';
 import { useAuth } from '../UserContext';
 import { useMyPayments } from '../../hooks/useMyPayments';
 
 interface Props {
     onBack: () => void;
 }
+
+// 1. Parses the AI string
+
+const parseRemarks = (rawRemarks?: string) => {
+    if (!rawRemarks) return { userRemarks: '', aiData: null };
+
+    if (!rawRemarks.includes('[AI Verified:')) {
+        return { userRemarks: rawRemarks, aiData: null };
+    }
+
+    const parts = rawRemarks.split('[AI Verified:');
+    const userRemarks = parts[0].trim();
+    const aiString = '[AI Verified:' + parts[1];
+
+    const isVerified = aiString.includes('[AI Verified: YES]');
+    const amountMatch = aiString.match(/\[Extracted Amount: (.*?)\]/);
+    const refMatch = aiString.match(/\[Ref: (.*?)\]/);
+
+    return {
+        userRemarks,
+        aiData: {
+            isVerified,
+            amount: amountMatch ? amountMatch[1] : 'N/A',
+            ref: refMatch ? refMatch[1] : 'N/A'
+        }
+    };
+};
 
 export const TenantPaymentHistory: React.FC<Props> = ({ onBack }) => {
     const { user } = useAuth();
@@ -35,14 +62,17 @@ export const TenantPaymentHistory: React.FC<Props> = ({ onBack }) => {
                                 <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Date</th>
                                 <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Type</th>
                                 <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Amount</th>
+                    
+                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Remarks / AI Notes</th>
+                                
                                 <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Status</th>
-                                <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">Proof</th> {/* New Column */}
+                                <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">Proof</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200">
                             {payments.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-slate-500 italic">
+                                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500 italic">
                                         No payments found.
                                     </td>
                                 </tr>
@@ -58,6 +88,47 @@ export const TenantPaymentHistory: React.FC<Props> = ({ onBack }) => {
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-emerald-600">
                                             ₱{payment.amount.toFixed(2)}
                                         </td>
+
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            {(() => {
+                                                const { userRemarks, aiData } = parseRemarks(payment.remarks);
+
+                                                return (
+                                                    <div className="flex flex-col gap-2">
+                                                        {userRemarks && (
+                                                            <span className="text-sm text-slate-700 whitespace-normal max-w-xs">{userRemarks}</span>
+                                                        )}
+                                                        
+                                                        {aiData && (
+                                                            <div className="flex flex-col gap-1 mt-1 p-2 bg-slate-50 rounded border border-slate-200 w-max">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    {aiData.isVerified ? (
+                                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                                                        AI Verified
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                                                                        AI Flagged
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="text-[11px] text-slate-500">
+                                                                    Scanned Amount: <span className="font-semibold">₱{aiData.amount}</span>
+                                                                </div>
+                                                                {aiData.ref !== 'null' && aiData.ref !== 'N/A' && (
+                                                                    <div className="text-[11px] text-slate-500">
+                                                                        Ref: <span className="font-mono">{aiData.ref}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        
+                                                        {!userRemarks && !aiData && <span className="text-slate-400 text-xs italic">No remarks</span>}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </td>
+                                        
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             {payment.status === 'Pending' && (
                                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 gap-1">
@@ -104,7 +175,7 @@ export const TenantPaymentHistory: React.FC<Props> = ({ onBack }) => {
                         <img 
                             src={viewImage} 
                             alt="Payment Proof" 
-                            className="max-w-full max-h-[90vh] rounded-lg shadow-2xl border-4 border-white" 
+                            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl border-4 border-white" 
                         />
                         <button 
                             className="absolute -top-10 right-0 text-white hover:text-gray-300 font-bold"
