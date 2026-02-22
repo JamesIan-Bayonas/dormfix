@@ -41,7 +41,8 @@ export const analyzePaymentImage = async (filePath: string) => {
                     content: `You are a strict data parsing algorithm. I will provide you with raw, messy text scanned from a utility bill, a bank receipt, or an e-wallet screenshot.
                     
                     RULES:
-                    1. Extract the exact Amount. Look for "Total Amount Due:", "AMOUNT", or numbers near "PHP".
+                    1. Extract the exact Amount. Look for "Total Amount Due:", "AMOUNT", or numbers near "PHP" or "$". 
+                    CRITICAL: You must remove all commas from the number before returning it. For example, if you see "18,200.00", return the number 18200.00. Do NOT return 18.2.
                     2. Extract the Date.
                     3. Extract the Account Number or Reference Number.
                     4. Do NOT invent data. If a field is completely missing, return null.
