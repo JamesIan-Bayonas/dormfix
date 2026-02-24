@@ -20,16 +20,23 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
     // UI State
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+    
+    // --- 🛡️ NEW: ZERO TRUST SECURITY STATE ---
+    const [paymentStatus, setPaymentStatus] = useState<'Idle' | 'Verified' | 'Anomalous' | 'Rejected'>('Idle');
+    const [alertMessages, setAlertMessages] = useState<string[]>([]);
 
     // Handle File Selection
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             setSelectedFile(e.target.files[0]);
+            // Reset the security status when a new file is chosen
+            setPaymentStatus('Idle');
+            setAlertMessages([]);
+            setMessage(null);
         }
     };
 
-    // Handle Submission (The "Envelope" Logic)
-    // Handle Submission (The "Envelope" Logic)
+    // Handle Submission
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
@@ -40,6 +47,7 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
 
         setIsSubmitting(true);
         setMessage(null);
+        setPaymentStatus('Idle'); // Reset before new scan
 
         try {
             const formData = new FormData();
@@ -59,29 +67,33 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
             const data = await response.json();
 
             if (response.ok) {
-                // --- 🤖 NEW AI FEEDBACK LOGIC ---
-                // If the backend sent back the AI analysis, show it to the user!
-                let successMsg = "Payment submitted successfully!";
-                if (data.aiAnalysis) {
-                    const status = data.aiAnalysis.is_valid_receipt ? "Verified ✅" : "Flagged for Manual Review ⚠️";
-                    successMsg = `Success! AI Analysis: ${status}. Extracted Amount: ₱${data.aiAnalysis.extracted_amount || 'Unknown'}`;
-                    alert(successMsg); // Use an alert for maximum visibility of the AI result
-                } else {
-                    setMessage({ type: 'success', text: successMsg });
-                }
-
-                // Reset form
-                setAmount('');
-                setRemarks('');
-                setSelectedFile(null);
+                // --- 🛡️ NEW: INTERCEPTING THE AI AUDIT VERDICT ---
+                // We extract the exact status and warnings sent by your paymentController
+                const finalStatus = data.status || 'Verified'; // Fallback just in case
+                const systemWarnings = data.warnings || [];
                 
-                // Wait a tiny bit so the user can read the success message/alert before closing
-                setTimeout(() => {
-                    if (onSuccess) onSuccess();
-                }, 1000);
+                setPaymentStatus(finalStatus);
+                setAlertMessages(systemWarnings);
+
+                // If it's a completely clean, perfect payment, we show the success message
+                if (finalStatus === 'Verified') {
+                    setMessage({ type: 'success', text: "Payment submitted and verified by AI successfully!" });
+                    
+                    // Reset form fields
+                    setAmount('');
+                    setRemarks('');
+                    setSelectedFile(null);
+                    
+                    // Wait so the user can see the green success message before closing the modal
+                    setTimeout(() => {
+                        if (onSuccess) onSuccess();
+                    }, 2000);
+                } 
+                // If it is anomalous, we DO NOT close the modal immediately. 
+                // We leave it open so the tenant is forced to read the red warning boxes.
 
             } else {
-                setMessage({ type: 'error', text: data.error || "Upload failed." });
+                setMessage({ type: 'error', text: data.error || data.message || "Upload failed." });
             }
 
         } catch (error) {
@@ -98,12 +110,53 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
                 <DollarSign className="text-emerald-600" /> Make a Payment
             </h2>
 
-            {message && (
+            {/* General System Messages */}
+            {message && paymentStatus === 'Idle' && (
                 <div className={`p-3 rounded-lg mb-4 flex items-center gap-2 text-sm font-medium ${
                     message.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
                 }`}>
                     {message.type === 'success' ? <CheckCircle size={16}/> : <AlertCircle size={16}/>}
                     {message.text}
+                </div>
+            )}
+
+            {/* --- 🛡️ NEW: ZERO TRUST UI FEEDBACK --- */}
+            {paymentStatus === 'Verified' && (
+                <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg mb-4 flex flex-col gap-1">
+                    <div className="flex items-center gap-2 text-emerald-700 font-bold">
+                        <CheckCircle size={18} /> Payment Verified!
+                    </div>
+                    <p className="text-sm text-emerald-600">
+                        Our AI confirmed your receipt matches your declared amount. It is now pending final landlord clearance.
+                    </p>
+                </div>
+            )}
+
+            {paymentStatus === 'Anomalous' && (
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg mb-4">
+                    <h4 className="text-red-700 font-bold flex items-center gap-2">
+                        <AlertCircle size={18} /> Action Required
+                    </h4>
+                    <p className="text-sm text-red-600 mt-1 mb-2">
+                        Our system scanned a valid receipt, but found the following mismatches against our records:
+                    </p>
+                    <ul className="list-disc ml-5 mb-2">
+                        {alertMessages.map((msg, index) => (
+                            <li key={index} className="text-red-600 text-sm font-semibold">{msg}</li>
+                        ))}
+                    </ul>
+                    <p className="text-xs text-red-500 italic mt-2">
+                        Your payment has been logged but flagged for manual review by the landlord. If this was a mistake, please cancel and re-upload the correct receipt.
+                    </p>
+                </div>
+            )}
+
+            {paymentStatus === 'Rejected' && (
+                <div className="bg-slate-100 border-l-4 border-slate-600 p-4 rounded-lg mb-4">
+                    <h4 className="text-slate-800 font-bold flex items-center gap-2">
+                        <AlertCircle size={18} /> Payment Rejected
+                    </h4>
+                    <p className="text-sm text-slate-600 mt-1">{alertMessages[0] || "Fraud detection triggered. This receipt cannot be used."}</p>
                 </div>
             )}
 
@@ -205,7 +258,7 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
                     {isSubmitting ? (
                         <>
                             <span className="animate-spin mr-2">⏳</span>
-                            🤖 AI is verifying receipt...
+                            🤖 AI is auditing receipt...
                         </>
                     ) : (
                         'Submit Payment'
