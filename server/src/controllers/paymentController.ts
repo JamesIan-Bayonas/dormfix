@@ -12,9 +12,9 @@ interface MulterFile {
     size: number;
 }
 
-export const submitPayment = async (req: Request & { file?: MulterFile }, res: Response) => {
+export const processTenantPayment = async (req: Request & { file?: MulterFile }, res: Response) => {
     const file = req.file;
-    const { tenantId, amount, paymentType, roomNumber, remarks } = req.body;
+    const { tenantId, amount, paymentType, remarks } = req.body;
 
     if (!file || !tenantId || !amount || !paymentType) {
          res.status(400).json({ error: "Missing required fields or proof of payment" });
@@ -25,63 +25,82 @@ export const submitPayment = async (req: Request & { file?: MulterFile }, res: R
         const id = crypto.randomUUID();
         const proofImage = `/uploads/${file.filename}`;
         
-        //  START AI INTEGRATION SECTION
-        console.log("AI is analyzing payment...");
+        const pool = await poolPromise;
+
+        // 1. Get Landlord ID
+        const landlordResult = await pool.request()
+            .input('tid', sql.VarChar(36), tenantId)
+            .query(`SELECT landlord_id FROM dorm_assignments WHERE tenant_id = @tid`);
         
-        // Run the AI analysis on the file path
-        // note: file.path is the full path on your disk (e.g., C:/.../uploads/image.jpg)
+        const landlordId = landlordResult.recordset[0]?.landlord_id;
+        if (!landlordId) throw new Error("Tenant not assigned to a landlord");
+
+        // 2. RUN AI ANALYSIS
+        console.log("AI is analyzing payment...");
         const aiAnalysis = await analyzePaymentImage(file.path);
         
-        console.log(" AI Result:", aiAnalysis);
-        
-        // Prepare the remarks to save in the database
-        // We take the user's remarks and append the AI's findings
-        let finalRemarks = remarks || '';
-        
+        // 3. ZERO TRUST ANOMALY LOGIC
+        let finalStatus = 'Verified'; 
+        let anomalyFlags: string[] = [];
+        const expectedAmount = parseFloat(amount); // The amount the tenant typed in the form
+
         if (aiAnalysis) {
-            // Append a readable summary of the AI findings
-            const aiNote = `[AI Verified: ${aiAnalysis.is_valid_receipt ? 'YES' : 'NO'}] ` +
-                           `[Extracted Amount: ${aiAnalysis.extracted_amount}] ` +
-                           `[Ref: ${aiAnalysis.reference_number}]`;
-            
-            finalRemarks = finalRemarks ? `${finalRemarks}\n\n${aiNote}` : aiNote;
+            // DEFENSE A: Date Check (Older than 7 days?)
+            if (aiAnalysis.extracted_date) {
+                const receiptDate = new Date(aiAnalysis.extracted_date);
+                const currentDate = new Date();
+                const diffInDays = (currentDate.getTime() - receiptDate.getTime()) / (1000 * 3600 * 24);
+                
+                if (diffInDays > 7) {
+                    finalStatus = 'Anomalous';
+                    anomalyFlags.push(`DATE WARNING: Receipt is ${Math.round(diffInDays)} days old.`);
+                }
+            }
+
+            // DEFENSE B: Amount Check (Does the AI reading match what the tenant typed?)
+            if (aiAnalysis.extracted_amount && aiAnalysis.extracted_amount !== expectedAmount) {
+                finalStatus = 'Anomalous';
+                anomalyFlags.push(`AMOUNT WARNING: Form says ₱${expectedAmount}, but AI read ₱${aiAnalysis.extracted_amount}.`);
+            }
+        } else {
+            finalStatus = 'Anomalous';
+            anomalyFlags.push("SYSTEM WARNING: AI failed to read the document clearly.");
         }
 
-        //  END AI INTEGRATION SECTION
+        // Format the notes for the database so the landlord can see exactly what happened
+        const combinedRemarks = `[AI Audit: ${finalStatus}]\n` +
+                                `[AI Extracted: ₱${aiAnalysis?.extracted_amount || 'N/A'}]\n` +
+                                `[Ref No: ${aiAnalysis?.reference_number || 'N/A'}]\n` +
+                                `[Warnings: ${anomalyFlags.length > 0 ? anomalyFlags.join(' | ') : 'None'}]\n\n` +
+                                `Tenant Remarks: ${remarks || 'None'}`;
 
-        const pool = await poolPromise;
+        // 4. SAVE TO MSSQL DATABASE
         const transaction = new sql.Transaction(pool);
         await transaction.begin();
 
         try {
-            const landlordResult = await transaction.request()
-                .input('tid', sql.VarChar(36), tenantId)
-                .query(`SELECT landlord_id FROM dorm_assignments WHERE tenant_id = @tid`);
-            
-            const landlordId = landlordResult.recordset[0]?.landlord_id;
-
-            if (!landlordId) throw new Error("Tenant not assigned to a landlord");
-
             await transaction.request()
                 .input('id', sql.VarChar(36), id)
                 .input('tid', sql.VarChar(36), tenantId)
                 .input('lid', sql.VarChar(36), landlordId)
-                .input('amount', sql.Decimal(10, 2), amount)
+                .input('amount', sql.Decimal(10, 2), expectedAmount)
                 .input('type', sql.VarChar(50), paymentType)
                 .input('proof', sql.VarChar(255), proofImage)
-                
-                // UPDATED: Use 'finalRemarks' instead of just 'remarks'
-                .input('remarks', sql.NVarChar(sql.MAX), finalRemarks) 
-                
+                .input('remarks', sql.NVarChar(sql.MAX), combinedRemarks)
+                // If Verified, set to 'Pending' landlord approval. If Anomalous, flag it directly.
+                .input('status', sql.VarChar(20), finalStatus === 'Verified' ? 'Pending' : 'Anomalous') 
                 .query(`
                     INSERT INTO payments (id, tenant_id, landlord_id, amount, payment_type, proof_image, remarks, status, date_paid, created_at)
-                    VALUES (@id, @tid, @lid, @amount, @type, @proof, @remarks, 'Pending', GETDATE(), GETDATE())
+                    VALUES (@id, @tid, @lid, @amount, @type, @proof, @remarks, @status, GETDATE(), GETDATE())
                 `);
 
             await transaction.commit();
+            
+            // 5. SEND VERDICT TO REACT FRONTEND
             res.status(201).json({ 
                 message: "Payment submitted successfully",
-                // Optional: Send AI result back to frontend immediately so user sees it
+                status: finalStatus,
+                warnings: anomalyFlags,
                 aiAnalysis: aiAnalysis 
             });
 
@@ -145,7 +164,7 @@ export const getTenantHistory = async (req: Request, res: Response) => {
 // 4. VERIFY PAYMENT (Landlord Action)
 export const verifyPayment = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { status, reason } = req.body; // Status: 'Verified' or 'Rejected'
+    const { status, reason } = req.body; 
 
     try {
         const pool = await poolPromise;
