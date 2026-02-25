@@ -1,18 +1,22 @@
 import express from 'express';
 import { upload } from '../middleware/uploadMiddleware.ts'; // Import your Multer config
 import { 
-    submitPayment, 
+    processTenantPayment,
     getLandlordPayments, 
     getTenantHistory, 
     verifyPayment 
-} from '../controllers/paymentController.ts'; // Note .ts extension
+} from '../controllers/paymentController.ts'; 
 
 const router = express.Router();
 
 // Define routes
-// The middleware 'upload.single("proof")' handles the file logic before the controller runs
-router.post('/', upload.single('proof'), submitPayment);
 
+// AI & ZERO TRUST ROUTE
+// 1. upload.single('proof') -> Multer grabs the GCash image and saves it to the /uploads folder.
+// 2. processTenantPayment -> Runs Tesseract OCR, asks Ollama for structured data, audits it against the DB, and saves the verdict.
+router.post('/', upload.single('proof'), processTenantPayment);
+
+// --- STANDARD DASHBOARD ROUTES ---
 router.get('/landlord/:landlordId', getLandlordPayments);
 
 router.get('/history/:tenantId', getTenantHistory);
