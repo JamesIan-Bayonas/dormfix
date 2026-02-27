@@ -1,6 +1,6 @@
 // LandlordPaymentHistory.tsx
 import React, { useState } from 'react';
-import { CheckCircle, XCircle, Eye, DollarSign, Calendar, MessageSquare } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, DollarSign, Calendar, MessageSquare, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../UserContext';
 import { usePayments } from '../../hooks/usePayments';
 
@@ -78,11 +78,21 @@ export const LandlordPaymentHistory: React.FC<Props> = ({ onBack }) => {
                                                         <span className="text-xs text-slate-400 italic">N/A</span>
                                                     )}
                                                 </td>
-
                                                 <td className="px-6 py-4">
-                                                    {payment.status === 'Pending' && <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-bold">Pending</span>}
-                                                    {payment.status === 'Verified' && <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-bold">Verified</span>}
-                                                    {payment.status === 'Rejected' && <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-bold">Rejected</span>}
+                                                    {payment.status === 'Pending' && (
+                                                        <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-bold">Pending (AI Cleared)</span>
+                                                    )}
+                                                    {payment.status === 'Anomalous' && (
+                                                        <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1 w-max">
+                                                            <AlertTriangle size={12} /> Anomalous
+                                                        </span>
+                                                    )}
+                                                    {payment.status === 'Verified' && (
+                                                        <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-bold">Verified</span>
+                                                    )}
+                                                    {payment.status === 'Rejected' && (
+                                                        <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-bold">Rejected</span>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 text-right flex justify-end gap-2">
                                                     <button 
@@ -92,7 +102,8 @@ export const LandlordPaymentHistory: React.FC<Props> = ({ onBack }) => {
                                                         <Eye size={18} />
                                                     </button>
                                                     
-                                                    {payment.status === 'Pending' && (
+                                                    {/* The landlord should be able to verify/reject whether it's Pending OR Anomalous */}
+                                                    {(payment.status === 'Pending' || payment.status === 'Anomalous') && (
                                                         <>
                                                             <button onClick={() => verifyPayment(payment.id, 'Verified')} className="text-green-600 hover:bg-green-50 p-2 rounded-lg transition-colors" title="Approve">
                                                                 <CheckCircle size={18} />
