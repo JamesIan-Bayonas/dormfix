@@ -3,8 +3,13 @@ import { poolPromise } from '../config/dbConfig.ts';
 import sql from 'mssql';
 import crypto from 'crypto';
 
+// 🛡️ MUST ADD THESE IMPORTS
+import { analyzeMaintenanceRequest } from '../services/aiService.ts';
+import { notificationService } from '../services/notificationService.ts';
+
 // 1. SUBMIT REQUEST
 export const submitMaintenance = async (req: Request, res: Response) => {
+    // We extract 'description' from the request body
     const { tenantId, issueType, description, urgency } = req.body;
 
     if (!tenantId || !issueType || !description || !urgency) {
@@ -15,19 +20,53 @@ export const submitMaintenance = async (req: Request, res: Response) => {
     try {
         const id = crypto.randomUUID();
         const pool = await poolPromise;
+
+        // 🛡️ STEP 1: FETCH THE ROOM NUMBER (Fixes 'roomNumber' error)
+        const roomResult = await pool.request()
+            .input('tid', sql.VarChar(36), tenantId)
+            .query(`SELECT room_number FROM dorm_assignments WHERE tenant_id = @tid`);
         
+        const roomNumber = roomResult.recordset[0]?.room_number || 'Unknown Room';
+
+        // 🛡️ STEP 2: RUN AI ANALYSIS (Fixes 'tenantMessage' error by using 'description')
+        console.log("🤖 AI is analyzing maintenance request...");
+        const aiMaintenanceVerdict = await analyzeMaintenanceRequest(description);
+        
+        let finalUrgency = urgency; // Default to what the tenant selected
+
+        if (aiMaintenanceVerdict) {
+            // If AI detects a crisis, upgrade the urgency and send alerts
+            if (aiMaintenanceVerdict.priority === 'Emergency') {
+                finalUrgency = 'Emergency';
+
+                // TRIGGER: Immediate alerts to the Landlord
+                await notificationService.sendEmergencySMS(
+                    `EMERGENCY TICKET: Room ${roomNumber} reports ${aiMaintenanceVerdict.category}. Summary: ${aiMaintenanceVerdict.landlord_summary}`
+                );
+                
+                await notificationService.sendLandlordAlert(
+                    "URGENT: Emergency Maintenance Required",
+                    `Room: ${roomNumber}\nCategory: ${aiMaintenanceVerdict.category}\nDescription: ${description}`
+                );
+            }
+        }
+
+        // 🛡️ STEP 3: SAVE TO DATABASE
         await pool.request()
             .input('id', sql.VarChar(36), id)
             .input('tenantId', sql.VarChar(36), tenantId)
             .input('issueType', sql.VarChar(50), issueType)
             .input('description', sql.VarChar(sql.MAX), description)
-            .input('urgency', sql.VarChar(20), urgency)
+            .input('urgency', sql.VarChar(20), finalUrgency) // Use the AI-upgraded urgency
             .query(`
                 INSERT INTO maintenance_requests (id, tenant_id, issue_type, description, urgency)
                 VALUES (@id, @tenantId, @issueType, @description, @urgency)
             `);
 
-        res.status(201).json({ message: "Request submitted successfully" });
+        res.status(201).json({ 
+            message: "Request submitted successfully",
+            aiReply: aiMaintenanceVerdict?.tenant_auto_reply || null 
+        });
     } catch (error) {
         console.error("Maintenance Submit Error:", error);
         res.status(500).json({ error: "Failed to submit request" });
