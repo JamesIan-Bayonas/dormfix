@@ -8,8 +8,9 @@ import { analyzeMaintenanceRequest } from '../services/aiService.ts';
 import { notificationService } from '../services/notificationService.ts';
 
 // 1. SUBMIT REQUEST
+// server/src/controllers/maintenanceController.ts
+
 export const submitMaintenance = async (req: Request, res: Response) => {
-    // We extract 'description' from the request body
     const { tenantId, issueType, description, urgency } = req.body;
 
     if (!tenantId || !issueType || !description || !urgency) {
@@ -21,43 +22,49 @@ export const submitMaintenance = async (req: Request, res: Response) => {
         const id = crypto.randomUUID();
         const pool = await poolPromise;
 
-        // 🛡️ STEP 1: FETCH THE ROOM NUMBER (Fixes 'roomNumber' error)
+        // STEP 1: ROOM CONTEXT
         const roomResult = await pool.request()
             .input('tid', sql.VarChar(36), tenantId)
             .query(`SELECT room_number FROM dorm_assignments WHERE tenant_id = @tid`);
         
         const roomNumber = roomResult.recordset[0]?.room_number || 'Unknown Room';
 
-        // 🛡️ STEP 2: RUN AI ANALYSIS (Fixes 'tenantMessage' error by using 'description')
+        // STEP 2: AI TRIAGE
         console.log("🤖 AI is analyzing maintenance request...");
+        
         const aiMaintenanceVerdict = await analyzeMaintenanceRequest(description);
         
-        let finalUrgency = urgency; // Default to what the tenant selected
+        console.log(`🤖 AI Decision: Priority is [${aiMaintenanceVerdict?.priority}]`);
 
-        if (aiMaintenanceVerdict) {
-            // If AI detects a crisis, upgrade the urgency and send alerts
-            if (aiMaintenanceVerdict.priority === 'Emergency') {
-                finalUrgency = 'Emergency';
+        let finalUrgency = urgency; 
 
-                // TRIGGER: Immediate alerts to the Landlord
-                await notificationService.sendEmergencySMS(
-                    `EMERGENCY TICKET: Room ${roomNumber} reports ${aiMaintenanceVerdict.category}. Summary: ${aiMaintenanceVerdict.landlord_summary}`
-                );
-                
-                await notificationService.sendLandlordAlert(
-                    "URGENT: Emergency Maintenance Required",
-                    `Room: ${roomNumber}\nCategory: ${aiMaintenanceVerdict.category}\nDescription: ${description}`
-                );
-            }
+        // STEP 3: THE NOTIFICATION LOOP
+        const aiPriority = aiMaintenanceVerdict?.priority;
+        const triggersAlert = aiPriority === 'Emergency' || aiPriority === 'High';
+
+        if (triggersAlert) {
+            // Override the tenant's chosen urgency with the AI's elevated status
+            finalUrgency = aiPriority; 
+
+            // Immediate SMS Alert - dynamically stating High or Emergency
+            await notificationService.sendEmergencySMS(
+                `ALERT [${aiPriority}]: Room ${roomNumber} reports ${aiMaintenanceVerdict.category}. Summary: ${aiMaintenanceVerdict.landlord_summary}`
+            );
+            
+            // Detailed Email Alert
+            await notificationService.sendLandlordAlert(
+                `URGENT: ${aiPriority} Maintenance Required`,
+                `Room: ${roomNumber}\nCategory: ${aiMaintenanceVerdict.category}\nAI Summary: ${aiMaintenanceVerdict.landlord_summary}\n\nTenant Description: ${description}`
+            );
         }
 
-        // 🛡️ STEP 3: SAVE TO DATABASE
+        // STEP 4: DATABASE PERSISTENCE
         await pool.request()
             .input('id', sql.VarChar(36), id)
             .input('tenantId', sql.VarChar(36), tenantId)
             .input('issueType', sql.VarChar(50), issueType)
             .input('description', sql.VarChar(sql.MAX), description)
-            .input('urgency', sql.VarChar(20), finalUrgency) // Use the AI-upgraded urgency
+            .input('urgency', sql.VarChar(20), finalUrgency) 
             .query(`
                 INSERT INTO maintenance_requests (id, tenant_id, issue_type, description, urgency)
                 VALUES (@id, @tenantId, @issueType, @description, @urgency)
