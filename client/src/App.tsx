@@ -1,5 +1,6 @@
 // src/App.tsx
 import React, { useState } from 'react';
+import { Toaster } from 'react-hot-toast'; // 🛡️ 1. Import the Toaster
 import { AuthProvider, useAuth } from './components/UserContext';
 import Login from './components/Login';
 import Register from './components/dashboards/Register'; 
@@ -45,6 +46,24 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
     return (
         <AuthProvider>
+            {/* 🛡️ 2. Place the Toaster here so it sits on top of everything */}
+            <Toaster 
+                position="bottom-right" 
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#1e293b', 
+                        color: '#fff',
+                    },
+                    success: {
+                        iconTheme: { primary: '#10b981', secondary: '#fff' }, 
+                    },
+                    error: {
+                        iconTheme: { primary: '#ef4444', secondary: '#fff' }, 
+                    },
+                }} 
+            />
+            {/* Your custom routing logic remains completely untouched below */}
             <AppContent />
         </AuthProvider>
     );
