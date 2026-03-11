@@ -58,7 +58,7 @@ export interface Payment {
     amount: number;
     paymentType: string;
     datePaid: string;
-    status: 'Pending' | 'Verified' | 'Rejected';
+    status: 'Pending' | 'Verified' | 'Rejected' | 'Anomalous';
     proofImage: string;
     remarks?: string;
 }

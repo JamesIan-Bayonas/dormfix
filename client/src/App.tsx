@@ -1,4 +1,5 @@
 // src/App.tsx
+import { BrowserRouter as Router } from 'react-router-dom';
 import React, { useState } from 'react';
 import { Toaster } from 'react-hot-toast'; // 🛡️ 1. Import the Toaster
 import { AuthProvider, useAuth } from './components/UserContext';
@@ -45,6 +46,7 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
     return (
+        <Router>
         <AuthProvider>
             {/* 🛡️ 2. Place the Toaster here so it sits on top of everything */}
             <Toaster 
@@ -66,6 +68,7 @@ const App: React.FC = () => {
             {/* Your custom routing logic remains completely untouched below */}
             <AppContent />
         </AuthProvider>
+        </Router>
     );
 };
 

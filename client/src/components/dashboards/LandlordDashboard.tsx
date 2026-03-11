@@ -5,6 +5,9 @@ import {
   Home, BedDouble, Zap, Clock, AlertTriangle, TrendingUp, TrendingDown, DollarSign, AlertCircle, X,
   ShieldCheck
 } from 'lucide-react';
+
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+
 import { useAuth } from '../UserContext';
 
 // HOOKS
@@ -33,6 +36,12 @@ type DashboardView = 'home' | 'maintenance' | 'payments' | 'tenants' | 'rooms' |
 export const LandlordDashboard: React.FC = () => {
     const { user, logout } = useAuth();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    
+    // 🛡️ 2. Replace currentView state with Router Hooks
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const isActive = (path: string) => location.pathname === path;
     
     // 1. DATA FETCHING
     const { rooms } = useRooms(user?.id);
@@ -251,53 +260,108 @@ export const LandlordDashboard: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-50 font-sans flex">
             
-            {/* 1. SIDEBAR (Uses LayoutDashboard, Users, BedDouble, Wrench, CreditCard, LogOut) */}
-            <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-72 bg-emerald-950 text-white transition-transform duration-300 ease-in-out flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-                <div className="h-24 flex items-center px-8 border-b border-emerald-900/50">
+            {/* 1. ENTERPRISE SIDEBAR (Premium Dark Theme) */}
+            <aside className={`fixed lg:static inset-y-0 left-0 z-40 w-72 bg-[#022c22] border-r border-[#064e3b] text-emerald-50 transition-transform duration-300 ease-in-out flex flex-col shadow-xl ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+                
+                {/* Brand Header */}
+                <div className="h-20 flex items-center px-8 border-b border-emerald-900/50 bg-[#022c22]">
                     <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10">
-                            <Home size={22} className="text-emerald-400" />
+                        <div className="p-2 bg-emerald-500 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                            <Home size={22} className="text-[#022c22]" />
                         </div>
                         <div>
-                            <span className="text-xl font-display font-bold tracking-tight block leading-none">DormFix</span>
-                            <span className="text-xs text-emerald-400/80 font-medium tracking-wide">LANDLORD</span>
+                            <span className="text-xl font-display font-bold tracking-tight block leading-none text-white">DormFix</span>
+                            <span className="text-[10px] text-emerald-400 font-bold tracking-widest uppercase">Landlord</span>
                         </div>
                     </div>
                 </div>
 
-                <nav className="flex-1 px-4 py-8 space-y-2">
-                    <button onClick={() => setCurrentView('home')} className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-colors ${currentView === 'home' ? 'bg-emerald-900 text-white shadow-lg' : 'text-emerald-100/70 hover:bg-emerald-900/50'}`}>
-                        <LayoutDashboard size={20} /><span className="font-medium">Dashboard</span>
+                {/* Navigation Menu */}
+                <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto custom-scrollbar">
+                    <button 
+                        onClick={() => { navigate('/'); setIsSidebarOpen(false); }} 
+                        className={`flex w-full items-center gap-3 px-4 py-3 transition-all duration-200 outline-none
+                        ${isActive('/') 
+                            ? 'bg-emerald-900/80 text-white font-bold border-l-4 border-emerald-400 rounded-r-xl shadow-inner' 
+                            : 'text-emerald-100/60 font-medium hover:bg-emerald-900/40 hover:text-emerald-50 rounded-xl border-l-4 border-transparent'}`}
+                    >
+                        <LayoutDashboard size={20} className={isActive('/') ? 'text-emerald-400' : 'opacity-70'} />
+                        <span>Dashboard</span>
                     </button>
-                    <button onClick={() => setCurrentView('tenants')} className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-colors ${currentView === 'tenants' ? 'bg-emerald-900 text-white shadow-lg' : 'text-emerald-100/70 hover:bg-emerald-900/50'}`}>
-                        <Users size={20} /><span className="font-medium">Tenants</span>
+
+                    <button 
+                        onClick={() => { navigate('/tenants'); setIsSidebarOpen(false); }} 
+                        className={`flex w-full items-center gap-3 px-4 py-3 transition-all duration-200 outline-none
+                        ${isActive('/tenants') 
+                            ? 'bg-emerald-900/80 text-white font-bold border-l-4 border-emerald-400 rounded-r-xl shadow-inner' 
+                            : 'text-emerald-100/60 font-medium hover:bg-emerald-900/40 hover:text-emerald-50 rounded-xl border-l-4 border-transparent'}`}
+                    >
+                        <Users size={20} className={isActive('/tenants') ? 'text-emerald-400' : 'opacity-70'} />
+                        <span>Tenants</span>
                     </button>
-                    <button onClick={() => setCurrentView('rooms')} className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-colors ${currentView === 'rooms' ? 'bg-emerald-900 text-white shadow-lg' : 'text-emerald-100/70 hover:bg-emerald-900/50'}`}>
-                        <BedDouble size={20} /><span className="font-medium">Rooms</span>
+
+                    <button 
+                        onClick={() => { navigate('/rooms'); setIsSidebarOpen(false); }} 
+                        className={`flex w-full items-center gap-3 px-4 py-3 transition-all duration-200 outline-none
+                        ${isActive('/rooms') 
+                            ? 'bg-emerald-900/80 text-white font-bold border-l-4 border-emerald-400 rounded-r-xl shadow-inner' 
+                            : 'text-emerald-100/60 font-medium hover:bg-emerald-900/40 hover:text-emerald-50 rounded-xl border-l-4 border-transparent'}`}
+                    >
+                        <BedDouble size={20} className={isActive('/rooms') ? 'text-emerald-400' : 'opacity-70'} />
+                        <span>Rooms</span>
                     </button>
-                    <button onClick={() => setCurrentView('maintenance')} className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-colors ${currentView === 'maintenance' ? 'bg-emerald-900 text-white shadow-lg' : 'text-emerald-100/70 hover:bg-emerald-900/50'}`}>
-                        <Wrench size={20} /><span className="font-medium">Maintenance</span>
+
+                    <button 
+                        onClick={() => { navigate('/maintenance'); setIsSidebarOpen(false); }} 
+                        className={`flex w-full items-center gap-3 px-4 py-3 transition-all duration-200 outline-none
+                        ${isActive('/maintenance') 
+                            ? 'bg-emerald-900/80 text-white font-bold border-l-4 border-emerald-400 rounded-r-xl shadow-inner' 
+                            : 'text-emerald-100/60 font-medium hover:bg-emerald-900/40 hover:text-emerald-50 rounded-xl border-l-4 border-transparent'}`}
+                    >
+                        <Wrench size={20} className={isActive('/maintenance') ? 'text-emerald-400' : 'opacity-70'} />
+                        <span>Maintenance</span>
                     </button>
-                    <button onClick={() => setCurrentView('payments')} className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-colors ${currentView === 'payments' ? 'bg-emerald-900 text-white shadow-lg' : 'text-emerald-100/70 hover:bg-emerald-900/50'}`}>
-                        <CreditCard size={20} /><span className="font-medium">Payments</span>
+
+                    <button 
+                        onClick={() => { navigate('/payments'); setIsSidebarOpen(false); }} 
+                        className={`flex w-full items-center gap-3 px-4 py-3 transition-all duration-200 outline-none
+                        ${isActive('/payments') 
+                            ? 'bg-emerald-900/80 text-white font-bold border-l-4 border-emerald-400 rounded-r-xl shadow-inner' 
+                            : 'text-emerald-100/60 font-medium hover:bg-emerald-900/40 hover:text-emerald-50 rounded-xl border-l-4 border-transparent'}`}
+                    >
+                        <CreditCard size={20} className={isActive('/payments') ? 'text-emerald-400' : 'opacity-70'} />
+                        <span>Payments</span>
                     </button>
-                    <button onClick={() => setCurrentView('rules' as any)} className={`flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-colors ${currentView === 'rules' as any ? 'bg-emerald-900 text-white shadow-lg' : 'text-emerald-100/70 hover:bg-emerald-900/50'}`}>
-                        <ShieldCheck size={20} /><span className="font-medium">House Rules</span>
+
+                    <button 
+                        onClick={() => { navigate('/rules'); setIsSidebarOpen(false); }} 
+                        className={`flex w-full items-center gap-3 px-4 py-3 transition-all duration-200 outline-none
+                        ${isActive('/rules') 
+                            ? 'bg-emerald-900/80 text-white font-bold border-l-4 border-emerald-400 rounded-r-xl shadow-inner' 
+                            : 'text-emerald-100/60 font-medium hover:bg-emerald-900/40 hover:text-emerald-50 rounded-xl border-l-4 border-transparent'}`}
+                    >
+                        <ShieldCheck size={20} className={isActive('/rules') ? 'text-emerald-400' : 'opacity-70'} />
+                        <span>House Rules</span>
                     </button>
                 </nav>
 
-                <div className="p-4 border-t border-emerald-900/50 m-4 bg-emerald-900/30 rounded-2xl">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="h-10 w-10 rounded-full bg-emerald-800 border border-emerald-700 flex items-center justify-center text-sm font-bold">
+                {/* User Profile Footer */}
+                <div className="p-4 border-t border-emerald-900/50 bg-[#012019]">
+                    <div className="flex items-center gap-3 mb-4 px-2">
+                        <div className="h-10 w-10 rounded-full bg-emerald-800 border border-emerald-600 flex items-center justify-center text-sm font-bold text-white shadow-sm shrink-0">
                             {user.name.charAt(0)}
                         </div>
                         <div className="overflow-hidden">
-                            <p className="text-sm font-medium text-white truncate">{user.name}</p>
-                            <p className="text-xs text-emerald-400 truncate">ID: {user.dormFixId}</p>
+                            <p className="text-sm font-bold text-white truncate">{user.name}</p>
+                            <p className="text-xs text-emerald-400/80 truncate font-medium">ID: {user.dormFixId}</p>
                         </div>
                     </div>
-                    <button onClick={logout} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-200 text-sm font-medium rounded-lg transition-colors">
-                        <LogOut size={16} />Sign Out
+                    {/* Fixed the Sign Out contrast issue mentioned in the other chat */}
+                    <button 
+                        onClick={logout} 
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-transparent border border-emerald-700 hover:bg-red-500 hover:text-white hover:border-red-500 text-emerald-200 text-sm font-bold rounded-xl transition-all shadow-sm"
+                    >
+                        <LogOut size={16} /> Sign Out
                     </button>
                 </div>
             </aside>
@@ -339,16 +403,16 @@ export const LandlordDashboard: React.FC = () => {
                 </header>
 
                 <main className="flex-1 overflow-y-auto bg-gray-50/50 p-6 lg:p-10 relative">
+    
+                {/* 🛡️ PILLAR 4 & SUB-ROUTING INTEGRATION */}
+                <Routes>
                     
-                    {/* 3. HOME VIEW (Uses Stats & Room Matrix) */}
-                    {currentView === 'home' && (
+                    {/* 1. THE HOME VIEW ROUTE */}
+                    <Route path="/" element={
                         <div className="space-y-8 animate-fade-in">
-                            
-                            {/* 🛡️ PILLAR 4: SKELETON CHECK */}
                             {isLoadingData ? (
-                                /* --- WHAT TO SHOW WHILE LOADING (THE SKELETONS) --- */
+                                /* --- PILLAR 4: SKELETON LOADERS --- */
                                 <>
-                                    {/* Skeleton Stat Cards */}
                                     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                         {[1, 2, 3, 4].map(i => (
                                             <div key={i} className="h-40 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
@@ -360,8 +424,6 @@ export const LandlordDashboard: React.FC = () => {
                                             </div>
                                         ))}
                                     </div>
-
-                                    {/* Skeleton Matrix and Feed */}
                                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                         <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 h-[500px]">
                                             <div className="skeleton h-6 w-40 mb-8 bg-slate-200"></div>
@@ -386,9 +448,8 @@ export const LandlordDashboard: React.FC = () => {
                                     </div>
                                 </>
                             ) : (
-                                /* --- WHAT TO SHOW WHEN DATA IS READY (YOUR EXACT CODE) --- */
+                                /* --- DATA VIEW (Your original logic + Stat Cards) --- */
                                 <>
-                                    {/* ALERTS (Uses AlertCircle) */}
                                     {unassignedTenantsCount > 0 && (
                                         <div className="bg-amber-50 border border-amber-200 rounded-lg py-2.5 px-4 flex items-center justify-between shadow-sm">
                                             <div className="flex items-center gap-3">
@@ -398,39 +459,62 @@ export const LandlordDashboard: React.FC = () => {
                                                     {unassignedTenantsCount} approved tenants need room assignments.
                                                 </p>
                                             </div>
-                                            <button onClick={() => setCurrentView('tenants')} className="px-3 py-1.5 bg-white text-amber-700 text-xs font-bold rounded-md border border-amber-200 hover:bg-amber-50 shadow-sm transition-colors">
+                                            <button onClick={() => navigate('/tenants')} className="px-3 py-1.5 bg-white text-amber-700 text-xs font-bold rounded-md border border-amber-200 hover:bg-amber-50 shadow-sm transition-colors">
                                                 Assign Now
                                             </button>
                                         </div>
                                     )}
 
-                                    {/* STATS ROW (Uses DollarSign, TrendingUp/Down) */}
                                     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                        <StatCard title="Total Tenants" value={tenants.length.toString()} icon={<Users size={24} />} color="emerald" onClick={() => setCurrentView('tenants')} />
-                                        <StatCard title="Total Rooms" value={rooms.length.toString()} icon={<BedDouble size={24} />} color="blue" onClick={() => setCurrentView('rooms')} />
-                                        <StatCard title="Active Issues" value={activeIssuesCount.toString()} icon={<Wrench size={24} />} color="amber" onClick={() => setCurrentView('maintenance')} alert={activeIssuesCount > 0} />
-                                        
-                                        <div onClick={() => setCurrentView('payments')} className="group bg-white p-6 r ounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <div className="p-3 rounded-xl bg-violet-50 text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-colors">
-                                                    <DollarSign size={24} />
+                                        <StatCard 
+                                            title="Total Tenants" 
+                                            value={tenants.length.toString()} 
+                                            icon={<Users size={20} />} 
+                                            color="blue" 
+                                            onClick={() => navigate('/tenants')} 
+                                            subLabel={unassignedTenantsCount > 0 ? <span className="text-amber-600">{unassignedTenantsCount} unassigned</span> : <span className="text-blue-500">All assigned</span>}
+                                        />
+                                        <StatCard 
+                                            title="Total Rooms" 
+                                            value={rooms.length.toString()} 
+                                            icon={<BedDouble size={20} />} 
+                                            color="emerald" 
+                                            onClick={() => navigate('/rooms')} 
+                                            subLabel={<span className="text-emerald-600">{rooms.filter(r => r.currentOccupants === 0).length} vacant</span>}
+                                        />
+                                        <StatCard 
+                                            title="Active Issues" 
+                                            value={activeIssuesCount.toString()} 
+                                            icon={<Wrench size={20} />} 
+                                            color={activeIssuesCount > 0 ? "red" : "amber"} 
+                                            onClick={() => navigate('/maintenance')} 
+                                            alert={activeIssuesCount > 0} 
+                                            subLabel={requests.some(r => (r.urgency === 'Emergency' || r.urgency === 'High') && r.status !== 'Completed') ? <span className="text-red-600 font-bold flex items-center gap-1"><AlertTriangle size={10}/> Critical</span> : <span className="text-amber-600">All standard</span>}
+                                        />
+                                        <div onClick={() => navigate('/payments')} className="group bg-white p-5 rounded-2xl border border-gray-100 border-l-4 border-l-violet-500 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between h-40">
+                                            <div className="flex justify-between items-start">
+                                                <div className="p-2.5 rounded-xl bg-violet-50 text-violet-600">
+                                                    <DollarSign size={20} />
                                                 </div>
-                                                <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${currentMonthStats.trend >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-md ${currentMonthStats.trend >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                     {currentMonthStats.trend >= 0 ? <TrendingUp size={12}/> : <TrendingDown size={12}/>}
                                                     {Math.abs(currentMonthStats.trend)}%
                                                 </div>
                                             </div>
-                                            <h4 className="text-gray-500 text-sm font-medium mb-1 font-display">Revenue (This Month)</h4>
-                                            <p className="text-2xl font-display font-bold text-gray-900 mb-2">₱{currentMonthStats.verifiedRevenue.toLocaleString()}</p>
-                                            <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-                                                <div className="h-full bg-violet-500 rounded-full transition-all duration-1000" style={{ width: `${currentMonthStats.collectionRate}%` }}></div>
+                                            <div className="mt-auto">
+                                                <p className="text-2xl font-display font-bold text-gray-900 leading-tight mb-1">₱{currentMonthStats.verifiedRevenue.toLocaleString()}</p>
+                                                <div className="flex justify-between items-center mb-1.5">
+                                                    <h4 className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Revenue</h4>
+                                                    <span className="text-[10px] font-bold text-violet-600">{currentMonthStats.collectionRate}% Collected</span>
+                                                </div>
+                                                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-violet-500 rounded-full transition-all duration-1000" style={{ width: `${currentMonthStats.collectionRate}%` }}></div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* CONTROL TOWER GRID */}
                                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                        {/* Room Matrix */}
                                         <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                                             <div className="flex justify-between items-center mb-6">
                                                 <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2">
@@ -443,7 +527,7 @@ export const LandlordDashboard: React.FC = () => {
                                                         key={room.id}
                                                         onClick={() => setSelectedRoomId(room.id)} 
                                                         className={`relative p-4 rounded-xl border transition-all cursor-pointer group hover:scale-[1.02] hover:shadow-md 
-                                                            ${room.isCritical ? 'border-red-200 bg-red-50 animate-pulse-slow' : ''}
+                                                            ${room.isCritical ? 'border-red-200 bg-red-50' : ''}
                                                             ${room.hasIssue && !room.isCritical ? 'border-amber-200 bg-amber-50' : ''}
                                                             ${room.status === 'occupied' && !room.hasIssue ? 'border-emerald-100 bg-emerald-50/30 hover:border-emerald-500' : ''}
                                                             ${room.status === 'vacant' ? 'border-gray-100 bg-gray-50 hover:border-gray-400 border-dashed' : ''}
@@ -461,111 +545,56 @@ export const LandlordDashboard: React.FC = () => {
                                                 ))}
                                             </div>
                                         </div>
-
-                                        {/* Activity Feed (Uses Zap, Clock) */}
-                                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col h-full">
-                                        <div className="flex justify-between items-center mb-6">
-                                            <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2">
-                                                <Zap size={20} className="text-amber-500"/> Activity
-                                            </h3>
-                                        </div>
-
-                                        {activityFeed.length > 0 ? (
-                                            <div className="space-y-6 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
-                                                {activityFeed.map((activity) => (
-                                                    <div 
-                                                        key={activity.id} 
-                                                        onClick={() => activity.roomId && setSelectedRoomId(activity.roomId)}
-                                                        className={`flex gap-4 group ${activity.roomId ? 'cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded-lg transition-colors' : ''}`}
-                                                    >
-                                                        {/* ICON COLUMN */}
-                                                        <div className="relative flex flex-col items-center">
-                                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10 border-2 border-white shadow-sm 
-                                                                ${activity.type === 'payment' ? 'bg-violet-100 text-violet-600' : ''} 
-                                                                ${activity.type === 'issue' ? 'bg-red-100 text-red-600' : ''} 
-                                                                ${activity.type === 'tenant' ? 'bg-blue-100 text-blue-600' : ''}
-                                                            `}>
-                                                                {activity.type === 'payment' && <CreditCard size={14} />}
-                                                                {activity.type === 'issue' && <Wrench size={14} />}
-                                                                {activity.type === 'tenant' && <Users size={14} />}
-                                                            </div>
-                                                            <div className="w-0.5 h-full bg-gray-100 absolute top-8 -bottom-6 group-last:hidden"></div>
-                                                        </div>
-                                                        
-                                                        {/* TEXT COLUMN */}
-                                                        <div className="pb-2">
-                                                            <p className="text-sm font-medium text-gray-900 group-hover:text-emerald-700 transition-colors">
-                                                                {activity.message}
-                                                            </p>
-                                                            <div className="flex items-center gap-2 mt-1">
-                                                                <Clock size={12} className="text-gray-400"/>
-                                                                <span className="text-xs text-gray-500">{formatDate(activity.time)}</span>
-                                                                
-                                                                {activity.sub && (
-                                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase
-                                                                        ${activity.sub === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}
-                                                                    `}>
-                                                                        {activity.sub}
-                                                                    </span>
-                                                                )}
-                                                                {activity.amount && (
-                                                                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                                                                        {activity.amount}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col h-full">
+                                            <div className="flex justify-between items-center mb-6">
+                                                <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2">
+                                                    <Zap size={20} className="text-amber-500"/> Activity
+                                                </h3>
                                             </div>
-                                        ) : (
-                                            // EMPTY STATE
-                                            <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                                                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                                                    <Bell size={24} className="text-gray-300" />
+                                            {activityFeed.length > 0 ? (
+                                                <div className="space-y-6 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
+                                                    {activityFeed.map((activity) => (
+                                                        <div key={activity.id} onClick={() => activity.roomId && setSelectedRoomId(activity.roomId)} className="flex gap-4 group cursor-pointer">
+                                                            <div className="relative flex flex-col items-center">
+                                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10 border-2 border-white shadow-sm ${activity.type === 'payment' ? 'bg-violet-100 text-violet-600' : ''} ${activity.type === 'issue' ? 'bg-red-100 text-red-600' : ''} ${activity.type === 'tenant' ? 'bg-blue-100 text-blue-600' : ''}`}>
+                                                                    {activity.type === 'payment' && <CreditCard size={14} />}
+                                                                    {activity.type === 'issue' && <Wrench size={14} />}
+                                                                    {activity.type === 'tenant' && <Users size={14} />}
+                                                                </div>
+                                                                <div className="w-0.5 h-full bg-gray-100 absolute top-8 -bottom-6 group-last:hidden"></div>
+                                                            </div>
+                                                            <div className="pb-2">
+                                                                <p className="text-sm font-medium text-gray-900 group-hover:text-emerald-700 transition-colors">{activity.message}</p>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <Clock size={12} className="text-gray-400"/><span className="text-xs text-gray-500">{formatDate(activity.time)}</span>
+                                                                    {activity.amount && <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">{activity.amount}</span>}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                                <p className="text-gray-900 font-medium">No recent activity</p>
-                                            </div>
-                                        )}
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                                                    <Bell size={24} className="text-gray-300 mb-4" />
+                                                    <p className="text-gray-900 font-medium">No recent activity</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </>
                             )}
                         </div>
-                    )}
+                    } />
 
-                    {/* 4. OTHER VIEWS (Now actually using the Imports!) */}
-                    {currentView === 'tenants' && (
-                        <div className="animate-fade-in">
-                            <LandlordTenantChecklist onBack={() => setCurrentView('home')} />
-                        </div>
-                    )}
-                    
-                    {currentView === 'rooms' && (
-                        <div className="animate-fade-in">
-                            <LandlordRoomList onBack={() => setCurrentView('home')} />
-                        </div>
-                    )}
-                    
-                    {currentView === 'maintenance' && (
-                        <div className="animate-fade-in">
-                            <LandlordMaintenanceList />
-                        </div>
-                    )}
-                    
-                    {currentView === 'payments' && (
-                        <div className="animate-fade-in">
-                            <LandlordPaymentHistory onBack={() => setCurrentView('home')} />
-                        </div>
-                    )}
+                    {/* 2. SUB-ROUTE VIEWS */}
+                    <Route path="/tenants" element={<div className="animate-fade-in"><LandlordTenantChecklist onBack={() => navigate('/')} /></div>} />
+                    <Route path="/rooms" element={<div className="animate-fade-in"><LandlordRoomList onBack={() => navigate('/')} /></div>} />
+                    <Route path="/maintenance" element={<div className="animate-fade-in"><LandlordMaintenanceList /></div>} />
+                    <Route path="/payments" element={<div className="animate-fade-in"><LandlordPaymentHistory onBack={() => navigate('/')} /></div>} />
+                    <Route path="/rules" element={<div className="animate-fade-in"><LandlordRules /></div>} />
 
-                    {currentView === 'rules' && (
-                        <div className="animate-fade-in">
-                            <LandlordRules />
-                        </div>
-                    )}
-
-                </main>
+                </Routes>
+            </main>
             </div>
 
             {/* 5. SLIDE-OVER DRAWER (The new component) */}
@@ -580,19 +609,53 @@ export const LandlordDashboard: React.FC = () => {
     );
 };
 
-// Helper Stat Card Component
-interface StatCardProps { title: string; value: string; icon: React.ReactNode; color: 'emerald' | 'blue' | 'amber' | 'violet'; onClick?: () => void; alert?: boolean; }
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, onClick, alert }) => {
-    const colorStyles = { emerald: "bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white", blue: "bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white", amber: "bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white", violet: "bg-violet-50 text-violet-600 group-hover:bg-violet-600 group-hover:text-white" };
+// Helper Stat Card Component (Enterprise Redesign)
+interface StatCardProps { 
+    title: string; 
+    value: string; 
+    icon: React.ReactNode; 
+    color: 'emerald' | 'blue' | 'amber' | 'violet' | 'red'; 
+    onClick?: () => void; 
+    alert?: boolean;
+    subLabel?: string | React.ReactNode; // 🛡️ NEW: Adds context below the stat
+}
+
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color, onClick, alert, subLabel }) => {
+    // 🛡️ NEW: Semantic mapping includes border-l-4 for enterprise visual anchoring
+    const colorStyles = { 
+        emerald: "bg-emerald-50 text-emerald-600 border-l-emerald-500", 
+        blue: "bg-blue-50 text-blue-600 border-l-blue-500", 
+        amber: "bg-amber-50 text-amber-600 border-l-amber-500", 
+        violet: "bg-violet-50 text-violet-600 border-l-violet-500",
+        red: "bg-red-50 text-red-600 border-l-red-500"
+    };
+
+    // Extract just the background/text classes for the icon container
+    const iconColors = colorStyles[color].split(' ').slice(0, 2).join(' ');
+    // Extract just the border class for the main card
+    const borderClass = colorStyles[color].split(' ')[2];
+
     return (
-        <button onClick={onClick} className="h-40 group bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all text-left w-full relative overflow-hidden">
-            <div className="flex justify-between items-start mb-4">
-                <div className={`p-3 rounded-xl transition-colors ${colorStyles[color]}`}>{icon}</div>
-                {alert && <span className="flex h-3 w-3 relative"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>}
+        <button onClick={onClick} className={`h-40 group bg-white p-5 rounded-2xl shadow-sm hover:shadow-md transition-all text-left w-full relative overflow-hidden border border-gray-100 border-l-4 ${borderClass}`}>
+            <div className="flex justify-between items-start mb-2">
+                <div className={`p-2.5 rounded-xl transition-colors ${iconColors}`}>
+                    {icon}
+                </div>
+                {alert && (
+                    <span className="flex h-3 w-3 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                    </span>
+                )}
             </div>
-            <div>
-                <h4 className="text-gray-500 text-sm font-medium mb-1 font-display">{title}</h4>
-                <p className="text-2xl font-display font-bold text-gray-900 group-hover:text-emerald-950 transition-colors">{value}</p>
+            
+            {/* 🛡️ NEW: Tightened typography and bottom-aligned content */}
+            <div className="mt-auto absolute bottom-5 left-5 right-5">
+                <p className="text-2xl font-display font-bold text-gray-900 leading-tight mb-1">{value}</p>
+                <div className="flex justify-between items-end">
+                    <h4 className="text-gray-500 text-xs font-semibold uppercase tracking-wider">{title}</h4>
+                    {subLabel && <div className="text-xs font-medium">{subLabel}</div>}
+                </div>
             </div>
         </button>
     );

@@ -94,7 +94,7 @@ export const LandlordPaymentHistory: React.FC<Props> = ({ onBack }) => {
                                                         <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-bold">Rejected</span>
                                                     )}
                                                 </td>
-                                                <td className="px-6 py-4 text-right flex justify-end gap-2">
+                                                <td className="px-6 py-4 text-right flex justify-end">
                                                     <button 
                                                         onClick={() => setViewImage(`http://localhost:5000${payment.proofImage}`)}
                                                         className="text-indigo-600 hover:bg-indigo-50 p-2 rounded-lg transition-colors" title="View Proof"
