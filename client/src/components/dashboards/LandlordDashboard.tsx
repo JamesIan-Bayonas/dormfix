@@ -1,4 +1,6 @@
 // src/components/dashboards/LandlordDashboard.tsx
+import { LandlordChat } from '../landlord/LandlordChat';
+import { MessageSquare } from 'lucide-react'; // Ensure this icon is imported
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   LayoutDashboard, Users, Wrench, CreditCard, LogOut, Bell, Search, Menu, 
@@ -312,6 +314,18 @@ export const LandlordDashboard: React.FC = () => {
                     </button>
 
                     <button 
+                        onClick={() => { navigate('/chat'); setIsSidebarOpen(false); }} 
+                        className={`flex w-full items-center gap-3 px-4 py-3 transition-all duration-200 outline-none
+                        ${isActive('/chat') 
+                            ? 'bg-emerald-50 text-emerald-700 font-bold border-l-4 border-emerald-600 rounded-r-xl' 
+                            : 'text-slate-500 font-medium hover:bg-slate-50 hover:text-emerald-600 rounded-xl border-l-4 border-transparent'}`}
+                    >
+                        <MessageSquare size={20} className={isActive('/chat') ? 'text-emerald-600' : 'text-slate-400'} />
+                        <span>Messages</span>
+                    </button>
+
+
+                    <button 
                         onClick={() => { navigate('/maintenance'); setIsSidebarOpen(false); }} 
                         className={`flex w-full items-center gap-3 px-4 py-3 transition-all duration-200 outline-none
                         ${isActive('/maintenance') 
@@ -592,7 +606,14 @@ export const LandlordDashboard: React.FC = () => {
                     <Route path="/maintenance" element={<div className="animate-fade-in"><LandlordMaintenanceList /></div>} />
                     <Route path="/payments" element={<div className="animate-fade-in"><LandlordPaymentHistory onBack={() => navigate('/')} /></div>} />
                     <Route path="/rules" element={<div className="animate-fade-in"><LandlordRules /></div>} />
-
+                    
+                                {/* 🛡️ INJECT THE NEW CHAT ROUTE HERE */}
+                    <Route path="/chat" element={
+                        <div className="animate-fade-in">
+                            <LandlordChat />
+                        </div>
+                    } />
+                    
                 </Routes>
             </main>
             </div>
