@@ -13,7 +13,7 @@ import paymentRoutes from './routes/paymentRoutes.ts';
 import roomRoutes from './routes/roomRoutes.ts';
 import ruleRoutes from './routes/ruleRoutes.ts';
 import uploadRoutes from './routes/uploadRoutes.ts';
-import tenantRoutes from './routes/tenantRoutes.ts'; // NEW
+import tenantRoutes from './routes/tenantRoutes.ts';
 
 // ESM Directory Fix
 const __filename = fileURLToPath(import.meta.url);

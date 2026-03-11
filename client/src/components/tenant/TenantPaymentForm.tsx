@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Upload, DollarSign, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../UserContext';
+import toast from 'react-hot-toast'; // 🛡️ NEW: Imported the toast library
 
 interface PaymentFormProps {
-    landlordId: string; // Type this for tenant needs to know who to pay
+    landlordId: string; 
     onSuccess?: () => void;
 }
 
@@ -19,9 +20,8 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
 
     // UI State
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     
-    // --- 🛡️ NEW: ZERO TRUST SECURITY STATE ---
+    // Zero Trust Security State
     const [paymentStatus, setPaymentStatus] = useState<'Idle' | 'Verified' | 'Anomalous' | 'Rejected'>('Idle');
     const [alertMessages, setAlertMessages] = useState<string[]>([]);
 
@@ -32,7 +32,6 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
             // Reset the security status when a new file is chosen
             setPaymentStatus('Idle');
             setAlertMessages([]);
-            setMessage(null);
         }
     };
 
@@ -41,12 +40,11 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
         e.preventDefault();
         
         if (!user?.id || !landlordId || !selectedFile) {
-            setMessage({ type: 'error', text: "Please fill in all fields and attach proof." });
+            toast.error("Please fill in all fields and attach proof."); // 🛡️ NEW: Toast Error
             return;
         }
 
         setIsSubmitting(true);
-        setMessage(null);
         setPaymentStatus('Idle'); // Reset before new scan
 
         try {
@@ -67,17 +65,16 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
             const data = await response.json();
 
             if (response.ok) {
-                // --- 🛡️ NEW: INTERCEPTING THE AI AUDIT VERDICT ---
-                // We extract the exact status and warnings sent by your paymentController
-                const finalStatus = data.status || 'Verified'; // Fallback just in case
+                // Intercepting the AI Audit Verdict
+                const finalStatus = data.status || 'Verified'; 
                 const systemWarnings = data.warnings || [];
                 
                 setPaymentStatus(finalStatus);
                 setAlertMessages(systemWarnings);
 
-                // If it's a completely clean, perfect payment, we show the success message
+                // Clean, perfect payment
                 if (finalStatus === 'Verified') {
-                    setMessage({ type: 'success', text: "Payment submitted and verified by AI successfully!" });
+                    toast.success("Payment submitted and verified by AI successfully!"); 
                     
                     // Reset form fields
                     setAmount('');
@@ -89,16 +86,15 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
                         if (onSuccess) onSuccess();
                     }, 2000);
                 } 
-                // If it is anomalous, we DO NOT close the modal immediately. 
-                // We leave it open so the tenant is forced to read the red warning boxes.
+                // If anomalous, we leave the modal open so the tenant reads the red warning boxes.
 
             } else {
-                setMessage({ type: 'error', text: data.error || data.message || "Upload failed." });
+                toast.error(data.error || data.message || "Upload failed."); // 🛡️ NEW: Toast Error
             }
 
         } catch (error) {
             console.error("Payment error:", error);
-            setMessage({ type: 'error', text: "Server error. Please try again." });
+            toast.error("Server error. Please try again."); // 🛡️ NEW: Toast Error
         } finally {
             setIsSubmitting(false);
         }
@@ -110,17 +106,9 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
                 <DollarSign className="text-emerald-600" /> Make a Payment
             </h2>
 
-            {/* General System Messages */}
-            {message && paymentStatus === 'Idle' && (
-                <div className={`p-3 rounded-lg mb-4 flex items-center gap-2 text-sm font-medium ${
-                    message.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
-                }`}>
-                    {message.type === 'success' ? <CheckCircle size={16}/> : <AlertCircle size={16}/>}
-                    {message.text}
-                </div>
-            )}
+            {/* 🛡️ REMOVED: The old inline General System Messages div was deleted here */}
 
-            {/* --- 🛡️ NEW: ZERO TRUST UI FEEDBACK --- */}
+            {/* --- 🛡️ ZERO TRUST UI FEEDBACK --- */}
             {paymentStatus === 'Verified' && (
                 <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg mb-4 flex flex-col gap-1">
                     <div className="flex items-center gap-2 text-emerald-700 font-bold">

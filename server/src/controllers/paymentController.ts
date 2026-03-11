@@ -3,6 +3,7 @@ import { poolPromise } from '../config/dbConfig.ts';
 import sql from 'mssql';
 import crypto from 'crypto';
 import { analyzePaymentImage } from '../services/aiService.ts';
+import { notificationService } from '../services/notificationService.ts';
 
 interface MulterFile {
     filename: string;
@@ -65,6 +66,16 @@ export const processTenantPayment = async (req: Request & { file?: MulterFile },
         } else {
             finalStatus = 'Anomalous';
             anomalyFlags.push("SYSTEM WARNING: AI failed to read the document clearly.");
+        }
+
+        if (finalStatus === 'Anomalous') {
+            // TRIGGER: Tell the landlord immediately that the AI found a problem
+            await notificationService.sendLandlordAlert(
+                "Payment Anomaly Detected",
+                `A tenant just uploaded a receipt that failed the Zero-Trust audit.\n\n` +
+                `Detected Warnings: ${anomalyFlags.join(', ')}\n` +
+                `Please log in to the Landlord Dashboard to review the document.`
+            );
         }
 
         // Format the notes for the database so the landlord can see exactly what happened
@@ -168,18 +179,29 @@ export const verifyPayment = async (req: Request, res: Response) => {
 
     try {
         const pool = await poolPromise;
+        
+        // 1. Get the tenant's email before updating the record
+        const tenantInfo = await pool.request()
+            .input('pid', sql.VarChar(36), id)
+            .query(`SELECT u.email FROM payments p JOIN users u ON p.tenant_id = u.id WHERE p.id = @pid`);
+        
+        const tenantEmail = tenantInfo.recordset[0]?.email;
+
+        // 2. Perform the database update
         await pool.request()
             .input('id', sql.VarChar(36), id)
             .input('status', sql.VarChar(20), status)
             .input('reason', sql.NVarChar(sql.MAX), reason || null)
-            .query(`
-                UPDATE payments 
-                SET status = @status, rejection_reason = @reason 
-                WHERE id = @id
-            `);
-        res.json({ message: `Payment marked as ${status}` });
+            .query(`UPDATE payments SET status = @status, rejection_reason = @reason WHERE id = @id`);
+
+        // 3. TRIGGER: Notify the tenant of the final result
+        if (tenantEmail) {
+            await notificationService.sendTenantUpdate(tenantEmail, status, reason);
+        }
+
+        res.json({ message: `Payment marked as ${status} and tenant notified.` });
     } catch (error) {
         console.error("Verify Payment Error:", error);
-        res.status(500).json({ error: "Failed to update payment status" });
+        res.status(500).json({ error: "Failed to update payment" });
     }
 };

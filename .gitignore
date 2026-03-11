@@ -22,3 +22,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Add this to server/.gitignore to hide the OCR data file
+eng.traineddata
+ 
+# Keep environment variables out of version control
+.env
+
+# Change .uploads to uploads/
+uploads/
+
+/src/generated/prisma
