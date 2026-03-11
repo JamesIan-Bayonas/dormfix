@@ -42,6 +42,7 @@ export const LandlordDashboard: React.FC = () => {
 
     useEffect(() => {
         if (user?.id) {
+            setIsLoadingData(true); // Start loading
             fetch(`http://localhost:5000/api/landlord/tenants/${user.id}`)
                 .then(res => res.json())
                 .then(data => {
@@ -55,13 +56,15 @@ export const LandlordDashboard: React.FC = () => {
                     }));
                     setTenants(formatted);  
                 })
-                .catch(err => console.error("Failed to fetch tenants:", err));
+                .catch(err => console.error("Failed to fetch tenants:", err))
+                .finally(() => setIsLoadingData(false)); // 🛡️ Stop loading regardless of success/fail
         }
     }, [user?.id]);
 
     // VIEW STATE
     const [currentView, setCurrentView] = useState<DashboardView>('home');
     const [searchQuery, setSearchQuery] = useState('');
+    const [isLoadingData, setIsLoadingData] = useState(true);
     
     // DRAWER STATE (Replaces Modal State)
     const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
@@ -341,147 +344,193 @@ export const LandlordDashboard: React.FC = () => {
                     {currentView === 'home' && (
                         <div className="space-y-8 animate-fade-in">
                             
-                            {/* ALERTS (Uses AlertCircle) */}
-                            {unassignedTenantsCount > 0 && (
-                                <div className="bg-amber-50 border border-amber-200 rounded-lg py-2.5 px-4 flex items-center justify-between shadow-sm">
-                                    <div className="flex items-center gap-3">
-                                        <AlertCircle className="text-amber-600" size={18} />
-                                        <p className="text-sm text-amber-800">
-                                            <span className="font-bold mr-1">Action Needed:</span> 
-                                            {unassignedTenantsCount} approved tenants need room assignments.
-                                        </p>
-                                    </div>
-                                    <button onClick={() => setCurrentView('tenants')} className="px-3 py-1.5 bg-white text-amber-700 text-xs font-bold rounded-md border border-amber-200 hover:bg-amber-50 shadow-sm transition-colors">
-                                        Assign Now
-                                    </button>
-                                </div>
-                            )}
-
-                            {/* STATS ROW (Uses DollarSign, TrendingUp/Down) */}
-                            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                <StatCard title="Total Tenants" value={tenants.length.toString()} icon={<Users size={24} />} color="emerald" onClick={() => setCurrentView('tenants')} />
-                                <StatCard title="Total Rooms" value={rooms.length.toString()} icon={<BedDouble size={24} />} color="blue" onClick={() => setCurrentView('rooms')} />
-                                <StatCard title="Active Issues" value={activeIssuesCount.toString()} icon={<Wrench size={24} />} color="amber" onClick={() => setCurrentView('maintenance')} alert={activeIssuesCount > 0} />
-                                
-                                <div onClick={() => setCurrentView('payments')} className="group bg-white p-6 r ounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div className="p-3 rounded-xl bg-violet-50 text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-colors">
-                                            <DollarSign size={24} />
-                                        </div>
-                                        <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${currentMonthStats.trend >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                            {currentMonthStats.trend >= 0 ? <TrendingUp size={12}/> : <TrendingDown size={12}/>}
-                                            {Math.abs(currentMonthStats.trend)}%
-                                        </div>
-                                    </div>
-                                    <h4 className="text-gray-500 text-sm font-medium mb-1 font-display">Revenue (This Month)</h4>
-                                    <p className="text-2xl font-display font-bold text-gray-900 mb-2">₱{currentMonthStats.verifiedRevenue.toLocaleString()}</p>
-                                    <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-                                        <div className="h-full bg-violet-500 rounded-full transition-all duration-1000" style={{ width: `${currentMonthStats.collectionRate}%` }}></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* CONTROL TOWER GRID */}
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                {/* Room Matrix */}
-                                <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2">
-                                            <BedDouble size={20} className="text-emerald-600"/> Room Matrix
-                                        </h3>
-                                    </div>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                        {filteredRoomMatrix.map((room) => (
-                                            <div 
-                                                key={room.id}
-                                                onClick={() => setSelectedRoomId(room.id)} 
-                                                className={`relative p-4 rounded-xl border transition-all cursor-pointer group hover:scale-[1.02] hover:shadow-md 
-                                                    ${room.isCritical ? 'border-red-200 bg-red-50 animate-pulse-slow' : ''}
-                                                    ${room.hasIssue && !room.isCritical ? 'border-amber-200 bg-amber-50' : ''}
-                                                    ${room.status === 'occupied' && !room.hasIssue ? 'border-emerald-100 bg-emerald-50/30 hover:border-emerald-500' : ''}
-                                                    ${room.status === 'vacant' ? 'border-gray-100 bg-gray-50 hover:border-gray-400 border-dashed' : ''}
-                                                `}
-                                            >
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <span className="font-bold text-gray-700 font-display">{room.room_number}</span>
-                                                    {room.isCritical && <AlertTriangle size={16} className="text-red-500 animate-bounce"/>}
-                                                    {room.hasIssue && !room.isCritical && <Wrench size={14} className="text-amber-500"/>}
+                            {/* 🛡️ PILLAR 4: SKELETON CHECK */}
+                            {isLoadingData ? (
+                                /* --- WHAT TO SHOW WHILE LOADING (THE SKELETONS) --- */
+                                <>
+                                    {/* Skeleton Stat Cards */}
+                                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                        {[1, 2, 3, 4].map(i => (
+                                            <div key={i} className="h-40 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between">
+                                                <div className="skeleton h-12 w-12 rounded-xl bg-slate-200"></div>
+                                                <div>
+                                                    <div className="skeleton h-4 w-24 mb-2 bg-slate-200"></div>
+                                                    <div className="skeleton h-8 w-32 bg-slate-200"></div>
                                                 </div>
-                                                <p className="text-xs text-gray-500 truncate font-medium">
-                                                    {room.status === 'vacant' ? 'Available' : `${room.currentOccupants}/${room.capacity} Occ.`}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Skeleton Matrix and Feed */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 h-[500px]">
+                                            <div className="skeleton h-6 w-40 mb-8 bg-slate-200"></div>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                                {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                                                    <div key={i} className="skeleton h-20 w-full rounded-xl bg-slate-200"></div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 h-[500px] flex flex-col gap-6">
+                                            <div className="skeleton h-6 w-32 bg-slate-200"></div>
+                                            {[1, 2, 3, 4, 5].map(i => (
+                                                <div key={i} className="flex gap-4 items-center">
+                                                    <div className="skeleton h-8 w-8 rounded-full shrink-0 bg-slate-200"></div>
+                                                    <div className="flex-1">
+                                                        <div className="skeleton h-4 w-full mb-2 bg-slate-200"></div>
+                                                        <div className="skeleton h-3 w-1/2 bg-slate-200"></div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                /* --- WHAT TO SHOW WHEN DATA IS READY (YOUR EXACT CODE) --- */
+                                <>
+                                    {/* ALERTS (Uses AlertCircle) */}
+                                    {unassignedTenantsCount > 0 && (
+                                        <div className="bg-amber-50 border border-amber-200 rounded-lg py-2.5 px-4 flex items-center justify-between shadow-sm">
+                                            <div className="flex items-center gap-3">
+                                                <AlertCircle className="text-amber-600" size={18} />
+                                                <p className="text-sm text-amber-800">
+                                                    <span className="font-bold mr-1">Action Needed:</span> 
+                                                    {unassignedTenantsCount} approved tenants need room assignments.
                                                 </p>
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                            <button onClick={() => setCurrentView('tenants')} className="px-3 py-1.5 bg-white text-amber-700 text-xs font-bold rounded-md border border-amber-200 hover:bg-amber-50 shadow-sm transition-colors">
+                                                Assign Now
+                                            </button>
+                                        </div>
+                                    )}
 
-                                {/* Activity Feed (Uses Zap, Clock) */}
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col h-full">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2">
-                                        <Zap size={20} className="text-amber-500"/> Activity
-                                    </h3>
-                                </div>
-
-                                {activityFeed.length > 0 ? (
-                                    <div className="space-y-6 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
-                                        {activityFeed.map((activity) => (
-                                            <div 
-                                                key={activity.id} 
-                                                onClick={() => activity.roomId && setSelectedRoomId(activity.roomId)}
-                                                className={`flex gap-4 group ${activity.roomId ? 'cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded-lg transition-colors' : ''}`}
-                                            >
-                                                {/* ICON COLUMN */}
-                                                <div className="relative flex flex-col items-center">
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10 border-2 border-white shadow-sm 
-                                                        ${activity.type === 'payment' ? 'bg-violet-100 text-violet-600' : ''} 
-                                                        ${activity.type === 'issue' ? 'bg-red-100 text-red-600' : ''} 
-                                                        ${activity.type === 'tenant' ? 'bg-blue-100 text-blue-600' : ''}
-                                                    `}>
-                                                        {activity.type === 'payment' && <CreditCard size={14} />}
-                                                        {activity.type === 'issue' && <Wrench size={14} />}
-                                                        {activity.type === 'tenant' && <Users size={14} />}
-                                                    </div>
-                                                    <div className="w-0.5 h-full bg-gray-100 absolute top-8 -bottom-6 group-last:hidden"></div>
+                                    {/* STATS ROW (Uses DollarSign, TrendingUp/Down) */}
+                                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                        <StatCard title="Total Tenants" value={tenants.length.toString()} icon={<Users size={24} />} color="emerald" onClick={() => setCurrentView('tenants')} />
+                                        <StatCard title="Total Rooms" value={rooms.length.toString()} icon={<BedDouble size={24} />} color="blue" onClick={() => setCurrentView('rooms')} />
+                                        <StatCard title="Active Issues" value={activeIssuesCount.toString()} icon={<Wrench size={24} />} color="amber" onClick={() => setCurrentView('maintenance')} alert={activeIssuesCount > 0} />
+                                        
+                                        <div onClick={() => setCurrentView('payments')} className="group bg-white p-6 r ounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div className="p-3 rounded-xl bg-violet-50 text-violet-600 group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                                                    <DollarSign size={24} />
                                                 </div>
-                                                
-                                                {/* TEXT COLUMN */}
-                                                <div className="pb-2">
-                                                    <p className="text-sm font-medium text-gray-900 group-hover:text-emerald-700 transition-colors">
-                                                        {activity.message}
-                                                    </p>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <Clock size={12} className="text-gray-400"/>
-                                                        <span className="text-xs text-gray-500">{formatDate(activity.time)}</span>
-                                                        
-                                                        {activity.sub && (
-                                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase
-                                                                ${activity.sub === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}
-                                                            `}>
-                                                                {activity.sub}
-                                                            </span>
-                                                        )}
-                                                        {activity.amount && (
-                                                            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
-                                                                {activity.amount}
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                                <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${currentMonthStats.trend >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                    {currentMonthStats.trend >= 0 ? <TrendingUp size={12}/> : <TrendingDown size={12}/>}
+                                                    {Math.abs(currentMonthStats.trend)}%
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    // EMPTY STATE
-                                    <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                                        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                                            <Bell size={24} className="text-gray-300" />
+                                            <h4 className="text-gray-500 text-sm font-medium mb-1 font-display">Revenue (This Month)</h4>
+                                            <p className="text-2xl font-display font-bold text-gray-900 mb-2">₱{currentMonthStats.verifiedRevenue.toLocaleString()}</p>
+                                            <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+                                                <div className="h-full bg-violet-500 rounded-full transition-all duration-1000" style={{ width: `${currentMonthStats.collectionRate}%` }}></div>
+                                            </div>
                                         </div>
-                                        <p className="text-gray-900 font-medium">No recent activity</p>
                                     </div>
-                                )}
-                                </div>
-                            </div>
+
+                                    {/* CONTROL TOWER GRID */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                        {/* Room Matrix */}
+                                        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                                            <div className="flex justify-between items-center mb-6">
+                                                <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2">
+                                                    <BedDouble size={20} className="text-emerald-600"/> Room Matrix
+                                                </h3>
+                                            </div>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                                {filteredRoomMatrix.map((room) => (
+                                                    <div 
+                                                        key={room.id}
+                                                        onClick={() => setSelectedRoomId(room.id)} 
+                                                        className={`relative p-4 rounded-xl border transition-all cursor-pointer group hover:scale-[1.02] hover:shadow-md 
+                                                            ${room.isCritical ? 'border-red-200 bg-red-50 animate-pulse-slow' : ''}
+                                                            ${room.hasIssue && !room.isCritical ? 'border-amber-200 bg-amber-50' : ''}
+                                                            ${room.status === 'occupied' && !room.hasIssue ? 'border-emerald-100 bg-emerald-50/30 hover:border-emerald-500' : ''}
+                                                            ${room.status === 'vacant' ? 'border-gray-100 bg-gray-50 hover:border-gray-400 border-dashed' : ''}
+                                                        `}
+                                                    >
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <span className="font-bold text-gray-700 font-display">{room.room_number}</span>
+                                                            {room.isCritical && <AlertTriangle size={16} className="text-red-500 animate-bounce"/>}
+                                                            {room.hasIssue && !room.isCritical && <Wrench size={14} className="text-amber-500"/>}
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 truncate font-medium">
+                                                            {room.status === 'vacant' ? 'Available' : `${room.currentOccupants}/${room.capacity} Occ.`}
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Activity Feed (Uses Zap, Clock) */}
+                                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col h-full">
+                                        <div className="flex justify-between items-center mb-6">
+                                            <h3 className="font-display font-bold text-lg text-gray-800 flex items-center gap-2">
+                                                <Zap size={20} className="text-amber-500"/> Activity
+                                            </h3>
+                                        </div>
+
+                                        {activityFeed.length > 0 ? (
+                                            <div className="space-y-6 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
+                                                {activityFeed.map((activity) => (
+                                                    <div 
+                                                        key={activity.id} 
+                                                        onClick={() => activity.roomId && setSelectedRoomId(activity.roomId)}
+                                                        className={`flex gap-4 group ${activity.roomId ? 'cursor-pointer hover:bg-gray-50 p-2 -m-2 rounded-lg transition-colors' : ''}`}
+                                                    >
+                                                        {/* ICON COLUMN */}
+                                                        <div className="relative flex flex-col items-center">
+                                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 z-10 border-2 border-white shadow-sm 
+                                                                ${activity.type === 'payment' ? 'bg-violet-100 text-violet-600' : ''} 
+                                                                ${activity.type === 'issue' ? 'bg-red-100 text-red-600' : ''} 
+                                                                ${activity.type === 'tenant' ? 'bg-blue-100 text-blue-600' : ''}
+                                                            `}>
+                                                                {activity.type === 'payment' && <CreditCard size={14} />}
+                                                                {activity.type === 'issue' && <Wrench size={14} />}
+                                                                {activity.type === 'tenant' && <Users size={14} />}
+                                                            </div>
+                                                            <div className="w-0.5 h-full bg-gray-100 absolute top-8 -bottom-6 group-last:hidden"></div>
+                                                        </div>
+                                                        
+                                                        {/* TEXT COLUMN */}
+                                                        <div className="pb-2">
+                                                            <p className="text-sm font-medium text-gray-900 group-hover:text-emerald-700 transition-colors">
+                                                                {activity.message}
+                                                            </p>
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <Clock size={12} className="text-gray-400"/>
+                                                                <span className="text-xs text-gray-500">{formatDate(activity.time)}</span>
+                                                                
+                                                                {activity.sub && (
+                                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase
+                                                                        ${activity.sub === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}
+                                                                    `}>
+                                                                        {activity.sub}
+                                                                    </span>
+                                                                )}
+                                                                {activity.amount && (
+                                                                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                                                                        {activity.amount}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            // EMPTY STATE
+                                            <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                                                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                                                    <Bell size={24} className="text-gray-300" />
+                                                </div>
+                                                <p className="text-gray-900 font-medium">No recent activity</p>
+                                            </div>
+                                        )}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     )}
 

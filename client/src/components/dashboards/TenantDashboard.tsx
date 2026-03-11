@@ -60,7 +60,6 @@ export const TenantDashboard: React.FC = () => {
             if (!res.ok) throw new Error("Submission failed");
 
             alert("Request sent to landlord!");
-            setActiveModal(null); // Close modal
             setFormData({ issueType: 'Plumbing', urgency: 'Low', description: '' }); // Reset form
             window.location.reload(); 
 
@@ -133,7 +132,16 @@ export const TenantDashboard: React.FC = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="text-slate-400 italic text-sm">Loading housing details...</div>
+                        /* 🛡️ PILLAR 4: SKELETON LOADER FOR TENANT PROFILE */
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {[1, 2, 3].map((index) => (
+                                <div key={index} className="p-4 bg-slate-50 rounded-lg border border-slate-100 flex flex-col gap-3">
+                                    <div className="skeleton h-3 w-24 bg-slate-200"></div>
+                                    <div className="skeleton h-6 w-3/4 bg-slate-200"></div>
+                                    <div className="skeleton h-4 w-1/2 bg-slate-200 mt-1"></div>
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </div>
 
@@ -253,7 +261,10 @@ export const TenantDashboard: React.FC = () => {
                         {housing?.landlordId ? (
                             <TenantPaymentForm 
                                 landlordId={housing.landlordId} 
-                                onSuccess={() => setActiveModal(null)}
+                                onSuccess={() => {
+                                    setActiveModal(null); // 1. Close the popup
+                                    setShowHistory(true); // 2. Auto-open the History Table
+                                }}
                             />
                         ) : (
                             <div className="bg-white p-6 rounded-xl text-center">
