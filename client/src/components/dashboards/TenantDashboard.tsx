@@ -1,3 +1,5 @@
+import { MessageSquare } from 'lucide-react'; // Ensure this is imported
+import { TenantChat } from '../tenant/TenantChat';
 import React, { useState, useEffect } from 'react';
 import { Home, LogOut, Wrench, CreditCard, X, User, Calendar, Mail } from 'lucide-react';
 import { useAuth } from '../UserContext';
@@ -28,6 +30,7 @@ export const TenantDashboard: React.FC = () => {
     const activeModal = location.pathname.includes('/pay') ? 'payment' : location.pathname.includes('/report') ? 'maintenance' : null;
 
     const [housing, setHousing] = useState<HousingDetails | null>(null);
+    const [isChatOpen, setIsChatOpen] = useState(false);
     
     // 3. SKELETON STATE: Track when housing data is loading
     const [isLoadingHousing, setIsLoadingHousing] = useState(true);
@@ -173,8 +176,22 @@ export const TenantDashboard: React.FC = () => {
                         </div>
 
                         {/* Action Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                            {/* Button updates the URL instead of local state */}
+                        {/* 🛡️ 1. CHANGED: md:grid-cols-2 is now md:grid-cols-3 to fit 3 cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            
+                            {/* 🛡️ 2. NEW: Message Landlord Card (Placed First) */}
+                            <button 
+                                onClick={() => setIsChatOpen(true)}
+                                className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-indigo-300 transition-all"
+                            >
+                                <div className="p-4 bg-indigo-50 rounded-full mb-4 group-hover:scale-110 transition-transform">
+                                    <MessageSquare size={32} className="text-indigo-600" />
+                                </div>
+                                <span className="text-lg font-bold text-slate-800">Message Landlord</span>
+                                <span className="text-sm text-slate-500 mt-1">Live Chat Support</span>
+                            </button>
+
+                            {/* 3. Your Existing Report Issue Button */}
                             <button 
                                 onClick={() => navigate('/report')} 
                                 className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-indigo-300 transition-all"
@@ -186,8 +203,8 @@ export const TenantDashboard: React.FC = () => {
                                 <span className="text-sm text-slate-500 mt-1">Plumbing, Electric, etc.</span>
                             </button>
 
+                            {/* 4. Your Existing Pay Rent Container */}
                             <div className="flex flex-col gap-2">
-                                {/* Button updates the URL instead of local state */}
                                 <button 
                                     onClick={() => navigate('/pay')}
                                     className="group flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-emerald-300 transition-all h-full"
@@ -206,7 +223,7 @@ export const TenantDashboard: React.FC = () => {
                                     View Payment History
                                 </button>
                             </div>
-                        </div>
+                        </div>                        
 
                         {/* History List */}
                         <h3 className="text-lg font-bold text-slate-900 mb-4">Your Request History</h3>
@@ -305,6 +322,22 @@ export const TenantDashboard: React.FC = () => {
                     )}
                 </div>
             } />
+            <Route path="*" element={
+            <>
+                {/* The Floating Chat Window */}
+                <TenantChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+
+                {/* The Floating Action Button (FAB) - Only shows when chat is CLOSED */}
+                {!isChatOpen && (
+                    <button 
+                        onClick={() => setIsChatOpen(true)}
+                        className="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-all z-50 animate-bounce-short"
+                    >
+                        <MessageSquare size={24} />
+                    </button>
+                )}
+            </>
+        } />
         </Routes>
     );
 };
