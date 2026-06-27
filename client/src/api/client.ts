@@ -1,4 +1,7 @@
-const BASE_URL = 'http://localhost:5000'; 
+// client/src/api/client.ts
+
+// Dynamic environment routing for safe Vercel deployment
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'; 
 
 // Helper to handle the actual fetch logic
 const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<{ data: T }> => {
@@ -13,7 +16,7 @@ const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<
         configBody = JSON.stringify(body);
     } 
 
-    // 2. Make the Request
+    // 2. Make the Request targeting our dynamic BASE_URL
     const response = await fetch(`${BASE_URL}${endpoint}`, {
         ...rest,
         headers: configHeaders,

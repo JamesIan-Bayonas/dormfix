@@ -7,37 +7,44 @@ export default {
   ],
   theme: {
     extend: {
-      // We keep a 'brand' color palette for deep custom styling outside of DaisyUI components
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        serif: ['Playfair Display', 'serif'],
+      },
       colors: {
-        brand: { 
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          900: '#312e81',
+        // Custom palette mappings to match Screenshot 2026-06-28 214140.png
+        sage: {
+          50: '#f8f9f5',   // Main application soft background canvas
+          100: '#e7efdb',  // Total Rooms card background tint
+          200: '#c2ceae',  // Total Tenants card background tint
+          700: '#5c6e4e',  // High-contrast muted text for room metrics
+          800: '#425042',  // Primary matte olive sidebar navigation background
+          900: '#344034',  // Deep active dark olive state
+        },
+        amberGold: {
+          50: '#fef9eb',   // Active Alerts card background tint
+          600: '#b97a26',  // Alert tracking text color
         }
       }
     },
   },
   plugins: [
-    // This tells DaisyUI to use our custom 'dormfix' theme instead of the default ones
     require("daisyui")({
       themes: [
         {
           dormfix: {
-            "primary": "#4f46e5",    // Brand Indigo: Used for main buttons, active links, primary CTAs
-            "secondary": "#64748b",  // Slate Gray: Used for secondary text, muted buttons, borders
-            "accent": "#6366f1",     // Lighter Indigo: Used for subtle highlights
-            "neutral": "#1e293b",    // Dark Slate: Used for heavy text, sidebar backgrounds
-            "base-100": "#ffffff",   // Pure White: Used for card backgrounds and main layout surfaces
-            "base-200": "#f8fafc",   // Off-White: Used for the main app background (behind the cards)
+            "primary": "#425042",    // Matte Olive: Replaces bright brand indigo
+            "secondary": "#657655",  // Sage Accent text color
+            "accent": "#b7c4a9",     // Soft header badge accent
+            "neutral": "#425042",    // Sidebar base
+            "base-100": "#ffffff",   // pure clean paper elements
+            "base-200": "#f8f9f5",   // Soft canvas off-white background
             
-            // THE SYSTEM STATES (Tied to your AI Logic)
-            "info": "#3b82f6",       // Blue: Standard system messages
-            "success": "#10b981",    // Emerald: "Verified" payments, "Completed" maintenance
-            "warning": "#f59e0b",    // Amber: "High" priority maintenance, "Pending" payments
-            "error": "#ef4444",      // Red: "Anomalous" payments, "Emergency" maintenance
+            // SYSTEM FEEDBACKS (Toned down to match premium UI palettes)
+            "info": "#3b82f6",       
+            "success": "#5c6e4e",    
+            "warning": "#dcb974",    
+            "error": "#cc4747",      
           },
         },
       ],
