@@ -1,10 +1,10 @@
+// client/src/components/landlord/LandlordChat.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../UserContext';
-import { Send, User, MicOff, ShieldAlert, MessageSquare } from 'lucide-react';
+import { Send, MicOff, ShieldAlert, MessageSquare, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-// Types
 interface Message {
     id: number;
     senderId: string;
@@ -39,11 +39,9 @@ export const LandlordChat: React.FC = () => {
                 ...prev, 
                 { id: Date.now(), senderId: data.senderId, senderRole: data.role, text: data.text, timestamp: new Date() }
             ]);
-            // Auto-scroll to bottom
             setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         });
 
-        // 🛡️ Error handling from the backend authority engine
         newSocket.on('chat_error', (error) => {
             toast.error(error.message);
         });
@@ -51,20 +49,19 @@ export const LandlordChat: React.FC = () => {
         return () => { newSocket.close(); };
     }, []);
 
-    // 2. Fetch Tenants to build Chat Rooms
+    // 2. Fetch Active Contacts
     useEffect(() => {
         if (user?.id) {
-            // Fetching approved tenants to act as chat rooms
             fetch(`http://localhost:5000/api/landlord/tenants/${user.id}`)
                 .then(res => res.json())
                 .then(data => {
                     const chatRooms: ChatRoom[] = data
                         .filter((t: any) => t.isApproved)
                         .map((t: any) => ({
-                            id: `${user.id}-${t.id}`, // Simplified Room ID for now
+                            id: `${user.id}-${t.id}`,
                             tenantId: t.id,
                             tenantName: t.name,
-                            isMuted: false // Defaulting to false until hooked to DB
+                            isMuted: false
                         }));
                     setRooms(chatRooms);
                 })
@@ -72,19 +69,17 @@ export const LandlordChat: React.FC = () => {
         }
     }, [user?.id]);
 
-    // 3. Join Room Logic
+    // 3. Connect to Chat Channel
     const joinRoom = (room: ChatRoom) => {
         if (socket && activeRoom?.id !== room.id) {
             socket.emit('join_room', room.id);
             setActiveRoom(room);
-            setMessages([]); // Clear previous messages
-            
-            // TODO: Fetch historical messages from SQL database here
+            setMessages([]); 
             toast.success(`Connected to ${room.tenantName}`);
         }
     };
 
-    // 4. Send Message Logic
+    // 4. Send Communication Packet
     const sendMessage = (e: React.FormEvent) => {
         e.preventDefault();
         if (newMessage.trim() === '' || !socket || !activeRoom || !user) return;
@@ -100,7 +95,7 @@ export const LandlordChat: React.FC = () => {
         setNewMessage('');
     };
 
-    // 5. Mute Tenant Logic (Authority)
+    // 5. Toggle Authority State (Mute Mappings)
     const toggleMute = () => {
         if (!activeRoom || !socket) return;
         
@@ -112,123 +107,132 @@ export const LandlordChat: React.FC = () => {
             icon: newMuteStatus ? '🔇' : '🔊'
         });
         
-        // Update room list state
         setRooms(rooms.map(r => r.id === activeRoom.id ? {...r, isMuted: newMuteStatus} : r));
     };
 
     return (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex h-[700px] overflow-hidden">
+        <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm flex h-[calc(100vh-12rem)] overflow-hidden animate-fade-in text-slate-800">
             
-            {/* LEFT: Contact List */}
-            <div className="w-1/3 border-r border-slate-100 flex flex-col bg-slate-50/50">
-                <div className="p-4 border-b border-slate-100 bg-white">
-                    <h2 className="font-display font-bold text-lg text-slate-800 flex items-center gap-2">
-                        <MessageSquare size={20} className="text-emerald-600"/> Messages
+            {/* LEFT CONTACT LEDGER COMPONENT SHEET */}
+            <div className="w-1/3 border-r border-gray-100 flex flex-col bg-[#f8f9f5]">
+                <div className="p-5 border-b border-gray-200/60 bg-white/60 backdrop-blur-md">
+                    <h2 className="font-semibold text-base text-slate-800 flex items-center gap-2">
+                        <MessageSquare size={16} className="text-[#657655]"/> Conversations
                     </h2>
                 </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                    {rooms.map(room => (
-                        <button 
-                            key={room.id}
-                            onClick={() => joinRoom(room)}
-                            className={`w-full text-left p-3 rounded-xl transition-all flex items-center justify-between group
-                                ${activeRoom?.id === room.id ? 'bg-emerald-50 border border-emerald-100 shadow-sm' : 'hover:bg-white border border-transparent hover:border-slate-100'}`}
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-sm shrink-0 transition-colors
-                                    ${activeRoom?.id === room.id ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'}`}>
-                                    {room.tenantName.charAt(0)}
+                
+                <div className="flex-1 overflow-y-auto p-3 space-y-1.5 custom-scrollbar">
+                    {rooms.map(room => {
+                        const isCurrent = activeRoom?.id === room.id;
+                        return (
+                            <button 
+                                key={room.id}
+                                onClick={() => joinRoom(room)}
+                                className={`w-full text-left p-3.5 rounded-xl transition-all flex items-center justify-between group outline-none
+                                    ${isCurrent 
+                                        ? 'bg-white border border-gray-200/80 shadow-xs' 
+                                        : 'hover:bg-white/50 border border-transparent'}`}
+                            >
+                                <div className="flex items-center gap-3 overflow-hidden">
+                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-xs shrink-0 transition-colors
+                                        ${isCurrent ? 'bg-[#e7efdb] text-[#3a4731]' : 'bg-white border border-gray-200 text-slate-500'}`}>
+                                        {room.tenantName.charAt(0)}
+                                    </div>
+                                    <div className="overflow-hidden">
+                                        <p className={`text-sm font-medium truncate ${isCurrent ? 'text-slate-900 font-semibold' : 'text-slate-700'}`}>
+                                            {room.tenantName}
+                                        </p>
+                                        <p className="text-[10px] text-slate-400 font-medium tracking-wide">Click to open ledger channel</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className={`font-semibold text-sm ${activeRoom?.id === room.id ? 'text-emerald-900' : 'text-slate-700'}`}>
-                                        {room.tenantName}
-                                    </p>
-                                    <p className="text-xs text-slate-400">Tap to view chat</p>
-                                </div>
-                            </div>
-                            {room.isMuted && <MicOff size={14} className="text-amber-500" />}
-                        </button>
-                    ))}
+                                {room.isMuted && <MicOff size={12} className="text-amber-600 shrink-0 ml-2" />}
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
-            {/* RIGHT: Active Chat Window */}
+            {/* RIGHT SIDE DIALOG WINDOW */}
             {activeRoom ? (
                 <div className="flex-1 flex flex-col bg-white relative">
-                    {/* Chat Header */}
-                    <div className="h-16 border-b border-slate-100 flex items-center justify-between px-6 bg-white/80 backdrop-blur-md z-10 absolute top-0 w-full">
+                    
+                    {/* CHAT TERMINAL SUB-HEADER */}
+                    <div className="h-16 border-b border-gray-100 flex items-center justify-between px-6 bg-white/80 backdrop-blur-md z-10 absolute top-0 w-full">
                         <div className="flex items-center gap-3">
-                            <span className="font-bold text-slate-800">{activeRoom.tenantName}</span>
+                            <span className="font-medium text-slate-800 text-sm">{activeRoom.tenantName}</span>
+                            <span className="h-2 w-2 bg-[#5c6e4e] rounded-full"></span>
                         </div>
                         
-                        {/* 🛡️ AUTHORITY: Mute Toggle Button */}
                         <button 
                             onClick={toggleMute}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold tracking-wider uppercase transition-all border outline-none
                                 ${activeRoom.isMuted 
                                     ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' 
-                                    : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                                    : 'bg-white text-slate-500 border-gray-200 hover:bg-gray-50'}`}
                         >
-                            {activeRoom.isMuted ? <><MicOff size={14}/> Muted</> : <><ShieldAlert size={14}/> Mute Tenant</>}
+                            {activeRoom.isMuted ? <><MicOff size={12}/> Restricted</> : <><ShieldAlert size={12}/> Restrict Tenant</>}
                         </button>
                     </div>
 
-                    {/* Chat Messages Area */}
-                    <div className="flex-1 overflow-y-auto p-6 pt-24 bg-slate-50/30">
+                    {/* INTERACTION MESSAGES VIEW PANEL */}
+                    <div className="flex-1 overflow-y-auto p-6 pt-20 pb-24 bg-[#f8f9f5]/40 custom-scrollbar">
                         {messages.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-slate-400">
-                                <MessageSquare size={32} className="mb-2 opacity-50"/>
-                                <p className="text-sm">No recent messages.</p>
-                                <p className="text-xs">Start the conversation below.</p>
+                                <MessageSquare size={24} className="mb-2 opacity-40 text-slate-400"/>
+                                <p className="text-xs font-medium text-slate-500">Secure conversation ledger initialized.</p>
+                                <p className="text-[10px] text-slate-400 mt-0.5">Type a message below to start communicating.</p>
                             </div>
                         ) : (
-                            messages.map((msg) => {
-                                const isMe = msg.senderRole === 'landlord';
-                                return (
-                                    /* 🛡️ DaisyUI Chat Bubbles */
-                                    <div key={msg.id} className={`chat ${isMe ? 'chat-end' : 'chat-start'} mb-2 animate-fade-in`}>
-                                        <div className="chat-image avatar">
-                                            <div className="w-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-500">
-                                                {isMe ? 'You' : activeRoom.tenantName.charAt(0)}
+                            <div className="space-y-4">
+                                {messages.map((msg) => {
+                                    const isMe = msg.senderRole === 'landlord';
+                                    return (
+                                        <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} space-y-1`}>
+                                            <div className="flex items-center gap-1.5 px-2">
+                                                <span className="text-[10px] font-bold text-slate-400">{isMe ? 'You' : activeRoom.tenantName}</span>
+                                                <span className="text-[9px] text-slate-400 flex items-center gap-0.5 font-medium">
+                                                    <Clock size={8}/>
+                                                    {msg.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                </span>
+                                            </div>
+                                            <div className={`max-w-xs md:max-w-md p-3.5 rounded-2xl text-xs leading-relaxed shadow-xs
+                                                ${isMe 
+                                                    ? 'bg-[#425042] text-white rounded-tr-xs' 
+                                                    : 'bg-white text-slate-800 border border-gray-200 rounded-tl-xs'}`}
+                                            >
+                                                {msg.text}
                                             </div>
                                         </div>
-                                        <div className="chat-header text-xs text-slate-400 mb-1">
-                                            {isMe ? 'You' : activeRoom.tenantName}
-                                            <time className="text-xs opacity-50 ml-1">{msg.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</time>
-                                        </div>
-                                        <div className={`chat-bubble text-sm shadow-sm ${isMe ? 'bg-emerald-600 text-white' : 'bg-white text-slate-800 border border-slate-100'}`}>
-                                            {msg.text}
-                                        </div>
-                                    </div>
-                                );
-                            })
+                                    );
+                                })}
+                            </div>
                         )}
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Message Input Form */}
-                    <form onSubmit={sendMessage} className="p-4 bg-white border-t border-slate-100 flex gap-3 items-center">
+                    {/* INPUT FORM ELEMENT BAR */}
+                    <form onSubmit={sendMessage} className="p-4 bg-white border-t border-gray-100 flex gap-2 items-center absolute bottom-0 w-full">
                         <input 
                             type="text" 
-                            placeholder="Type a message..." 
-                            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all text-slate-800"
+                            placeholder="Type an administrative message..." 
+                            className="flex-1 bg-[#f8f9f5] border border-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:bg-white focus:ring-1 focus:ring-[#425042] transition-all text-slate-800"
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
                         />
                         <button 
                             type="submit" 
                             disabled={!newMessage.trim()}
-                            className="p-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-2.5 bg-[#425042] hover:bg-[#344034] text-white rounded-xl transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed outline-none"
                         >
-                            <Send size={18} />
+                            <Send size={14} />
                         </button>
                     </form>
                 </div>
             ) : (
-                <div className="flex-1 flex flex-col items-center justify-center bg-slate-50/50 text-slate-400">
-                    <MessageSquare size={48} className="mb-4 opacity-20"/>
-                    <h3 className="font-medium text-slate-600">No Chat Selected</h3>
-                    <p className="text-sm mt-1">Select a tenant from the list to start messaging.</p>
+                <div className="flex-1 flex flex-col items-center justify-center bg-[#f8f9f5]/30 text-slate-400">
+                    <MessageSquare size={32} className="mb-3 opacity-20 text-[#425042]"/>
+                    <h3 className="font-medium text-slate-700 text-sm">No Active Conversation Selected</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Select an active contact profile from the folder sidebar to fetch records.</p>
                 </div>
             )}
         </div>
