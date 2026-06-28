@@ -1,7 +1,6 @@
-// LandlordTenantChecklist.tsx
-//This is where you have left of.
+// client/src/components/landlord/LandlordTenantChecklist.tsx
 import React, { useState, useEffect } from 'react';
-import { User, CheckCircle, XCircle, Home, AlertCircle, UserPlus } from 'lucide-react';
+import { User, CheckCircle, XCircle, Home, AlertCircle, UserPlus, ArrowLeft, Mail } from 'lucide-react';
 import { useAuth } from '../UserContext';
 
 interface Tenant {
@@ -27,7 +26,7 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
     const [tenants, setTenants] = useState<Tenant[]>([]);
     const [rooms, setRooms] = useState<RoomSimple[]>([]);
     
-    // Modal State
+    // Modal Allocation State
     const [isAssignModalOpen, setAssignModalOpen] = useState(false);
     const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
     const [selectedRoom, setSelectedRoom] = useState('');
@@ -79,7 +78,6 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
             const data = await res.json();
             
             if (res.ok) {
-                alert("Assigned successfully!");
                 setAssignModalOpen(false);
                 setSelectedTenant(null);
                 setSelectedRoom('');
@@ -99,8 +97,6 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
         setSelectedRoom('');
     };
 
-    // --- LOGIC FIX: Helper function to check if tenant is truly assigned ---
-    // If it is null, empty, OR literally the word 'Unassigned', they are homeless.
     const hasRoom = (t: Tenant) => {
         return t.roomNumber && t.roomNumber !== 'Unassigned';
     };
@@ -109,33 +105,57 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
     const activeTenants = tenants.filter(t => t.isApproved);
 
     return (
-        <div className="min-h-screen bg-slate-100 p-4 sm:p-8">
-            <div className="max-w-5xl mx-auto">
-                <button onClick={onBack} className="mb-6 text-sm text-slate-500 hover:text-indigo-600 font-medium">
-                    ← Back to Dashboard
+        <div className="min-h-screen bg-[#f8f9f5] p-4 sm:p-8 animate-fade-in text-slate-800">
+            <div className="max-w-4xl mx-auto space-y-8">
+                
+                {/* ELEGANT BACK NAVIGATION TRACK */}
+                <button 
+                    onClick={onBack} 
+                    className="group flex items-center gap-2 text-xs font-bold text-[#5c6e4e] uppercase tracking-wider hover:text-[#425042] transition-colors outline-none"
+                >
+                    <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" /> Back to Dashboard
                 </button>
 
-                {/* PENDING APPROVALS */}
+                {/* PAGE TYPOGRAPHY HEADER */}
+                <div className="border-b border-gray-200/60 pb-4">
+                    <h1 className="text-4xl font-serif text-slate-800 mb-1">Tenant Records</h1>
+                    <p className="text-slate-500 text-sm">Manage pending member verifications and room allocations.</p>
+                </div>
+
+                {/* PENDING REGISTER APPLICATIONS (Muted Warning Theme) */}
                 {pendingTenants.length > 0 && (
-                    <div className="mb-8 bg-white rounded-xl shadow-sm border border-orange-200 overflow-hidden">
-                        <div className="px-6 py-4 bg-orange-50 border-b border-orange-100 flex items-center gap-2">
-                            <AlertCircle className="text-orange-600" size={20} />
-                            <h2 className="text-lg font-bold text-orange-900">Pending Applications</h2>
-                            <span className="bg-orange-200 text-orange-800 text-xs font-bold px-2 py-0.5 rounded-full">
-                                {pendingTenants.length}
+                    <div className="bg-[#fef9eb] rounded-2xl border border-[#f5ead0] overflow-hidden shadow-xs">
+                        <div className="px-6 py-4 border-b border-[#eecfba]/30 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <AlertCircle className="text-[#b97a26]" size={16} />
+                                <h2 className="text-sm font-bold text-[#5c4b22] uppercase tracking-wider">Awaiting Verification</h2>
+                            </div>
+                            <span className="bg-[#fdf2e3] text-[#b97a26] text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                                {pendingTenants.length} Pending
                             </span>
                         </div>
-                        <div className="divide-y divide-orange-100">
+                        <div className="divide-y divide-[#f5ead0]/40">
                             {pendingTenants.map(tenant => (
-                                <div key={tenant.id} className="p-4 flex items-center justify-between hover:bg-orange-50/50 transition-colors">
+                                <div key={tenant.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/40">
                                     <div>
-                                        <div className="font-bold text-slate-800">{tenant.name}</div>
-                                        <div className="text-sm text-slate-500">{tenant.email}</div>
-                                        <div className="text-xs text-orange-600 font-medium mt-1">Awaiting approval</div>
+                                        <div className="font-semibold text-slate-800">{tenant.name}</div>
+                                        <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                                            <Mail size={12} className="text-slate-400" /> {tenant.email}
+                                        </div>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <button onClick={() => handleStatusUpdate(tenant.id, 'approved')} className="p-2 bg-green-100 text-green-700 rounded-lg font-bold flex items-center gap-1 text-sm"><CheckCircle size={16} /> Approve</button>
-                                        <button onClick={() => handleStatusUpdate(tenant.id, 'rejected')} className="p-2 bg-red-100 text-red-700 rounded-lg font-bold flex items-center gap-1 text-sm"><XCircle size={16} /> Reject</button>
+                                    <div className="flex gap-2 shrink-0">
+                                        <button 
+                                            onClick={() => handleStatusUpdate(tenant.id, 'rejected')} 
+                                            className="px-4 py-2 bg-white hover:bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100 transition-colors"
+                                        >
+                                            Reject
+                                        </button>
+                                        <button 
+                                            onClick={() => handleStatusUpdate(tenant.id, 'approved')} 
+                                            className="px-4 py-2 bg-[#425042] hover:bg-[#344034] text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
+                                        >
+                                            Approve Access
+                                        </button>
                                     </div>
                                 </div>
                             ))}
@@ -143,82 +163,99 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
                     </div>
                 )}
 
-                {/* TENANT DIRECTORY */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-                        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2"><User className="text-indigo-600" /> Tenant Directory</h2>
-                        <span className="text-xs text-slate-500 font-medium">{activeTenants.length} Active Tenants</span>
+                {/* ACTIVE TENANTS DIRECTORY PANEL */}
+                <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="px-8 py-5 border-b border-gray-100 flex justify-between items-center bg-transparent">
+                        <h2 className="font-semibold text-lg text-slate-800 flex items-center gap-2">
+                            <User size={18} className="text-[#657655]" /> Member Directory
+                        </h2>
+                        <span className="px-3 py-1 bg-[#e7efdb] text-[#5c6e4e] text-[10px] font-bold rounded-full uppercase tracking-wider">
+                            {activeTenants.length} Boarders Live
+                        </span>
                     </div>
 
-                    <table className="min-w-full divide-y divide-slate-200">
-                        <thead className="bg-white">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Name</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Status</th>
-                                <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200">
-                            {activeTenants.map(tenant => (
-                                <tr key={tenant.id} className="hover:bg-slate-50">
-                                    <td className="px-6 py-4">
-                                        <div className="font-medium text-slate-900">{tenant.name}</div>
-                                        <div className="text-sm text-slate-500">{tenant.email}</div>
-                                    </td>
+                    {/* SOFT CARD LIST INSTEAD OF PRIMITIVE STARK TABLES */}
+                    <div className="p-6 space-y-3 max-h-[550px] overflow-y-auto custom-scrollbar">
+                        {activeTenants.length === 0 ? (
+                            <div className="text-center py-12 text-slate-400 text-sm font-medium">No active boarders currently logged in repository.</div>
+                        ) : (
+                            activeTenants.map(tenant => (
+                                <div key={tenant.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-[#f8f9f5] hover:bg-[#f4f7f4] border border-gray-200/50 rounded-2xl transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-10 w-10 rounded-full bg-white border border-gray-200 text-slate-600 flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+                                            {tenant.name.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <div className="font-medium text-slate-800 text-sm">{tenant.name}</div>
+                                            <div className="text-xs text-slate-400 mt-0.5 font-medium">{tenant.email}</div>
+                                        </div>
+                                    </div>
                                     
-                                    {/* STATUS COLUMN FIX */}
-                                    <td className="px-6 py-4">
-                                        {hasRoom(tenant) ? (
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 gap-1">
-                                                <Home size={12} /> Room {tenant.roomNumber}
-                                            </span>
-                                        ) : (
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 gap-1">
-                                                <UserPlus size={12} /> Needs Room
-                                            </span>
-                                        )}
-                                    </td>
+                                    <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0">
+                                        {/* TONE-MATCHED BADGES & ACTIONS */}
+                                        <div>
+                                            {hasRoom(tenant) ? (
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold bg-[#e7efdb] text-[#5c6e4e] gap-1.5 border border-[#d3e0c0]">
+                                                    <Home size={12} /> Unit {tenant.roomNumber}
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold bg-orange-50 text-amber-700 gap-1.5 border border-orange-100">
+                                                    <UserPlus size={12} /> Unassigned
+                                                </span>
+                                            )}
+                                        </div>
 
-                                    {/* ACTION COLUMN FIX */}
-                                    <td className="px-6 py-4 text-right">
-                                        {!hasRoom(tenant) && (
-                                            <button 
-                                                onClick={() => openAssignModal(tenant)}
-                                                className="text-indigo-600 hover:text-indigo-900 text-sm font-medium hover:underline"
-                                            >
-                                                Assign Room
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                        <div className="min-w-[90px] text-right">
+                                            {!hasRoom(tenant) && (
+                                                <button 
+                                                    onClick={() => openAssignModal(tenant)}
+                                                    className="px-3 py-1.5 bg-white border border-gray-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors shadow-xs"
+                                                >
+                                                    Assign Unit
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
             </div>
 
-            {/* MODAL */}
+            {/* ASSIGN UNIT MODAL VIEW CONFIG */}
             {isAssignModalOpen && selectedTenant && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-                        <h3 className="text-lg font-bold text-slate-900 mb-2">Assign Room</h3>
-                        <p className="text-sm text-slate-500 mb-6">Select a room for <span className="font-semibold text-slate-800">{selectedTenant.name}</span>.</p>
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-[1px] flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 border border-gray-100 animate-in zoom-in-95 duration-150">
+                        <h3 className="text-md font-bold text-slate-800 mb-1">Allocate Dormitory Spot</h3>
+                        <p className="text-xs text-slate-400 font-medium mb-6">Select an open space configuration for <span className="font-semibold text-slate-700">{selectedTenant.name}</span>.</p>
                         <div className="space-y-4">
                             <select 
-                                className="w-full p-3 border border-slate-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="w-full p-3 border border-gray-200 rounded-xl bg-[#f8f9f5] text-xs text-slate-700 font-medium outline-none focus:ring-1 focus:ring-[#425042] transition-all"
                                 value={selectedRoom}
                                 onChange={(e) => setSelectedRoom(e.target.value)}
                             >
-                                <option value="">-- Select a Room --</option>
+                                <option value="">-- Choose Unit Reference --</option>
                                 {rooms.filter(r => r.currentOccupants < r.capacity).map(room => (
                                     <option key={room.room_number} value={room.room_number}>
-                                        Room {room.room_number} ({room.capacity - room.currentOccupants} spots left)
+                                        Unit {room.room_number} ({room.capacity - room.currentOccupants} slots remaining)
                                     </option>
                                 ))}
                             </select>
-                            <div className="flex gap-3 pt-2">
-                                <button onClick={() => setAssignModalOpen(false)} className="flex-1 py-2 border border-slate-300 rounded-lg font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
-                                <button onClick={handleAssign} disabled={!selectedRoom} className="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 disabled:opacity-50">Confirm</button>
+                            <div className="flex gap-2 pt-2">
+                                <button 
+                                    onClick={() => setAssignModalOpen(false)} 
+                                    className="flex-1 py-2 bg-gray-50 border border-gray-200 text-slate-600 text-xs font-medium rounded-lg hover:bg-gray-100 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    onClick={handleAssign} 
+                                    disabled={!selectedRoom} 
+                                    className="flex-1 py-2 bg-[#425042] hover:bg-[#344034] text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    Confirm Unit
+                                </button>
                             </div>
                         </div>
                     </div>

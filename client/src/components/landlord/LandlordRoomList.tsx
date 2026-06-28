@@ -1,6 +1,6 @@
-// LandLordRoomList.tsx
+// client/src/components/landlord/LandlordRoomList.tsx
 import React, { useState } from 'react';
-import { Plus, Users, X } from 'lucide-react';
+import { Plus, Users, X, ArrowLeft, BedDouble } from 'lucide-react';
 import { useAuth } from '../UserContext';
 import { useRooms } from '../../hooks/useRooms'; 
 
@@ -10,18 +10,13 @@ interface RoomListProps {
 
 export const LandlordRoomList: React.FC<RoomListProps> = ({ onBack }) => {
     const { user } = useAuth();
-    
-    // 2. USE THE HOOK: delegating all "thinking" to the Logic Layer
-    // We instantly get the data (rooms) and the action (addRoom)
     const { rooms, isLoading, addRoom } = useRooms(user?.id);
 
-    // Local UI state (Modals/Form inputs) stays here because it's specific to the View
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newRoomNum, setNewRoomNum] = useState('');
     const [newCapacity, setNewCapacity] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // 3. CLEAN HANDLER: The UI just calls the function, it doesn't care about API status codes
     const handleAddRoomSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -34,124 +29,158 @@ export const LandlordRoomList: React.FC<RoomListProps> = ({ onBack }) => {
             setNewCapacity(1);
             alert("Room added successfully!");
         }
-        setIsSubmitting(false);
+        setIsSubmitting(true);
     };
 
     return (
-        <div className="min-h-screen bg-slate-100 p-4 sm:p-8">
-            <div className="max-w-5xl mx-auto">
-                <button onClick={onBack} className="text-sm text-slate-500 hover:text-indigo-600 mb-4 font-medium">
-                    ← Back to Dashboard
+        <div className="min-h-screen bg-[#f8f9f5] p-4 sm:p-8 animate-fade-in text-slate-800">
+            <div className="max-w-4xl mx-auto space-y-8">
+                
+                {/* ELEGANT BACK NAVIGATION TRACK */}
+                <button 
+                    onClick={onBack} 
+                    className="group flex items-center gap-2 text-xs font-bold text-[#5c6e4e] uppercase tracking-wider hover:text-[#425042] transition-colors outline-none"
+                >
+                    <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" /> Back to Dashboard
                 </button>
 
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold text-slate-900">Property Rooms</h1>
+                {/* PAGE TYPOGRAPHY HEADER */}
+                <div className="border-b border-gray-200/60 pb-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                    <div>
+                        <h1 className="text-4xl font-serif text-slate-800 mb-1">Property Inventory</h1>
+                        <p className="text-slate-500 text-sm">Review room allocation metrics and maximum occupant capacity.</p>
+                    </div>
                     <button 
                         onClick={() => setIsModalOpen(true)}
-                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-sm"
+                        className="px-5 py-2.5 rounded-full bg-[#425042] hover:bg-[#344034] text-white text-sm font-medium flex items-center gap-2 shadow-sm transition-all shrink-0 self-start sm:self-auto"
                     >
-                        <Plus size={18} /> Add Room
+                        <Plus size={16} /> Add Property Room
                     </button>
                 </div>
 
-                {/* ROOM LIST TABLE */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                        <div className="text-sm text-slate-500">
-                            {/* We handle the simple math here, or you could even move this to the hook if complex */}
-                            Total Capacity: <b>{rooms.reduce((acc, r) => acc + r.capacity, 0)}</b>
-                        </div>
-                        <div className="text-sm text-slate-500">
-                            Occupied: <b>{rooms.reduce((acc, r) => acc + (r.currentOccupants || 0), 0)}</b>
+                {/* ACTIVE PROPERTY ROOMS LEDGER PANEL */}
+                <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="px-8 py-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-transparent">
+                        <h2 className="font-semibold text-lg text-slate-800 flex items-center gap-2">
+                            <BedDouble size={18} className="text-[#657655]" /> Unit Allocation
+                        </h2>
+                        <div className="flex items-center gap-4 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                            <span>Total Spots: <b className="text-slate-700 font-bold">{rooms.reduce((acc, r) => acc + r.capacity, 0)}</b></span>
+                            <span className="h-3 w-px bg-gray-300"></span>
+                            <span>Live Occupied: <b className="text-[#5c6e4e] font-bold">{rooms.reduce((acc, r) => acc + (r.currentOccupants || 0), 0)}</b></span>
                         </div>
                     </div>
 
-                    {isLoading ? (
-                        <div className="p-8 text-center text-slate-500">Loading rooms...</div>
-                    ) : (
-                        <table className="min-w-full divide-y divide-slate-200">
-                            <thead className="bg-white">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Room Number</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Occupancy</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-slate-200">
-                                {rooms.map((room) => {
-                                    const current = room.currentOccupants || 0;
-                                    const isFull = current >= room.capacity;
-                                    return (
-                                        <tr key={room.id} className="hover:bg-slate-50">
-                                            <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-900">
-                                                {room.room_number}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                {isFull ? (
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                        Occupied
-                                                    </span>
-                                                ) : current > 0 ? (
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                                        Partial
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                        Available
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 flex items-center gap-1">
-                                                <Users size={14} />
-                                                {current} / {room.capacity}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    )}
+                    {/* CARD ITEMS REPLACING PRAGMATIC BARE TABLE ROW TILES */}
+                    <div className="p-6 space-y-3 max-h-[550px] overflow-y-auto custom-scrollbar">
+                        {isLoading ? (
+                            <div className="p-8 text-center text-slate-400 text-sm font-medium">Loading asset structure...</div>
+                        ) : rooms.length === 0 ? (
+                            <div className="text-center py-12 text-slate-400 text-sm font-medium">No units registered inside the ledger database.</div>
+                        ) : (
+                            rooms.map((room) => {
+                                const current = room.currentOccupants || 0;
+                                const isFull = current >= room.capacity;
+                                const percentFull = Math.round((current / room.capacity) * 100);
+
+                                return (
+                                    <div key={room.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-[#f8f9f5] hover:bg-[#f4f7f4] border border-gray-200/50 rounded-2xl transition-all">
+                                        <div className="flex items-center gap-4 min-w-[120px]">
+                                            <div className="h-10 w-10 rounded-full bg-white border border-gray-200 text-slate-700 flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+                                                {room.room_number.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <div className="font-medium text-slate-800 text-sm">Unit {room.room_number}</div>
+                                                <div className="text-[11px] text-slate-400 mt-0.5 font-medium flex items-center gap-1">
+                                                    <Users size={12} /> {current} / {room.capacity} Spots Filled
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* SCALABLE HORIZONTAL DENSITY METER */}
+                                        <div className="flex-1 max-w-md hidden md:flex items-center gap-3">
+                                            <div className="w-full bg-white border border-gray-200/60 h-2 rounded-full overflow-hidden shadow-inner">
+                                                <div 
+                                                    className={`h-full rounded-full transition-all duration-500 ${isFull ? 'bg-[#cc4747]' : 'bg-[#657655]'}`} 
+                                                    style={{ width: `${percentFull}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-[11px] font-semibold text-slate-400 min-w-[36px] text-right">{percentFull}%</span>
+                                        </div>
+                                        
+                                        {/* TONE-MATCHED SECTOR SYSTEM STATUS TAGS */}
+                                        <div className="shrink-0 text-right sm:min-w-[110px]">
+                                            {isFull ? (
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-50 text-red-700 border border-red-100">
+                                                    Fully Booked
+                                                </span>
+                                            ) : current > 0 ? (
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-100">
+                                                    Partial
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#e7efdb] text-[#5c6e4e] border border-[#d3e0c0]">
+                                                    Available
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
                 </div>
             </div>
 
-            {/* ADD ROOM MODAL */}
+            {/* ADD INVENTORY UNIT MODAL PANEL CONFIG */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-[1px] flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 border border-gray-100 animate-in zoom-in-95 duration-150">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold text-slate-900">Add New Room</h3>
-                            <button onClick={() => setIsModalOpen(false)}><X size={20} className="text-slate-400" /></button>
+                            <h3 className="text-md font-bold text-slate-800">Add New Unit Entry</h3>
+                            <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                                <X size={16} />
+                            </button>
                         </div>
                         <form onSubmit={handleAddRoomSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Room Number / Name</label>
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Unit Identifier / Name</label>
                                 <input 
                                     type="text" 
                                     required 
-                                    placeholder="e.g. 305-B"
-                                    className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-black"
+                                    placeholder="e.g. 108"
+                                    className="w-full p-3 border border-gray-200 rounded-xl bg-[#f8f9f5] text-xs text-slate-700 font-medium outline-none focus:bg-white focus:ring-1 focus:ring-[#425042] transition-all"
                                     value={newRoomNum}
                                     onChange={e => setNewRoomNum(e.target.value)}
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Capacity (Max Tenants)</label>
+                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Max Occupancy Threshold</label>
                                 <input 
                                     type="number" 
                                     min="1" 
                                     required 
-                                    className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-black"
+                                    className="w-full p-3 border border-gray-200 rounded-xl bg-[#f8f9f5] text-xs text-slate-700 font-medium outline-none focus:bg-white focus:ring-1 focus:ring-[#425042] transition-all"
                                     value={newCapacity}
                                     onChange={e => setNewCapacity(parseInt(e.target.value))}
                                 />
                             </div>
-                            <button 
-                                type="submit" 
-                                disabled={isSubmitting}
-                                className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                            >
-                                {isSubmitting ? 'Saving...' : 'Save Room'}
-                            </button>
+                            <div className="flex gap-2 pt-2">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setIsModalOpen(false)} 
+                                    className="flex-1 py-2 bg-gray-50 border border-gray-200 text-slate-600 text-xs font-medium rounded-lg hover:bg-gray-100 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    disabled={isSubmitting}
+                                    className="flex-1 py-2 bg-[#425042] hover:bg-[#344034] text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    {isSubmitting ? 'Saving Asset...' : 'Save Unit'}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
