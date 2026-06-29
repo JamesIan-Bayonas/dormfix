@@ -1,5 +1,6 @@
+// client/src/components/dashboards/Register.tsx
 import React, { useState } from 'react';
-import { Home, Mail, Lock, Key, AlertCircle } from 'lucide-react';
+import { Home, Mail, Lock, Key, AlertCircle, User, ArrowRight } from 'lucide-react';
 
 interface RegisterProps {
     onToggleLogin: () => void;
@@ -10,7 +11,7 @@ const Register: React.FC<RegisterProps> = ({ onToggleLogin }) => {
         name: '',
         email: '',
         password: '',
-        role: 'tenant' as 'tenant' | 'landlord', // Explicitly type the role
+        role: 'tenant' as 'tenant' | 'landlord',
         landlordCode: ''
     });
     const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +34,7 @@ const Register: React.FC<RegisterProps> = ({ onToggleLogin }) => {
             if (!response.ok) throw new Error(data.error || 'Registration failed');
 
             alert('Registration Successful! Please login.');
-            onToggleLogin(); // Switch back to login view
+            onToggleLogin();
 
         } catch (err: any) {
             setError(err.message || 'An unexpected error occurred.');
@@ -43,68 +44,69 @@ const Register: React.FC<RegisterProps> = ({ onToggleLogin }) => {
     };
 
     return (
-        <div className="min-h-screen flex w-full bg-emerald-950 overflow-hidden">
+        <div className="min-h-screen flex w-full bg-[#f8f9f5] font-sans text-slate-800 animate-fade-in">
             
-            {/* LEFT SIDE: "DormFix" panel (Identical to Homepage.tsx) */}
-            <div className="hidden lg:flex w-1/2 bg-emerald-950 relative overflow-hidden justify-center items-center">
-                <div className="absolute inset-0 bg-linear-to-br from-emerald-900/90 to-emerald-550/90 z-10" /> 
+            {/* LEFT SIDE: MATTE OLIVE BRAND HERO */}
+            <div className="hidden lg:flex w-1/2 relative overflow-hidden justify-center items-center bg-[#425042]">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#425042]/95 via-[#344034]/90 to-[#566556]/60 mix-blend-multiply z-10" /> 
                 <img 
                     src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&q=80" 
                     alt="Dormitory Building" 
-                    className="absolute inset-0 w-full h-full object-cover opacity-50"
+                    className="absolute inset-0 w-full h-full object-cover opacity-20"
                 />
-                <div className="relative z-20 text-white max-w-md px-8 text-center">
+                <div className="relative z-20 text-white max-w-sm px-8 text-center space-y-6">
                     <div className="mb-6 flex justify-center">
-                        <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
-                            <Home size={48} className="text-emerald-300" />
+                        <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-md border border-white/20 shadow-xl">
+                            <Home size={32} className="text-white" />
                         </div>
                     </div>
-                    <h1 className="text-4xl font-bold mb-4 tracking-tight">Join DormFix</h1>
-                    <p className="text-lg text-emerald-100 font-light leading-relaxed">
+                    <h1 className="text-5xl font-serif text-white tracking-tight">Join DormFix</h1>
+                    <p className="text-base text-[#bac3ba] font-light leading-relaxed">
                         Create your account to start managing your dormitory experience.
                     </p>
                 </div>
             </div>
 
-            {/* RIGHT SIDE: The Registration Form (White background) */}
-            <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 sm:p-12 lg:p-24 bg-white">
+            {/* RIGHT SIDE: THE REGISTRATION FORM */}
+            <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 sm:p-12 bg-transparent">
                 <div className="w-full max-w-sm space-y-8">
                     <div className="text-center lg:text-left">
-                        <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Create Account</h2>
-                        <p className="mt-2 text-sm text-gray-500">Sign up as a tenant or landlord.</p>
+                        <h2 className="text-3xl font-serif text-slate-800 tracking-tight">Create Account</h2>
+                        <p className="mt-1.5 text-xs text-slate-400 font-medium">Sign up as a tenant or landlord.</p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-                        {/* Role Toggle (Styled to match theme) */}
-                        <div className="flex bg-gray-100 p-1 rounded-lg">
+                    <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+                        
+                        {/* Role Toggle Selector (Styled to match design theme) */}
+                        <div className="flex bg-gray-200/50 p-1 rounded-xl border border-gray-200/40">
                             <button
                                 type="button"
                                 onClick={() => setFormData({...formData, role: 'tenant'})}
-                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${formData.role === 'tenant' ? 'bg-white shadow text-emerald-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`flex-1 py-2 text-xs font-bold tracking-wider uppercase rounded-lg transition-all outline-none ${formData.role === 'tenant' ? 'bg-white shadow-xs text-[#425042]' : 'text-slate-400 hover:text-slate-600'}`}
                             >
                                 I am a Tenant
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setFormData({...formData, role: 'landlord'})}
-                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${formData.role === 'landlord' ? 'bg-white shadow text-emerald-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`flex-1 py-2 text-xs font-bold tracking-wider uppercase rounded-lg transition-all outline-none ${formData.role === 'landlord' ? 'bg-white shadow-xs text-[#425042]' : 'text-slate-400 hover:text-slate-600'}`}
                             >
                                 I am a Landlord
                             </button>
                         </div>
 
-                        <div className="space-y-5">
+                        <div className="space-y-4">
                             {/* Full Name Input */}
                             <div>
-                                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                                <div className="relative">
-                                    {/* Using Home icon as a placeholder for User icon if not imported */}
-                                    <Home size={18} className="absolute left-3 top-3 text-gray-400 pointer-events-none" />
+                                <label htmlFor="name" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Full Name</label>
+                                <div className="relative group">
+                                    <User size={16} className="absolute left-3.5 top-3.5 text-gray-400 group-focus-within:text-[#657655] transition-colors pointer-events-none" />
                                     <input
                                         id="name"
                                         type="text"
                                         required
-                                        className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-emerald-600 focus:border-transparent transition-all duration-200 sm:text-sm bg-gray-50 focus:bg-white"
+                                        className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-xs text-gray-700 font-medium
+                                        bg-white focus:ring-1 focus:ring-[#425042] focus:border-[#425042] transition-all outline-none shadow-xs"
                                         placeholder="John Doe"
                                         value={formData.name}
                                         onChange={(e) => setFormData({...formData, name: e.target.value})}
@@ -114,15 +116,16 @@ const Register: React.FC<RegisterProps> = ({ onToggleLogin }) => {
 
                             {/* Email Input */}
                             <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email address</label>
-                                <div className="relative">
-                                    <Mail size={18} className="absolute left-3 top-3 text-gray-400 pointer-events-none" />
+                                <label htmlFor="email" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Email Address</label>
+                                <div className="relative group">
+                                    <Mail size={16} className="absolute left-3.5 top-3.5 text-gray-400 group-focus-within:text-[#657655] transition-colors pointer-events-none" />
                                     <input
                                         id="email"
                                         type="email"
                                         autoComplete="email"
                                         required
-                                        className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-emerald-600 focus:border-transparent transition-all duration-200 sm:text-sm bg-gray-50 focus:bg-white"
+                                        className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-xs text-gray-700 font-medium
+                                        bg-white focus:ring-1 focus:ring-[#425042] focus:border-[#425042] transition-all outline-none shadow-xs"
                                         placeholder="you@example.com"
                                         value={formData.email}
                                         onChange={(e) => setFormData({...formData, email: e.target.value})}
@@ -132,15 +135,16 @@ const Register: React.FC<RegisterProps> = ({ onToggleLogin }) => {
 
                             {/* Password Input */}
                             <div>
-                                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                                <div className="relative">
-                                    <Lock size={18} className="absolute left-3 top-3 text-gray-400 pointer-events-none" />
+                                <label htmlFor="password" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Password</label>
+                                <div className="relative group">
+                                    <Lock size={16} className="absolute left-3.5 top-3.5 text-gray-400 group-focus-within:text-[#657655] transition-colors pointer-events-none" />
                                     <input
                                         id="password"
                                         type="password"
                                         autoComplete="new-password"
                                         required
-                                        className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-emerald-600 focus:border-transparent transition-all duration-200 sm:text-sm bg-gray-50 focus:bg-white"
+                                        className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl text-xs text-gray-700 font-medium
+                                        bg-white focus:ring-1 focus:ring-[#425042] focus:border-[#425042] transition-all outline-none shadow-xs"
                                         placeholder="••••••••"
                                         value={formData.password}
                                         onChange={(e) => setFormData({...formData, password: e.target.value})}
@@ -148,62 +152,67 @@ const Register: React.FC<RegisterProps> = ({ onToggleLogin }) => {
                                 </div>
                             </div>
 
-                            {/* CONDITIONAL: Landlord Code */}
-                            {/* renders if the user is a tenant */}
+                            {/* CONDITIONAL: Dynamic Landlord Spot Allocation Code */}
                             {formData.role === 'tenant' && ( 
-                                <div className="animate-in fade-in slide-in-from-top-2">
-                                    <label htmlFor="landlordCode" className="block text-sm font-medium text-emerald-700 mb-1">Landlord's Dorm Code</label>
-                                    <div className="relative">
-                                        <Key size={18} className="absolute left-3 top-3 text-emerald-500 pointer-events-none" />
+                                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <label htmlFor="landlordCode" className="block text-[10px] font-bold text-[#5c6e4e] uppercase tracking-wider">Landlord's Dorm Code</label>
+                                    <div className="relative group">
+                                        <Key size={16} className="absolute left-3.5 top-3.5 text-[#657655] pointer-events-none" />
                                         <input 
                                             id="landlordCode"
                                             type="text" 
                                             placeholder="#8821" 
                                             required 
-                                            className="block w-full pl-10 pr-3 py-2.5 border-2 border-emerald-100 rounded-lg text-gray-900 placeholder-emerald-300 focus:ring-2 focus:ring-emerald-600 focus:border-transparent transition-all duration-200 sm:text-sm bg-emerald-50/30 focus:bg-white font-mono tracking-wider"
+                                            className="block w-full pl-10 pr-3 py-3 border border-[#d3e0c0] bg-[#e7efdb]/30 rounded-xl text-xs text-gray-700 font-mono tracking-widest
+                                            focus:bg-white focus:ring-1 focus:ring-[#425042] focus:border-[#425042] transition-all outline-none"
                                             value={formData.landlordCode}
                                             onChange={e => setFormData({...formData, landlordCode: e.target.value})}
                                         />
                                     </div>
-                                    <p className="text-xs text-emerald-600 mt-1 ml-1">Ask your landlord for this code to join their dorm.</p>
+                                    <p className="text-[10px] text-slate-400 font-medium pl-1">Ask your property provider for this custom identification token.</p>
                                 </div>
                             )}
                         </div>
 
-                        {/* Error Message */}
+                        {/* Error Handling Notification Block */}
                         {error && (
-                            <div className="flex items-center p-3 rounded-lg bg-red-50 border border-red-300 text-red-700">
-                                <AlertCircle size={18} className="mr-2 flex-shrink-0" />
-                                <p className="text-sm font-medium">{error}</p>
+                            <div className="flex items-center p-3.5 rounded-xl bg-red-50 border border-red-100 text-red-700 animate-in fade-in zoom-in-95 duration-150">
+                                <AlertCircle size={16} className="mr-2.5 flex-shrink-0" />
+                                <p className="text-xs font-semibold">{error}</p>
                             </div>
                         )}
 
-                        {/* Submit Button */}
+                        {/* Submission Form Trigger */}
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                            className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-sm 
+                            text-xs font-bold tracking-wider uppercase text-white bg-[#425042] hover:bg-[#344034]
+                            focus:outline-none transition-all disabled:opacity-50 select-none cursor-pointer"
                         >
                             {isLoading ? (
                                 <span className="flex items-center gap-2">
-                                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <svg className="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
                                     Creating Account...
                                 </span>
                             ) : (
-                                "Register"
+                                <span className="flex items-center gap-1">
+                                    Register Account <ArrowRight size={14} />
+                                </span>
                             )}
                         </button>
                     </form>
                     
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-500">
+                    {/* Switch Toggle Anchor Links */}
+                    <div className="mt-8 text-center pt-4 border-t border-gray-200/40">
+                        <p className="text-xs text-slate-400 font-medium">
                             Already have an account?{' '}
                             <button 
                                 onClick={onToggleLogin} 
-                                className="font-semibold text-emerald-600 hover:text-emerald-500 transition-colors hover:underline"
+                                className="font-bold text-[#5c6e4e] hover:text-[#425042] hover:underline transition-colors outline-none"
                             >
                                 Log in here
                             </button>
