@@ -185,7 +185,7 @@ const Register: React.FC<RegisterProps> = ({ onToggleLogin }) => {
                         {/* Submission Form Trigger */}
                         <button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isLoading}    
                             className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-sm 
                             text-xs font-bold tracking-wider uppercase text-white bg-[#425042] hover:bg-[#344034]
                             focus:outline-none transition-all disabled:opacity-50 select-none cursor-pointer"
