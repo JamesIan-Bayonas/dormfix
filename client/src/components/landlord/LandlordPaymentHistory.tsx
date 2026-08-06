@@ -1,6 +1,7 @@
 // client/src/components/landlord/LandlordPaymentHistory.tsx
 import React, { useState } from 'react';
-import { CheckCircle, XCircle, Eye, DollarSign, Calendar, MessageSquare, AlertTriangle, ArrowLeft, ShieldAlert } from 'lucide-react';
+import { Eye, DollarSign, Calendar, ArrowLeft, ShieldAlert } from 'lucide-react';
+
 import { useAuth } from '../UserContext';
 import { usePayments } from '../../hooks/usePayments';
 

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { 
     X, User, CreditCard, Wrench, CheckCircle2, 
-    AlertTriangle, Eye, AlertCircle 
+    AlertTriangle, Eye
 } from 'lucide-react';
 
 export interface RoomDetailData {

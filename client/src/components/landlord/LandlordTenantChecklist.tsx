@@ -1,6 +1,6 @@
 // client/src/components/landlord/LandlordTenantChecklist.tsx
 import React, { useState, useEffect } from 'react';
-import { User, CheckCircle, XCircle, Home, AlertCircle, UserPlus, ArrowLeft, Mail } from 'lucide-react';
+import { User, Home, AlertCircle, UserPlus, ArrowLeft, Mail } from 'lucide-react';
 import { useAuth } from '../UserContext';
 
 interface Tenant {

@@ -1,6 +1,6 @@
 // client/src/components/tenant/TenantPaymentHistory.tsx
 import React, { useState } from 'react';
-import { ArrowLeft, ShieldAlert, AlertTriangle, FileText, Info, Eye, Clock } from 'lucide-react';
+import { ArrowLeft, ShieldAlert, AlertTriangle, FileText, Info, Eye } from 'lucide-react';
 import { useAuth } from '../UserContext';
 import { useMyPayments } from '../../hooks/useMyPayments';
 

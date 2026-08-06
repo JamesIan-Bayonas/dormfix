@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../UserContext';
-import { Send, MessageSquare, Trash2, X, Minimize2 } from 'lucide-react';
+import { Send, MessageSquare, Trash2, Minimize2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Message {
