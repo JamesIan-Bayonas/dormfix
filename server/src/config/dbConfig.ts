@@ -15,10 +15,10 @@ if (missingVars.length > 0) {
 const sqlConfig: sql.config = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    server: 'localhost\\SQLEXPRESS',
+    server: process.env.DB_SERVER || 'localhost\\SQLEXPRESS', 
     database: process.env.DB_NAME,
     options: {
-        encrypt: false, 
+        encrypt: true, 
         trustServerCertificate: true,
         enableArithAbort: true
     }

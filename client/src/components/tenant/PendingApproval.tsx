@@ -1,48 +1,55 @@
+// client/src/components/tenant/PendingApproval.tsx
 import React from 'react';
-import { Clock, LogOut, ShieldAlert } from 'lucide-react';
+import { Clock, LogOut, ShieldAlert, ArrowRight } from 'lucide-react';
 import { useAuth } from '../UserContext';
 
 export const PendingApproval: React.FC = () => {
     const { logout, user } = useAuth();
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4">
-            <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden text-center">
-                <div className="bg-amber-500 p-6 flex justify-center">
-                    <div className="bg-white/20 p-4 rounded-full backdrop-blur-sm">
-                        <Clock size={48} className="text-white" />
+        <div className="min-h-screen bg-[#f8f9f5] flex flex-col justify-center items-center p-6 font-sans text-slate-800 animate-fade-in">
+            <div className="max-w-md w-full bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden p-8 text-center space-y-6">
+                
+                {/* REFINED TIMING CIRCLE INDICATOR */}
+                <div className="flex justify-center pt-2">
+                    <div className="bg-[#fef9eb] border border-[#f5ead0] p-5 rounded-full shadow-xs text-[#b97a26] animate-pulse">
+                        <Clock size={40} strokeWidth={2} />
                     </div>
                 </div>
                 
-                <div className="p-8">
-                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Access Pending</h2>
-                    <p className="text-slate-600 mb-6">
-                        Hello <strong>{user?.name}</strong>! You have successfully joined the dormitory queue. 
-                        Your landlord needs to verify and approve your account before you can access the dashboard.
+                {/* EDITORIAL TYPOGRAPHY SUMMARY */}
+                <div>
+                    <h2 className="text-3xl font-serif text-slate-800 tracking-tight">Access Pending</h2>
+                    <p className="text-slate-500 text-xs font-medium mt-2 leading-relaxed">
+                        Hello <span className="font-bold text-slate-700">{user?.name}</span>! You have successfully joined the dormitory queue. Your landlord needs to verify and authorize your account profile before you can access the dashboard.
                     </p>
+                </div>
 
-                    <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 text-left mb-6">
-                        <div className="flex gap-3">
-                            <ShieldAlert className="text-amber-500 shrink-0" size={20} />
-                            <div>
-                                <h4 className="font-semibold text-sm text-slate-800">What happens next?</h4>
-                                <ul className="text-xs text-slate-500 list-disc list-inside mt-1 space-y-1">
-                                    <li>Your landlord sees your request instantly.</li>
-                                    <li>Once approved, you can log in to pay rent & request repairs.</li>
-                                    <li>If you entered the wrong code, ask your landlord to reject it.</li>
-                                </ul>
-                            </div>
+                {/* NEXT STEPS GUIDE BOX */}
+                <div className="bg-[#f8f9f5] rounded-2xl p-5 border border-gray-200/60 text-left">
+                    <div className="flex gap-3">
+                        <ShieldAlert className="text-[#b97a26] shrink-0 mt-0.5" size={18} />
+                        <div>
+                            <h4 className="font-semibold text-xs uppercase tracking-wider text-slate-500">What happens next?</h4>
+                            <ul className="text-xs text-slate-600 list-disc list-inside mt-2.5 space-y-1.5 font-medium leading-relaxed">
+                                <li>Your landlord sees your pending request instantly.</li>
+                                <li>Once approved, you can log in to pay rent & request repairs.</li>
+                                <li>If you entered the wrong code, ask your landlord to reject it.</li>
+                            </ul>
                         </div>
                     </div>
-
-                    <button 
-                        onClick={logout}
-                        className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
-                    >
-                        <LogOut size={18} />
-                        Logout and Check Later
-                    </button>
                 </div>
+
+                {/* PRIMARY ACTIONS LOGOUT TRIGGER BUTTON */}
+                <button 
+                    onClick={logout}
+                    className="w-full py-3 bg-[#425042] hover:bg-[#344034] text-white text-xs font-bold tracking-wider uppercase rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 outline-none select-none cursor-pointer"
+                >
+                    <LogOut size={14} />
+                    <span>Logout and Check Later</span>
+                    <ArrowRight size={14} className="ml-1 opacity-60" />
+                </button>
+                
             </div>
         </div>
     );

@@ -1,3 +1,4 @@
+// server/src/index.ts
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -5,8 +6,10 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { createServer } from 'http'; // 🛡️ Wrapped HTTP layer for WebSocket bindings
+import { Server } from 'socket.io';   // 🛡️ Socket.io integration engine
 
-// Import New Route Modules
+// Import Route Modules
 import authRoutes from './routes/authRoutes.ts';
 import maintenanceRoutes from './routes/maintenanceRoutes.ts';
 import paymentRoutes from './routes/paymentRoutes.ts';
@@ -15,7 +18,6 @@ import ruleRoutes from './routes/ruleRoutes.ts';
 import uploadRoutes from './routes/uploadRoutes.ts';
 import tenantRoutes from './routes/tenantRoutes.ts';
 
-// ESM Directory Fix
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -35,29 +37,63 @@ if (!fs.existsSync(uploadDir)) {
 }
 app.use('/uploads', express.static(uploadDir));
 
-// Auth: /api/login, /api/register
+// Route Mounting
 app.use('/api', authRoutes);
-
-// Maintenance: /api/maintenance/...
 app.use('/api/maintenance', maintenanceRoutes);
-
-// Payments: /api/payments/...
 app.use('/api/payments', paymentRoutes);
-
-// Rooms: /api/landlord/rooms...
 app.use('/api/landlord', roomRoutes);
-
-// Rules: /api/rules/...
 app.use('/api/rules', ruleRoutes);
-
-// Uploads: /api/upload
 app.use('/api/upload', uploadRoutes);
-
-// Tenant Management: /api/landlord/approve..., /api/tenant/details...
-// We mount this at '/api' because the router file handles the specific sub-paths
 app.use('/api', tenantRoutes);
 
-// Start Server
-app.listen(PORT, () => {
+// 🛡️ INTERCEPT AND RE-ROUTE EXPRESS VIA SERVER WRAPPER
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+    cors: {
+        origin: "http://localhost:5173", // Allow connection links from Vite server
+        methods: ["GET", "POST", "PATCH", "DELETE"]
+    }
+});
+
+// 🤖 CORE REAL-TIME WEBSOCKET ROUTING LIFECYCLE ENGINE
+io.on('connection', (socket) => {
+    console.log(`🔌 Real-Time Pipeline Open: Connection Verified for Socket ID [${socket.id}]`);
+
+    // Tenant and Landlord Client Room Isolation Binding
+    socket.on('join_room', (roomId) => {
+        socket.join(roomId);
+        console.log(`🔒 Channel Routing: Socket [${socket.id}] joined isolated Chat Room [${roomId}]`);
+    });
+
+    // Message Packet Interception & Broadcast Loop
+    socket.on('send_message', (data) => {
+        const { roomId, senderId, role, text } = data;
+        
+        console.log(`📩 Message Packet Dispatched inside Room [${roomId}] from Role [${role}]`);
+        
+        // Broadcast packet back to everyone connected to the current isolated room instance
+        io.to(roomId).emit('receive_message', {
+            senderId,
+            role,
+            text,
+            timestamp: new Date()
+        });
+    });
+
+    // Administrative Client Restriction Handlers
+    socket.on('toggle_mute', (data) => {
+        const { roomId, status } = data;
+        io.to(roomId).emit('chat_error', {
+            message: status ? "Communication capabilities restricted by property management." : "Communication capabilities restored."
+        });
+    });
+
+    socket.on('disconnect', () => {
+        console.log(`❌ Pipeline Terminated: Connection Closed for Socket ID [${socket.id}]`);
+    });
+});
+
+// Start Wrapped HTTP Server Instance instead of raw Express listener
+httpServer.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });

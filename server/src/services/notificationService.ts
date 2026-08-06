@@ -15,7 +15,7 @@ export const notificationService = {
         try {
             console.log(`📩 Sending Landlord Alert: ${subject}`);
             await transporter.sendMail({
-                from: '"DormFix System" <system@dormfix.com>',
+                from: '"DormFix System" <`system@dormfix.com>',
                 to: process.env.LANDLORD_EMAIL, 
                 subject: `[DormFix Alert] ${subject}`,
                 text: message,
@@ -48,4 +48,4 @@ export const notificationService = {
         console.log(`📱 SMS TRIGGERED: ${message}`);
         // Future: Integration with Semaphore API
     }
-};
+};  
