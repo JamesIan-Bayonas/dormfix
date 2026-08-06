@@ -1,8 +1,7 @@
 // client/src/components/landlord/LandlordMaintenanceList.tsx
 import React from 'react';
 import { 
-    Clock, CheckCircle, AlertTriangle, 
-    FileText, MapPin, MoreHorizontal, ArrowRight, Wrench 
+    Clock, CheckCircle, AlertTriangle, MapPin, MoreHorizontal, ArrowRight, Wrench 
 } from 'lucide-react';
 import { useAuth } from '../UserContext';
 import { useMaintenance } from '../../hooks/useMaintenance';

@@ -1,8 +1,7 @@
 // client/src/components/landlord/LandlordRules.tsx
 import React, { useState, useEffect } from 'react';
 import { 
-  Plus, Trash2, ScrollText, ShieldCheck, Home, Globe, 
-  Volume2, Users, AlertTriangle, Sparkles, ArrowLeft
+  Plus, Trash2, ScrollText, ShieldCheck, AlertTriangle
 } from 'lucide-react';
 import { ruleService, type HouseRule } from '../../services/ruleService';
 import { useAuth } from '../UserContext';
