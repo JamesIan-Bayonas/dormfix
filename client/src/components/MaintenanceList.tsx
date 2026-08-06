@@ -21,7 +21,7 @@ export const MaintenanceList: React.FC = () => {
     useEffect(() => {
         if (user?.id) {
             // FIX: Point the API string to the true backend target path
-            fetch(`http://localhost:5000/api/maintenance/${user.id}`)
+            fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/maintenance/${user.id}`)
                 .then(res => {
                     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
                     return res.json();

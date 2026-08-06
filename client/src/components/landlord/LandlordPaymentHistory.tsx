@@ -156,7 +156,7 @@ export const LandlordPaymentHistory: React.FC<Props> = ({ onBack }) => {
                                         {/* ADMINISTRATIVE INTERACTIVE ACTIONS BAR */}
                                         <div className="flex justify-between items-center pt-2 border-t border-gray-200/20">
                                             <button 
-                                                onClick={() => setViewImage(`http://localhost:5000${payment.proofImage}`)}
+                                                onClick={() => setViewImage(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${payment.proofImage}`)}
                                                 className="text-xs text-[#5c6e4e] font-semibold hover:text-[#425042] inline-flex items-center gap-1 bg-white border border-gray-200 px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors shadow-xs outline-none"
                                             >
                                                 <Eye size={12} /> View Document

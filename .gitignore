@@ -33,3 +33,4 @@ eng.traineddata
 uploads/
 
 /src/generated/prisma
+repomix-output.xml

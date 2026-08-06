@@ -36,12 +36,13 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
     }, [user?.id]);
 
     const refreshData = () => {
-        fetch(`http://localhost:5000/api/landlord/tenants/${user?.id}`)
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        fetch(`${API_URL}/api/landlord/tenants/${user?.id}`)
             .then(res => res.json())
             .then(data => setTenants(data))
             .catch(err => console.error("Failed to load tenants", err));
 
-        fetch(`http://localhost:5000/api/landlord/rooms/${user?.id}`)
+        fetch(`${API_URL}/api/landlord/rooms/${user?.id}`)
             .then(res => res.json())
             .then(setRooms)
             .catch(err => console.error("Failed to load rooms", err));
@@ -49,7 +50,8 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
 
     const handleStatusUpdate = async (tenantId: string, status: 'approved' | 'rejected') => {
         try {
-            const res = await fetch(`http://localhost:5000/api/users/${tenantId}/status`, {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const res = await fetch(`${API_URL}/api/users/${tenantId}/status`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ isApproved: status === 'approved' })
@@ -65,7 +67,8 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
         if (!selectedTenant || !selectedRoom) return;
 
         try {
-            const res = await fetch('http://localhost:5000/api/assign-room', {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const res = await fetch(`${API_URL}/api/assign-room`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

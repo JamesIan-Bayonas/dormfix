@@ -31,7 +31,7 @@ export const LandlordChat: React.FC = () => {
 
     // 1. Initialize Socket Connection
     useEffect(() => {
-        const newSocket = io('http://localhost:5000');
+        const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
         setSocket(newSocket);
 
         newSocket.on('receive_message', (data) => {
@@ -52,7 +52,7 @@ export const LandlordChat: React.FC = () => {
     // 2. Fetch Active Contacts
     useEffect(() => {
         if (user?.id) {
-            fetch(`http://localhost:5000/api/landlord/tenants/${user.id}`)
+            fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/landlord/tenants/${user.id}`)
                 .then(res => res.json())
                 .then(data => {
                     const chatRooms: ChatRoom[] = data

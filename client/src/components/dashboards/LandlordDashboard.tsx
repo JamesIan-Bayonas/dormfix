@@ -54,7 +54,7 @@ export const LandlordDashboard: React.FC = () => {
     useEffect(() => {
         if (user?.id) {
             setIsLoadingData(true);
-            fetch(`http://localhost:5000/api/landlord/tenants/${user.id}`)
+            fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/landlord/tenants/${user.id}`)
                 .then(res => res.json())
                 .then(data => {
                     const formatted = data.map((t: any) => ({

@@ -126,7 +126,7 @@ export const RoomDetailDrawer: React.FC<RoomDetailDrawerProps> = React.memo(({
                                                         <div className="mt-3 pt-2 border-t border-gray-200/60">
                                                             <div className="aspect-video bg-gray-100 rounded-xl mb-3 overflow-hidden relative border border-gray-200">
                                                                 <img 
-                                                                    src={occ.paymentProof ? `http://localhost:5000${occ.paymentProof}` : "https://placehold.co/600x400"} 
+                                                                    src={occ.paymentProof ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${occ.paymentProof}` : "https://placehold.co/600x400"}
                                                                     alt="Proof" 
                                                                     className="w-full h-full object-cover"
                                                                     onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/600x400?text=Receipt+Image+Not+Found"; }}
