@@ -30,7 +30,7 @@ export const TenantChat: React.FC<TenantChatProps> = ({ isOpen, onClose }) => {
     useEffect(() => {
         if (!user?.id || !isOpen) return; // Only connect when opened to save resources
 
-        fetch(`http://localhost:5000/api/tenant/details/${user.id}`)
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/tenant/details/${user.id}`)
             .then(res => res.json())
             .then(data => {
                 if (!data.error && data.landlordId) {
@@ -38,7 +38,7 @@ export const TenantChat: React.FC<TenantChatProps> = ({ isOpen, onClose }) => {
                     setRoomId(generatedRoomId);
                     setLandlordName(data.landlordName);
 
-                    const newSocket = io('http://localhost:5000');
+                    const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
                     setSocket(newSocket);
                     newSocket.emit('join_room', generatedRoomId);
 

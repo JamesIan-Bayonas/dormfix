@@ -51,7 +51,7 @@ export const TenantDashboard: React.FC = () => {
     useEffect(() => {
         if (user?.id) {
             setIsLoadingHousing(true);
-            fetch(`http://localhost:5000/api/tenant/details/${user.id}`)
+            fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/tenant/details/${user.id}`)
                 .then(res => res.json())
                 .then(data => {
                     if (!data.error) setHousing(data);
@@ -69,7 +69,7 @@ export const TenantDashboard: React.FC = () => {
         if (!user?.id || !housing?.landlordId || !location.pathname.includes('/chat')) return;
 
         const channelRoomId = `${housing.landlordId}-${user.id}`;
-        const activeSocket = io('http://localhost:5000');
+        const activeSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
         setSocket(activeSocket);
 
         activeSocket.emit('join_room', channelRoomId);
@@ -110,7 +110,7 @@ export const TenantDashboard: React.FC = () => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            const res = await fetch('http://localhost:5000/api/maintenance', {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/maintenance`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tenantId: user?.id, ...formData })

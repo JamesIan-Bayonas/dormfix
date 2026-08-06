@@ -179,7 +179,7 @@ export const TenantPaymentHistory: React.FC<Props> = ({ onBack }) => {
                                     {/* INTERACTIVE ACTIONS SECTOR FOOTER */}
                                     <div className="flex justify-between items-center">
                                         <button 
-                                            onClick={() => setViewImage(`http://localhost:5000${payment.proofImage}`)}
+                                            onClick={() => setViewImage(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${payment.proofImage}`)}
                                             className="text-xs text-[#5c6e4e] font-semibold hover:text-[#425042] inline-flex items-center gap-1 bg-white border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors shadow-xs outline-none"
                                         >
                                             <Eye size={12} /> Inspect Uploaded Proof

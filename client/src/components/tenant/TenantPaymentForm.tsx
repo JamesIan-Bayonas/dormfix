@@ -53,7 +53,7 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
             formData.append('remarks', remarks);
             formData.append('proof', selectedFile);
 
-            const response = await fetch('http://localhost:5000/api/payments', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/payments`, {
                 method: 'POST',
                 body: formData, 
             });
