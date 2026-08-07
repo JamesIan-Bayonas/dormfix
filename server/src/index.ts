@@ -20,12 +20,33 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Exact production origin list (NO trailing slashes)
+const allowedOrigins = [
+    "http://localhost:5173",
+    "https://dormfix-jamesian-bayonas-projects.vercel.app",
+    process.env.FRONTEND_URL
+].filter(Boolean) as string[];
+
+const corsOptions: cors.CorsOptions = {
+    origin: (origin, callback) => {
+        // Allow requests with no origin (Postman, server-to-server, mobile)
+        if (!origin) return callback(null, true);
+        
+        // Allow explicitly listed origins or any Vercel preview build (*.vercel.app)
+        if (allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin)) {
+            return callback(null, true);
+        }
+        
+        return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+};
+
 // Global Middleware
 app.use(express.json());    
-app.use(cors({
-    origin: ["http://localhost:5173", "https://dormfix-app.vercel.app"],
-    credentials: true
-}));
+app.use(cors(corsOptions));
 
 // Static Files (Uploads)
 const uploadDir = path.join(process.cwd(), 'uploads');
@@ -47,8 +68,14 @@ app.use('/api', tenantRoutes);
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: {
-        origin: ["http://localhost:5173", "https://dormfix-app.vercel.app"],
-        methods: ["GET", "POST", "PATCH", "DELETE"]
+        origin: (origin, callback) => {
+            if (!origin || allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin)) {
+                return callback(null, true);
+            }
+            return callback(new Error(`Socket CORS blocked for origin: ${origin}`));
+        },
+        methods: ["GET", "POST", "PATCH", "DELETE"],
+        credentials: true
     }
 });
 
