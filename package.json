@@ -1,4 +1,11 @@
 {
+  "name": "dormfix-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix server install && npm --prefix server run build",
+    "start": "npm --prefix server start"
+  },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "nodemailer": "^8.0.1"

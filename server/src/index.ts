@@ -3,12 +3,10 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 
-// Import Route Modules (removed .ts extensions)
+// Import Route Modules
 import authRoutes from './routes/authRoutes';
 import maintenanceRoutes from './routes/maintenanceRoutes';
 import paymentRoutes from './routes/paymentRoutes';
@@ -16,9 +14,6 @@ import roomRoutes from './routes/roomRoutes';
 import ruleRoutes from './routes/ruleRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 import tenantRoutes from './routes/tenantRoutes';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 dotenv.config();
 
