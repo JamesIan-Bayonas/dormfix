@@ -5,7 +5,7 @@ import {
     getTenantDetails, 
     getLandlordTenants, 
     updateUserStatus 
-} from '../controllers/tenantController.ts';
+} from '../controllers/tenantController';
 
 const router = express.Router();
 

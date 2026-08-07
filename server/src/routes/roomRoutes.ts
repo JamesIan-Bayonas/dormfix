@@ -1,5 +1,5 @@
 import express from 'express';
-import { getRooms, addRoom, assignTenant } from '../controllers/roomController.ts';
+import { getRooms, addRoom, assignTenant } from '../controllers/roomController';
 
 const router = express.Router();
 

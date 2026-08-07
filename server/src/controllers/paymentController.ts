@@ -1,10 +1,10 @@
 // server/src/controllers/paymentController.ts
 import type { Request, Response } from 'express';
-import { poolPromise } from '../config/dbConfig.ts';
+import { poolPromise } from '../config/dbConfig';
 import sql from 'mssql';
 import crypto from 'crypto';
-import { analyzePaymentImage } from '../services/aiService.ts';
-import { notificationService } from '../services/notificationService.ts';
+import { analyzePaymentImage } from '../services/aiService';
+import { notificationService } from '../services/notificationService';
 
 interface MulterFile {
     filename: string;

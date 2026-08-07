@@ -1,11 +1,11 @@
 import type { Request, Response } from 'express';
-import { poolPromise } from '../config/dbConfig.ts';
+import { poolPromise } from '../config/dbConfig';
 import sql from 'mssql';
 import crypto from 'crypto';
 
 // 🛡️ MUST ADD THESE IMPORTS
-import { analyzeMaintenanceRequest } from '../services/aiService.ts';
-import { notificationService } from '../services/notificationService.ts';
+import { analyzeMaintenanceRequest } from '../services/aiService';
+import { notificationService } from '../services/notificationService';
 
 // 1. SUBMIT REQUEST
 // server/src/controllers/maintenanceController.ts

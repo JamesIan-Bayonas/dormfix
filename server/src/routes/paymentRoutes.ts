@@ -1,11 +1,11 @@
 import express from 'express';
-import { upload } from '../middleware/uploadMiddleware.ts'; // Import your Multer config
+import { upload } from '../middleware/uploadMiddleware'; // Import your Multer config
 import { 
     processTenantPayment,
     getLandlordPayments, 
     getTenantHistory, 
     verifyPayment 
-} from '../controllers/paymentController.ts'; 
+} from '../controllers/paymentController'; 
 
 const router = express.Router();
 

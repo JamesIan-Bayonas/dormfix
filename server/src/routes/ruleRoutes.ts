@@ -1,6 +1,6 @@
 import express from 'express';
 // Note the .ts extension
-import { getRules, addRule, deleteRule } from '../controllers/ruleController.ts';
+import { getRules, addRule, deleteRule } from '../controllers/ruleController';
 
 const router = express.Router();
 

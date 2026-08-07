@@ -1,6 +1,6 @@
 import express from 'express';
-import { upload } from '../middleware/uploadMiddleware.ts';
-import { uploadFile } from '../controllers/uploadController.ts';
+import { upload } from '../middleware/uploadMiddleware';
+import { uploadFile } from '../controllers/uploadController';
 
 const router = express.Router();
 

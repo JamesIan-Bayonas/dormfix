@@ -3,44 +3,36 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const requiredEnvVars = ['DB_USER', 'DB_PASSWORD', 'DB_SERVER', 'DB_NAME'];
-const missingVars = requiredEnvVars.filter(key => !process.env[key]);
+// Determine if running in cloud production
+const isProduction = process.env.NODE_ENV === 'production';
 
-if (missingVars.length > 0) {
-    console.error(`CRITICAL ERROR: Missing required environment variables: ${missingVars.join(', ')}`);
-    console.error('Please create a .env file in the server directory based on the README instructions.');
-    process.exit(1);
-}
-
-const sqlConfig: sql.config = {
+const dbConfig: sql.config = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    server: process.env.DB_SERVER || 'localhost\\SQLEXPRESS', 
-    database: process.env.DB_NAME,
+    server: process.env.DB_SERVER || 'localhost',
+    database: process.env.DB_NAME || 'dormfix',
+    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 1433,
     options: {
-        encrypt: true, 
-        trustServerCertificate: true,
-        enableArithAbort: true
+        // Enforce encryption for cloud databases (e.g., Azure SQL)
+        encrypt: isProduction, 
+        trustServerCertificate: !isProduction
+    },
+    pool: {
+        max: 10,
+        min: 0,
+        idleTimeoutMillis: 30000
     }
 };
 
-console.log('Attempting to connect to SQL Server...');
-console.log(`   Server: ${sqlConfig.server}`);
-console.log(`   Database: ${sqlConfig.database}`);
-console.log(`   User: ${sqlConfig.user}`);
-
-export const poolPromise = new sql.ConnectionPool(sqlConfig)
+export const poolPromise = new sql.ConnectionPool(dbConfig)
     .connect()
     .then(pool => {
-        console.log('Connected to SQL Server successfully!');
+        console.log(`✅ Connected to MSSQL Database (${isProduction ? 'Production Cloud' : 'Local Host'})`);
         return pool;
     })
     .catch(err => {
-        console.error('Database Connection Failed!');
-        console.error('Error Code:', err.code);
-        console.error('Error Message:', err.message);
-        console.log(`Server: ${sqlConfig.server}`);
-        process.exit(1);``
+        console.error('❌ Database Connection Failed: ', err);
+        throw err;
     });
 
 export { sql };

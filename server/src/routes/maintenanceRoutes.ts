@@ -1,6 +1,6 @@
 import express from 'express';
 // Note the .ts extension to avoid errors!
-import { submitMaintenance, getMaintenance, updateMaintenanceStatus } from '../controllers/maintenanceController.ts';
+import { submitMaintenance, getMaintenance, updateMaintenanceStatus } from '../controllers/maintenanceController';
 
 const router = express.Router();
 

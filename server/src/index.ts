@@ -1,4 +1,3 @@
-// server/src/index.ts
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -6,17 +5,17 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { createServer } from 'http'; // 🛡️ Wrapped HTTP layer for WebSocket bindings
-import { Server } from 'socket.io';   // 🛡️ Socket.io integration engine
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 
-// Import Route Modules
-import authRoutes from './routes/authRoutes.ts';
-import maintenanceRoutes from './routes/maintenanceRoutes.ts';
-import paymentRoutes from './routes/paymentRoutes.ts';
-import roomRoutes from './routes/roomRoutes.ts';
-import ruleRoutes from './routes/ruleRoutes.ts';
-import uploadRoutes from './routes/uploadRoutes.ts';
-import tenantRoutes from './routes/tenantRoutes.ts';
+// Import Route Modules (removed .ts extensions)
+import authRoutes from './routes/authRoutes';
+import maintenanceRoutes from './routes/maintenanceRoutes';
+import paymentRoutes from './routes/paymentRoutes';
+import roomRoutes from './routes/roomRoutes';
+import ruleRoutes from './routes/ruleRoutes';
+import uploadRoutes from './routes/uploadRoutes';
+import tenantRoutes from './routes/tenantRoutes';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -24,14 +23,17 @@ const __dirname = dirname(__filename);
 dotenv.config();
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 // Global Middleware
 app.use(express.json());    
-app.use(cors());
+app.use(cors({
+    origin: ["http://localhost:5173", "https://dormfix-app.vercel.app"],
+    credentials: true
+}));
 
 // Static Files (Uploads)
-const uploadDir = path.join(__dirname, '../uploads');
+const uploadDir = path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -46,32 +48,29 @@ app.use('/api/rules', ruleRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api', tenantRoutes);
 
-// 🛡️ INTERCEPT AND RE-ROUTE EXPRESS VIA SERVER WRAPPER
+// Wrapped HTTP layer for WebSocket bindings
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: {
-        origin: "http://localhost:5173", // Allow connection links from Vite server
+        origin: ["http://localhost:5173", "https://dormfix-app.vercel.app"],
         methods: ["GET", "POST", "PATCH", "DELETE"]
     }
 });
 
-// 🤖 CORE REAL-TIME WEBSOCKET ROUTING LIFECYCLE ENGINE
+// Real-Time WebSocket Lifecycle Engine
 io.on('connection', (socket) => {
     console.log(`🔌 Real-Time Pipeline Open: Connection Verified for Socket ID [${socket.id}]`);
 
-    // Tenant and Landlord Client Room Isolation Binding
     socket.on('join_room', (roomId) => {
         socket.join(roomId);
         console.log(`🔒 Channel Routing: Socket [${socket.id}] joined isolated Chat Room [${roomId}]`);
     });
 
-    // Message Packet Interception & Broadcast Loop
     socket.on('send_message', (data) => {
         const { roomId, senderId, role, text } = data;
         
         console.log(`📩 Message Packet Dispatched inside Room [${roomId}] from Role [${role}]`);
         
-        // Broadcast packet back to everyone connected to the current isolated room instance
         io.to(roomId).emit('receive_message', {
             senderId,
             role,
@@ -80,7 +79,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    // Administrative Client Restriction Handlers
     socket.on('toggle_mute', (data) => {
         const { roomId, status } = data;
         io.to(roomId).emit('chat_error', {
@@ -93,7 +91,6 @@ io.on('connection', (socket) => {
     });
 });
 
-// Start Wrapped HTTP Server Instance instead of raw Express listener
 httpServer.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });

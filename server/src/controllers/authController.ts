@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { poolPromise } from '../config/dbConfig.ts';
+import { poolPromise } from '../config/dbConfig';
 import sql from 'mssql';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
