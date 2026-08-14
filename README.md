@@ -307,6 +307,6 @@ npm run build
 
 ## License
 
-This project is licensed under the **Proprietary Source-Available License**. See the [LICENSE](https://www.google.com/search?q=LICENSE) file for complete details and restrictions.
+This project is licensed under the **Proprietary Source-Available License**. See the [LICENSE](https://github.com/JamesIan-Bayonas/dormfix?tab=License-1-ov-file) file for complete details and restrictions.
 
 Copyright © 2026–2027 Alyssa Faith Bagunbon, Jay-an P. Calago, and James Ian M. Bayonas. All Rights Reserved.
