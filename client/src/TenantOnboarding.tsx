@@ -1,5 +1,6 @@
+// client/src/TenantOnboarding.tsx
 import React, { useState } from 'react';
-import { Home, Key, ArrowRight, CheckCircle } from 'lucide-react';
+import { Home, Key, ArrowRight, CheckSquare } from 'lucide-react';
 
 export const TenantOnboarding: React.FC<{ onJoin: () => void }> = ({ onJoin }) => {
     const [code, setCode] = useState('');
@@ -9,43 +10,47 @@ export const TenantOnboarding: React.FC<{ onJoin: () => void }> = ({ onJoin }) =
         e.preventDefault();
         setIsJoining(true);
 
-        // SIMULATION: In real backend, this POSTs to /api/join-dorm
+        // API SIMULATION BINDING
         setTimeout(() => {
-            alert(`Successfully joined dorm with code: ${code}`);
+            alert(`Database linked with identifier: ${code}`);
             setIsJoining(false);
-            onJoin(); // Triggers the parent to switch to "Dashboard Mode"
+            onJoin(); 
         }, 1000);
     };
 
     return (
-        <div className="min-h-[80vh] flex flex-col justify-center items-center p-4">
-            <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
-                {/* Hero Section */}
-                <div className="bg-emerald-900 p-8 text-center">
-                    <div className="mx-auto bg-white/10 w-16 h-16 rounded-2xl flex items-center justify-center backdrop-blur-sm mb-4">
-                        <Home className="text-emerald-300" size={32} />
+        <div className="min-h-screen bg-[#f8f9f5] flex flex-col justify-center items-center p-6 font-sans text-slate-800 animate-fade-in">
+            <div className="w-full max-w-md bg-white border border-gray-200 rounded-sm shadow-sm overflow-hidden">
+                
+                {/* INSTITUTIONAL HEADER */}
+                <div className="bg-[#425042] px-8 py-10 text-center relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                    <div className="relative z-10 flex flex-col items-center">
+                        <div className="bg-white/10 w-14 h-14 rounded-sm flex items-center justify-center backdrop-blur-sm mb-5 border border-white/20">
+                            <Home className="text-[#e7efdb]" size={28} strokeWidth={1.5} />
+                        </div>
+                        <h2 className="text-3xl font-serif text-white tracking-tight">Property Linkage</h2>
+                        <p className="text-[#bac3ba] mt-2 text-xs font-medium tracking-wide">
+                            Provide your structural assignment token.
+                        </p>
                     </div>
-                    <h2 className="text-2xl font-bold text-white">Find Your Dorm</h2>
-                    <p className="text-emerald-200 mt-2 text-sm">
-                        Enter the unique code provided by your landlord to access your dashboard.
-                    </p>
                 </div>
 
-                {/* Form Section */}
-                <div className="p-8">
+                {/* LEDGER INPUT SECTION */}
+                <div className="p-8 space-y-8 bg-white">
                     <form onSubmit={handleJoin} className="space-y-6">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Landlord / Dorm Code
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                System Identifier Token
                             </label>
                             <div className="relative">
-                                <Key className="absolute left-3 top-3 text-gray-400" size={20} />
+                                <Key className="absolute left-3 top-3.5 text-slate-400" size={16} />
                                 <input 
                                     type="text" 
                                     value={code}
                                     onChange={(e) => setCode(e.target.value)}
                                     placeholder="#8821" 
-                                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:ring-emerald-500 transition-colors text-lg font-mono tracking-wider placeholder:font-sans"
+                                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-none bg-[#f8f9f5] focus:bg-white focus:border-[#425042] focus:ring-1 focus:ring-[#425042] transition-colors text-sm font-mono tracking-widest text-slate-800 uppercase outline-none"
                                     required
                                 />
                             </div>
@@ -54,30 +59,33 @@ export const TenantOnboarding: React.FC<{ onJoin: () => void }> = ({ onJoin }) =
                         <button 
                             type="submit" 
                             disabled={isJoining}
-                            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-200 transition-all flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                            className="w-full py-3.5 bg-[#425042] hover:bg-[#344034] text-white text-[11px] font-bold uppercase tracking-wider rounded-sm transition-all flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed outline-none"
                         >
                             {isJoining ? (
-                                'Verifying...'
+                                'Verifying Token...'
                             ) : (
-                                <>Join Dormitory <ArrowRight size={18} /></>
+                                <>Execute Linkage <ArrowRight size={14} /></>
                             )}
                         </button>
                     </form>
 
-                    <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">How it works</h4>
-                        <ul className="text-sm text-gray-600 space-y-2">
-                            <li className="flex gap-2">
-                                <CheckCircle size={16} className="text-emerald-500 shrink-0" />
-                                <span>Get the code directly from your Landlord.</span>
+                    {/* PROTOCOL LIST */}
+                    <div className="pt-6 border-t border-gray-100">
+                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            Standard Operating Procedure
+                        </h4>
+                        <ul className="text-xs text-slate-600 space-y-3 font-medium">
+                            <li className="flex gap-3 items-start">
+                                <CheckSquare size={14} className="text-[#5c6e4e] shrink-0 mt-0.5" />
+                                <span>Obtain physical or digital identifier from your property administrator.</span>
                             </li>
-                            <li className="flex gap-2">
-                                <CheckCircle size={16} className="text-emerald-500 shrink-0" />
-                                <span>Your account will be instantly linked.</span>
+                            <li className="flex gap-3 items-start">
+                                <CheckSquare size={14} className="text-[#5c6e4e] shrink-0 mt-0.5" />
+                                <span>Database linkage executes instantly upon verification.</span>
                             </li>
-                            <li className="flex gap-2">
-                                <CheckCircle size={16} className="text-emerald-500 shrink-0" />
-                                <span>Start reporting issues and paying rent.</span>
+                            <li className="flex gap-3 items-start">
+                                <CheckSquare size={14} className="text-[#5c6e4e] shrink-0 mt-0.5" />
+                                <span>Gain clearance to file audits and maintenance reports.</span>
                             </li>
                         </ul>
                     </div>
