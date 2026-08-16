@@ -2,13 +2,8 @@ import type { Request, Response } from 'express';
 import { poolPromise } from '../config/dbConfig';
 import sql from 'mssql';
 import crypto from 'crypto';
-
-// 🛡️ MUST ADD THESE IMPORTS
 import { analyzeMaintenanceRequest } from '../services/aiService';
 import { notificationService } from '../services/notificationService';
-
-// 1. SUBMIT REQUEST
-// server/src/controllers/maintenanceController.ts
 
 export const submitMaintenance = async (req: Request, res: Response) => {
     const { tenantId, issueType, description, urgency } = req.body;
@@ -22,20 +17,20 @@ export const submitMaintenance = async (req: Request, res: Response) => {
         const id = crypto.randomUUID();
         const pool = await poolPromise;
 
-        // STEP 1: ROOM CONTEXT
+        // STEP 1: ROOM CONTEXT & GUARD
         const roomResult = await pool.request()
             .input('tid', sql.VarChar(36), tenantId)
             .query(`SELECT room_number FROM dorm_assignments WHERE tenant_id = @tid`);
         
-        const roomNumber = roomResult.recordset[0]?.room_number || 'Unknown Room';
+        const roomNumber = roomResult.recordset[0]?.room_number;
+
+        if (!roomNumber || roomNumber === 'Unassigned') {
+            res.status(403).json({ error: "Cannot file maintenance tickets: No room currently assigned." });
+            return;
+        }
 
         // STEP 2: AI TRIAGE
-        console.log("🤖 AI is analyzing maintenance request...");
-        
         const aiMaintenanceVerdict = await analyzeMaintenanceRequest(description);
-        
-        console.log(`🤖 AI Decision: Priority is [${aiMaintenanceVerdict?.priority}]`);
-
         let finalUrgency = urgency; 
 
         // STEP 3: THE NOTIFICATION LOOP
@@ -43,15 +38,12 @@ export const submitMaintenance = async (req: Request, res: Response) => {
         const triggersAlert = aiPriority === 'Emergency' || aiPriority === 'High';
 
         if (triggersAlert) {
-            // Override the tenant's chosen urgency with the AI's elevated status
             finalUrgency = aiPriority; 
 
-            // Immediate SMS Alert - dynamically stating High or Emergency
             await notificationService.sendEmergencySMS(
                 `ALERT [${aiPriority}]: Room ${roomNumber} reports ${aiMaintenanceVerdict.category}. Summary: ${aiMaintenanceVerdict.landlord_summary}`
             );
             
-            // Detailed Email Alert
             await notificationService.sendLandlordAlert(
                 `URGENT: ${aiPriority} Maintenance Required`,
                 `Room: ${roomNumber}\nCategory: ${aiMaintenanceVerdict.category}\nAI Summary: ${aiMaintenanceVerdict.landlord_summary}\n\nTenant Description: ${description}`
@@ -79,8 +71,7 @@ export const submitMaintenance = async (req: Request, res: Response) => {
         res.status(500).json({ error: "Failed to submit request" });
     }
 };
- 
-// 2. FETCH REQUESTS (Landlord & Tenant Logic)
+
 export const getMaintenance = async (req: Request, res: Response) => {
     const { userId } = req.params;
     const { role } = req.query;
@@ -114,7 +105,7 @@ export const getMaintenance = async (req: Request, res: Response) => {
             query = `
                 SELECT 
                     id, 
-                    tenant_id as tenantId, -- <--- Added here too for consistency
+                    tenant_id as tenantId,
                     issue_type as issueType, 
                     description, 
                     urgency, 
@@ -136,7 +127,6 @@ export const getMaintenance = async (req: Request, res: Response) => {
     }
 };
 
-// 3. UPDATE STATUS
 export const updateMaintenanceStatus = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status } = req.body;

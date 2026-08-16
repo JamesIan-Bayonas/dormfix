@@ -1,66 +1,63 @@
-import OpenAI from 'openai';
-import { z } from 'zod';
-import { zodResponseFormat } from 'openai/helpers/zod';
-import Tesseract from 'tesseract.js'; 
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import Tesseract from 'tesseract.js';
+import dotenv from 'dotenv';
 
-// Setup the Connection to Local Ollama
-const openai = new OpenAI({
-    baseURL: 'http://localhost:11434/v1',
-    apiKey: 'ollama', 
-});
+dotenv.config();
 
-// Define the Output Structure for Payments
-const PaymentAnalysisSchema = z.object({
-    is_valid_receipt: z.boolean(),
-    extracted_amount: z.number().nullable(),
-    extracted_date: z.string().nullable(),
-    reference_number: z.string().nullable(),
-    confidence_score: z.number().min(0).max(100),
-    analysis_notes: z.string()
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export const analyzePaymentImage = async (filePath: string) => {
     try {
-        // EXACT TEXT EXTRACTION (OCR)
+        if (!process.env.GEMINI_API_KEY) {
+            console.error("GEMINI_API_KEY is not configured in .env");
+            return null;
+        }
+
+        // STEP 1: Running OCR to extract raw text
         console.log("Step 1: Running OCR to extract raw text...");
-        // Tesseract scans the image and pulls out the exact characters
         const { data: { text } } = await Tesseract.recognize(filePath, 'eng');
-        
         console.log("Extracted Text Preview:\n", text.substring(0, 200) + "...\n");
 
-        // AI DATA PARSING 
-        console.log("Step 2: Asking AI to organize the text...");
-        
-        const response = await openai.chat.completions.create({
-            model: 'llava', // We use the same model, but only feed it text now
-            temperature: 0.0, // Strict, no-guessing mode
-            messages: [
-                {
-                    role: "system",
-                    content: `You are a strict data parsing algorithm. I will provide you with raw, messy text scanned from a utility bill, a bank receipt, or an e-wallet screenshot.
-                    
-                    RULES:
-                    1. Extract the exact Amount. Look for "Total Amount Due:", "AMOUNT", or numbers near "PHP" or "$". 
-                    CRITICAL: You must remove all commas from the number before returning it. For example, if you see "18,200.00", return the number 18200.00. Do NOT return 18.2.
-                    2. Extract the Date.
-                    3. Extract the Account Number or Referece Number.
-                    4. Do NOT invent data. If a field is completely missing, return null.
-                    5. Ignore background noise text.`
+        // STEP 2: Asking Gemini to organize and audit structured parameters
+        console.log("Step 2: Asking Gemini AI to structure and audit payment receipt...");
+
+        const model = genAI.getGenerativeModel({
+            model: "gemini-1.5-flash",
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                        is_valid_receipt: { type: SchemaType.BOOLEAN },
+                        extracted_amount: { type: SchemaType.NUMBER, nullable: true },
+                        extracted_date: { type: SchemaType.STRING, nullable: true },
+                        reference_number: { type: SchemaType.STRING, nullable: true },
+                        confidence_score: { type: SchemaType.NUMBER },
+                        analysis_notes: { type: SchemaType.STRING }
+                    },
+                    required: ["is_valid_receipt", "confidence_score", "analysis_notes"]
                 },
-                {
-                    role: "user",
-                    // NOTE: We send the raw TEXT here, not the image URL!
-                    content: `Here is the raw text scanned from the document:\n\n${text}` 
-                }
-            ],
-            response_format: zodResponseFormat(PaymentAnalysisSchema, "payment_analysis"),
+                temperature: 0.0
+            }
         });
 
-        // Parse the Result
-        const content = response.choices[0].message.content;
-        if (!content) return null;
+        const prompt = `You are a strict data parsing algorithm. I will provide you with raw text scanned via OCR from a utility bill, bank receipt, or e-wallet screenshot (e.g. GCash, Maya).
 
-        return JSON.parse(content);
+RULES:
+1. Extract the exact Amount. Look for "Total Amount Sent", "Total Amount Due", "Amount", or numbers near PHP/₱/$.
+CRITICAL: Convert commas to pure numbers. If you see "10,000.00", return 10000.
+2. Extract the Date in YYYY-MM-DD format if identifiable.
+3. Extract the Reference Number or Account Number (e.g., "Ref No. 2012 202 833553" -> "2012202833553" or formatted string).
+4. Do NOT invent data. If a field is missing, return null.
+
+Here is the raw text from the document:
+${text}`;
+
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+
+        if (!responseText) return null;
+        return JSON.parse(responseText);
 
     } catch (error) {
         console.error("Analysis Pipeline Failed:", error);
@@ -68,45 +65,54 @@ export const analyzePaymentImage = async (filePath: string) => {
     }
 };
 
-// Define the Output Structure for Maintenance
-
-const MaintenanceAnalysisSchema = z.object({
-    category: z.enum(["Plumbing", "Electrical", "HVAC", "Appliance", "Pest Control", "Other"]),
-    priority: z.enum(["Low", "Medium", "High", "Emergency"]),
-    landlord_summary: z.string(),
-    tenant_auto_reply: z.string()
-});
-
 export const analyzeMaintenanceRequest = async (tenantMessage: string) => {
     try {
-        console.log("🤖 Asking AI to triage maintenance request...");
+        if (!process.env.GEMINI_API_KEY) {
+            console.error("GEMINI_API_KEY is not configured in .env");
+            return null;
+        }
+
+        console.log("🤖 Asking Gemini AI to triage maintenance request...");
         
-        const response = await openai.chat.completions.create({
-            model: 'llava', 
-            temperature: 0.2, // Slightly higher so it can write a friendly auto-reply
-            messages: [
-                {
-                    role: "system",
-                    content: `You are an expert Property Manager assistant. A tenant will give you a raw, often panicked maintenance request. 
-                    
-                    Your job is to:
-                    1. Categorize the issue strictly.
-                    2. Determine the priority. (Water leaks or electrical sparks are Emergency. A broken cabinet is Low).
-                    3. Write a short, 1-sentence summary for the landlord.
-                    4. Write a polite, calming 2-sentence auto-reply to the tenant with a basic safety/troubleshooting tip (e.g., "Turn off the water valve").`
+        const model = genAI.getGenerativeModel({
+            model: "gemini-1.5-flash",
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                        category: { 
+                            type: SchemaType.STRING, 
+                            format: "enum",
+                            enum: ["Plumbing", "Electrical", "HVAC", "Appliance", "Pest Control", "Other"] 
+                        },
+                        priority: { 
+                            type: SchemaType.STRING, 
+                            format: "enum",
+                            enum: ["Low", "Medium", "High", "Emergency"] 
+                        },
+                        landlord_summary: { type: SchemaType.STRING },
+                        tenant_auto_reply: { type: SchemaType.STRING }
+                    },
+                    required: ["category", "priority", "landlord_summary", "tenant_auto_reply"]
                 },
-                {
-                    role: "user",
-                    content: `Tenant Request: "${tenantMessage}"` 
-                }
-            ],
-            response_format: zodResponseFormat(MaintenanceAnalysisSchema, "maintenance_analysis"),
+                temperature: 0.2
+            }
         });
 
-        const content = response.choices[0].message.content;
-        if (!content) return null;
+        const prompt = `You are an expert Property Manager assistant. Triage this tenant maintenance request:
+1. Categorize the issue strictly.
+2. Determine priority (Water leaks or exposed electrical wires are Emergency. Minor cosmetics are Low).
+3. Provide a concise 1-sentence landlord summary.
+4. Provide a polite 2-sentence auto-reply with immediate safety advice for the tenant.
 
-        return JSON.parse(content);
+Tenant Request: "${tenantMessage}"`;
+
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+
+        if (!responseText) return null;
+        return JSON.parse(responseText);
 
     } catch (error) {
         console.error("Maintenance Triage Failed:", error);
