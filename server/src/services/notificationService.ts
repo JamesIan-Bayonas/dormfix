@@ -1,21 +1,27 @@
 import nodemailer from 'nodemailer';
 
-// Configure the email transporter using environment variables
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
+const hasEmailConfig = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+
+const transporter = hasEmailConfig
+    ? nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+    })
+    : null;
 
 export const notificationService = {
-    // 1. Alert Landlord about AI findings (Anomalies or Emergencies)
     sendLandlordAlert: async (subject: string, message: string) => {
+        if (!transporter || !process.env.LANDLORD_EMAIL) {
+            console.log(`⚠️ SMTP Alert Skipped (Email credentials not configured in .env): [${subject}]`);
+            return;
+        }
         try {
             console.log(`📩 Sending Landlord Alert: ${subject}`);
             await transporter.sendMail({
-                from: '"DormFix System" <`system@dormfix.com>',
+                from: `"DormFix System" <${process.env.EMAIL_USER}>`,
                 to: process.env.LANDLORD_EMAIL, 
                 subject: `[DormFix Alert] ${subject}`,
                 text: message,
@@ -25,15 +31,18 @@ export const notificationService = {
         }
     },
 
-    // 2. Notify Tenant when status is updated (Verified/Rejected)
     sendTenantUpdate: async (tenantEmail: string, status: string, reason?: string) => {
+        if (!transporter) {
+            console.log(`⚠️ SMTP Tenant Update Skipped (Email credentials not configured in .env): [${status}] to ${tenantEmail}`);
+            return;
+        }
         try {
             const message = status === 'Verified' 
                 ? "Your payment has been successfully cleared."
                 : `Your payment was rejected. Reason: ${reason || 'Contact management.'}`;
 
             await transporter.sendMail({
-                from: '"DormFix Management" <support@dormfix.com>',
+                from: `"DormFix Management" <${process.env.EMAIL_USER}>`,
                 to: tenantEmail,
                 subject: `Payment Update: ${status}`,
                 text: message,
@@ -43,9 +52,7 @@ export const notificationService = {
         }
     },
 
-    // 3. SMS Placeholder for Emergency Alerts
     sendEmergencySMS: async (message: string) => {
         console.log(`📱 SMS TRIGGERED: ${message}`);
-        // Future: Integration with Semaphore API
     }
-};  
+};

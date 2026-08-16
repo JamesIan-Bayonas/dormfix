@@ -1,4 +1,3 @@
-// server/src/controllers/paymentController.ts
 import type { Request, Response } from 'express';
 import { poolPromise } from '../config/dbConfig';
 import sql from 'mssql';
@@ -28,12 +27,22 @@ export const processTenantPayment = async (req: Request & { file?: MulterFile },
         const proofImage = `/uploads/${file.filename}`;
         const pool = await poolPromise;
 
-        const landlordResult = await pool.request()
+        const assignmentResult = await pool.request()
             .input('tid', sql.VarChar(36), tenantId)
-            .query(`SELECT landlord_id FROM dorm_assignments WHERE tenant_id = @tid`);
+            .query(`SELECT landlord_id, room_number FROM dorm_assignments WHERE tenant_id = @tid`);
         
-        const landlordId = landlordResult.recordset[0]?.landlord_id;
-        if (!landlordId) throw new Error("Tenant not assigned to a landlord");
+        const assignment = assignmentResult.recordset[0];
+        if (!assignment || !assignment.landlord_id) {
+            res.status(404).json({ error: "Tenant not assigned to a landlord" });
+            return;
+        }
+
+        if (!assignment.room_number || assignment.room_number === 'Unassigned') {
+            res.status(403).json({ error: "Cannot submit payment: Room allocation is still pending with your landlord." });
+            return;
+        }
+
+        const landlordId = assignment.landlord_id;
 
         console.log("AI is analyzing payment...");
         const aiAnalysis = await analyzePaymentImage(file.path);
@@ -115,7 +124,6 @@ export const getLandlordPayments = async (req: Request, res: Response) => {
         const pool = await poolPromise;
         const result = await pool.request()
             .input('lid', sql.VarChar(36), landlordId)
-            // REMOVED THE NON-EXISTENT p.rejection_reason FIELD TO PREVENT SQL 500 EXCEPTIONS
             .query(`
                 SELECT 
                     p.id, p.amount, p.status, p.date_paid as datePaid, p.payment_type as paymentType, 
@@ -140,7 +148,6 @@ export const getTenantHistory = async (req: Request, res: Response) => {
         const pool = await poolPromise;
         const result = await pool.request()
             .input('tid', sql.VarChar(36), tenantId)
-            // REMOVED THE NON-EXISTENT p.rejection_reason FIELD TO PREVENT SQL 500 EXCEPTIONS
             .query(`
                 SELECT id, amount, status, date_paid as datePaid, payment_type as paymentType, 
                        proof_image as proofImage, remarks
@@ -172,7 +179,6 @@ export const verifyPayment = async (req: Request, res: Response) => {
             .input('id', sql.VarChar(36), id)
             .input('status', sql.VarChar(20), status)
             .input('appendedText', sql.NVarChar(sql.MAX), appendedRemarksUpdate)
-            // Appends the verification verdict status straight into remarks to prevent breaking schema layouts
             .query(`UPDATE payments SET status = @status, remarks = CONCAT(remarks, @appendedText) WHERE id = @id`);
 
         if (tenantEmail) {

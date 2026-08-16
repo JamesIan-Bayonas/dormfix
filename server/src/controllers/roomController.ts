@@ -44,7 +44,6 @@ export const addRoom = async (req: Request, res: Response) => {
     try {
         const pool = await poolPromise;
         
-        // Check for duplicate room number for this landlord
         const check = await pool.request()
             .input('lid', sql.VarChar(36), landlordId)
             .input('rnum', sql.VarChar(50), roomNumber)
@@ -74,7 +73,7 @@ export const addRoom = async (req: Request, res: Response) => {
     }
 };
 
-// 3. ASSIGN TENANT (Transactional & Safe)
+// 3. ASSIGN TENANT (Transactional, Upsert & Safe)
 export const assignTenant = async (req: Request, res: Response) => {
     const { tenantId, landlordId, roomNumber, moveInDate } = req.body;
 
@@ -104,24 +103,49 @@ export const assignTenant = async (req: Request, res: Response) => {
             const countCheck = await transaction.request()
                 .input('lid', sql.VarChar(36), landlordId)
                 .input('rnum', sql.VarChar(50), roomNumber)
-                .query(`SELECT COUNT(*) as count FROM dorm_assignments WHERE landlord_id = @lid AND room_number = @rnum`);
+                .input('tenantId', sql.VarChar(36), tenantId)
+                .query(`
+                    SELECT COUNT(*) as count 
+                    FROM dorm_assignments 
+                    WHERE landlord_id = @lid AND room_number = @rnum AND tenant_id != @tenantId
+                `);
             
             if (countCheck.recordset[0].count >= capacity) {
                 throw new Error("Room is already at full capacity.");
             }
 
-            // Create Assignment
-            const id = crypto.randomUUID();
-            await transaction.request()
-                .input('id', sql.VarChar(36), id)
+            // Check if tenant already has an assignment row
+            const existingAssign = await transaction.request()
                 .input('tenantId', sql.VarChar(36), tenantId)
                 .input('landlordId', sql.VarChar(36), landlordId)
-                .input('roomNumber', sql.VarChar(50), roomNumber)
-                .input('moveInDate', sql.Date, moveInDate || new Date())
-                .query(`
-                    INSERT INTO dorm_assignments (id, tenant_id, landlord_id, room_number, move_in_date)
-                    VALUES (@id, @tenantId, @landlordId, @roomNumber, @moveInDate)
-                `);
+                .query(`SELECT id FROM dorm_assignments WHERE tenant_id = @tenantId AND landlord_id = @landlordId`);
+
+            if (existingAssign.recordset.length > 0) {
+                // Update existing record (Removes 'Unassigned' state cleanly)
+                await transaction.request()
+                    .input('tenantId', sql.VarChar(36), tenantId)
+                    .input('landlordId', sql.VarChar(36), landlordId)
+                    .input('roomNumber', sql.VarChar(50), roomNumber)
+                    .input('moveInDate', sql.Date, moveInDate || new Date())
+                    .query(`
+                        UPDATE dorm_assignments 
+                        SET room_number = @roomNumber, move_in_date = @moveInDate
+                        WHERE tenant_id = @tenantId AND landlord_id = @landlordId
+                    `);
+            } else {
+                // Insert only if no previous record exists
+                const id = crypto.randomUUID();
+                await transaction.request()
+                    .input('id', sql.VarChar(36), id)
+                    .input('tenantId', sql.VarChar(36), tenantId)
+                    .input('landlordId', sql.VarChar(36), landlordId)
+                    .input('roomNumber', sql.VarChar(50), roomNumber)
+                    .input('moveInDate', sql.Date, moveInDate || new Date())
+                    .query(`
+                        INSERT INTO dorm_assignments (id, tenant_id, landlord_id, room_number, move_in_date, created_at)
+                        VALUES (@id, @tenantId, @landlordId, @roomNumber, @moveInDate, GETDATE())
+                    `);
+            }
 
             await transaction.commit();
             res.json({ message: "Tenant assigned successfully" });
