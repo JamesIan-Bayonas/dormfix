@@ -1,6 +1,6 @@
 // client/src/components/dashboards/Register.tsx
 import React, { useState } from 'react';
-import { Home, Mail, Lock, Key, AlertCircle, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Home, Mail, Lock, Key, AlertCircle, User, ArrowRight, Eye, EyeOff, Phone } from 'lucide-react';
 
 interface RegisterProps {
     onToggleLogin: () => void;
@@ -10,6 +10,7 @@ const Register: React.FC<RegisterProps> = ({ onToggleLogin }) => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
+        phoneNumber: '',
         password: '',
         role: 'tenant' as 'tenant' | 'landlord',
         landlordCode: ''
@@ -133,6 +134,23 @@ const Register: React.FC<RegisterProps> = ({ onToggleLogin }) => {
                                         placeholder="you@example.com"
                                         value={formData.email}
                                         onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* PHONE NUMBER */}
+                            <div>
+                                <label htmlFor="phoneNumber" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Phone Number</label>
+                                <div className="relative group">
+                                    <Phone size={15} className="absolute left-3 top-3 text-gray-400 group-focus-within:text-[#5c6e4e] transition-colors pointer-events-none" />
+                                    <input
+                                        id="phoneNumber"
+                                        type="tel"
+                                        className="block w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-none bg-white text-xs text-slate-800 font-medium
+                                        focus:bg-[#f8f9f5] focus:ring-1 focus:ring-[#425042] focus:border-[#425042] transition-all outline-none"
+                                        placeholder="09123456789"
+                                        value={formData.phoneNumber}
+                                        onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
                                     />
                                 </div>
                             </div>

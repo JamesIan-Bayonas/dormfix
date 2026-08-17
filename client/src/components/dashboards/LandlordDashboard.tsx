@@ -21,13 +21,14 @@ import { LandlordMaintenanceList } from '../landlord/LandlordMaintenanceList';
 import { LandlordTenantChecklist } from '../landlord/LandlordTenantChecklist';
 import { LandlordRoomList } from '../landlord/LandlordRoomList';
 import { LandlordPaymentHistory } from '../landlord/LandlordPaymentHistory';
-import { RoomDetailDrawer} from '../landlord/RoomDetailDrawer';
+import { RoomDetailDrawer } from '../landlord/RoomDetailDrawer';
 import { LandlordRules } from '../landlord/LandlordRules';
 
 interface TenantData {  
     id: string;
     name: string;
     email: string;
+    phoneNumber?: string | null;
     roomNumber?: string;
     isApproved: boolean;
     joinedDate: string;
@@ -61,6 +62,7 @@ export const LandlordDashboard: React.FC = () => {
                         id: t.id,
                         name: t.name,
                         email: t.email,
+                        phoneNumber: t.phoneNumber || null,
                         roomNumber: t.roomNumber,
                         isApproved: t.isApproved,
                         joinedDate: t.createdAt ? new Date(t.createdAt).toISOString() : new Date().toISOString()
@@ -128,6 +130,8 @@ export const LandlordDashboard: React.FC = () => {
                 return {
                     name: occ.name,
                     id: occ.id,
+                    email: occ.email,
+                    phoneNumber: occ.phoneNumber || null,
                     joinedDate: occ.joinedDate,
                     hasPendingPayment: !!pendingPay,
                     paymentId: pendingPay?.id,
@@ -229,7 +233,7 @@ export const LandlordDashboard: React.FC = () => {
     return (
         <div className="min-h-screen bg-[#f8f9f5] font-sans flex text-slate-800">
             
-            {/* 1. SIDEBAR REDESIGN (Soft Matte Olive Setup) */}
+            {/* 1. SIDEBAR REDESIGN */}
             <aside className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-[#425042] text-[#d4dbd4] transition-transform duration-300 ease-in-out flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
                 
                 <div className="h-20 flex items-center px-6 shrink-0 pt-4">
@@ -378,9 +382,8 @@ export const LandlordDashboard: React.FC = () => {
                                       </div>
                                     </div>
 
-                                    {/* REDESIGNED CONTAINER METRICS MATRIX */}
+                                    {/* METRICS MATRIX */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        {/* Total Rooms Block */}
                                         <div onClick={() => navigate('/rooms')} className="bg-[#e7efdb] border border-[#d3e0c0] p-6 rounded-2xl flex flex-col justify-between h-40 cursor-pointer transition-all hover:shadow-sm">
                                           <div className="flex justify-between items-start">
                                             <h4 className="text-[11px] font-bold text-[#5c6e4e] uppercase tracking-wider">Total Rooms</h4>
@@ -392,7 +395,6 @@ export const LandlordDashboard: React.FC = () => {
                                           </div>
                                         </div>
 
-                                        {/* Active Alerts Block */}
                                         <div onClick={() => navigate('/maintenance')} className="bg-[#fef9eb] border border-[#f5ead0] p-6 rounded-2xl flex flex-col justify-between h-40 cursor-pointer transition-all hover:shadow-sm">
                                           <div className="flex justify-between items-start">
                                             <h4 className="text-[11px] font-bold text-[#8b7235] uppercase tracking-wider">Active Alerts</h4>
@@ -404,7 +406,6 @@ export const LandlordDashboard: React.FC = () => {
                                           </div>
                                         </div>
 
-                                        {/* Total Tenants Block */}
                                         <div onClick={() => navigate('/tenants')} className="bg-[#c2ceae] border border-[#aebc98] p-6 rounded-2xl flex flex-col justify-between h-40 cursor-pointer transition-all hover:shadow-sm">
                                           <div className="flex justify-between items-start">
                                             <h4 className="text-[11px] font-bold text-[#45503a] uppercase tracking-wider">Total Tenants</h4>
@@ -419,7 +420,6 @@ export const LandlordDashboard: React.FC = () => {
                                           </div>
                                         </div>
 
-                                        {/* Precise Financial Ledger Revenue Box (Corrected Audit) */}
                                         <div onClick={() => navigate('/payments')} className="bg-white border border-gray-200 p-6 rounded-2xl flex flex-col justify-between h-40 cursor-pointer transition-all hover:shadow-md shadow-sm">
                                           <div className="flex justify-between items-start">
                                             <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Collected Revenue</h4>
@@ -438,10 +438,8 @@ export const LandlordDashboard: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    {/* CORE DATA WORKSPACES PANEL GRID */}
+                                    {/* WORKSPACES GRID */}
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                        
-                                        {/* THE GRID ROOM MATRIX CONTROL BOARD */}
                                         <div className="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm flex flex-col h-[500px]">
                                           <div className="flex justify-between items-center mb-6">
                                             <h3 className="font-semibold text-lg text-slate-800">Operational Room Matrix</h3>
@@ -450,7 +448,6 @@ export const LandlordDashboard: React.FC = () => {
                                             </span>
                                           </div>
                                           
-                                          {/* Balanced Layout Solution: Re-implemented clean, micro-column structure grid */}
                                           <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar grid grid-cols-2 sm:grid-cols-3 gap-3 auto-rows-max">
                                               {filteredRoomMatrix.map((room) => (
                                                   <div 
@@ -481,7 +478,6 @@ export const LandlordDashboard: React.FC = () => {
                                           </div>
                                         </div>
 
-                                        {/* COMPREHENSIVE RECENT SYSTEMS FEED ACTIVITY LOG */}
                                         <div className="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm flex flex-col h-[500px]">
                                           <div className="flex justify-between items-center mb-6">
                                             <h3 className="font-semibold text-lg text-slate-800">Recent Activity Ledger</h3>
@@ -527,7 +523,6 @@ export const LandlordDashboard: React.FC = () => {
                                               </div>
                                           )}
                                         </div>
-
                                     </div>
                                 </>
                             )}

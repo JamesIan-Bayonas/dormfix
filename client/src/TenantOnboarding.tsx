@@ -1,21 +1,57 @@
 // client/src/TenantOnboarding.tsx
 import React, { useState } from 'react';
-import { Home, Key, ArrowRight, CheckSquare } from 'lucide-react';
+import { Home, Key, ArrowRight, CheckSquare, AlertCircle } from 'lucide-react';
+import { useAuth } from './components/UserContext';
+import toast from 'react-hot-toast';
 
 export const TenantOnboarding: React.FC<{ onJoin: () => void }> = ({ onJoin }) => {
+    const { user } = useAuth();
     const [code, setCode] = useState('');
     const [isJoining, setIsJoining] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleJoin = (e: React.FormEvent) => {
+    const handleJoin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsJoining(true);
+        
+        if (!user?.id) {
+            setError("Active session not found. Please log in again.");
+            return;
+        }
 
-        // API SIMULATION BINDING
-        setTimeout(() => {
-            alert(`Database linked with identifier: ${code}`);
+        if (!code.trim()) {
+            setError("Please enter a valid landlord identifier token.");
+            return;
+        }
+
+        setIsJoining(true);
+        setError(null);
+
+        try {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const res = await fetch(`${API_URL}/api/tenant/relink`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tenantId: user.id,
+                    landlordCode: code.trim()
+                })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || "Failed to link property identifier token.");
+            }
+
+            toast.success("Property linkage verified successfully!");
+            onJoin();
+        } catch (err: any) {
+            const errorMessage = err.message || "An unexpected error occurred during property linkage.";
+            setError(errorMessage);
+            toast.error(errorMessage);
+        } finally {
             setIsJoining(false);
-            onJoin(); 
-        }, 1000);
+        }
     };
 
     return (
@@ -56,9 +92,17 @@ export const TenantOnboarding: React.FC<{ onJoin: () => void }> = ({ onJoin }) =
                             </div>
                         </div>
 
+                        {/* ERROR FEEDBACK */}
+                        {error && (
+                            <div className="flex items-start p-3 bg-[#fff7f7] border border-[#fce8e8] text-[#cc4747] rounded-sm text-xs font-semibold gap-2 animate-in fade-in">
+                                <AlertCircle size={15} className="shrink-0 mt-0.5" />
+                                <span>{error}</span>
+                            </div>
+                        )}
+
                         <button 
                             type="submit" 
-                            disabled={isJoining}
+                            disabled={isJoining || !code.trim()}
                             className="w-full py-3.5 bg-[#425042] hover:bg-[#344034] text-white text-[11px] font-bold uppercase tracking-wider rounded-sm transition-all flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed outline-none"
                         >
                             {isJoining ? (
