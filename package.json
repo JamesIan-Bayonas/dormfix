@@ -1,17 +1,36 @@
 {
-  "name": "dormfix-root",
+  "name": "server",
   "version": "1.0.0",
-  "private": true,
+  "type": "commonjs",
+  "main": "dist/index.js",
   "scripts": {
-    "build": "npm --prefix server install && npm --prefix server run build",
-    "start": "npm --prefix server start"
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "node --watch -r ts-node/register src/index.ts"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "bcrypt": "^6.0.0",
-    "nodemailer": "^8.0.1"
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "mssql": "^12.2.0",
+  "multer": "^2.0.2",
+    "nodemailer": "^9.0.4",
+    "openai": "^6.22.0",
+    "socket.io": "^4.8.3",
+    "tesseract.js": "^7.0.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
-    "@types/nodemailer": "^7.0.11"
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/mssql": "^9.1.8",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.10.1",
+    "@types/nodemailer": "^7.0.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }

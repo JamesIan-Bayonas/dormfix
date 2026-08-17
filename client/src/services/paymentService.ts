@@ -1,3 +1,4 @@
+// client/src/services/paymentService.ts
 import { apiClient } from '../api/client';
 
 export interface Payment {
@@ -14,32 +15,26 @@ export interface Payment {
 }
 
 export const paymentService = {
-    // 1. GET LANDLORD PAYMENTS (Updated URL)
+    // 1. GET LANDLORD PAYMENTS
     getLandlordPayments: async (landlordId: string): Promise<Payment[]> => {
-        // Matches server/src/routes/paymentRoutes.ts: router.get('/landlord/:landlordId', ...)
         const { data } = await apiClient.get<Payment[]>(`/api/payments/landlord/${landlordId}`);
         return data;
     },
 
-    // 2. GET TENANT HISTORY (Updated URL)
+    // 2. GET TENANT HISTORY
     getMyPayments: async (tenantId: string): Promise<Payment[]> => {
-        // Matches router.get('/history/:tenantId', ...)
         const { data } = await apiClient.get<Payment[]>(`/api/payments/history/${tenantId}`);
         return data;
     },
 
-    // 3. SUBMIT PAYMENT (Already Fixed in Form, but good to have here)
+    // 3. SUBMIT PAYMENT
     submitPayment: async (formData: FormData) => {
-        // Matches router.post('/', ...)
-        const { data } = await apiClient.post('/api/payments', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        const { data } = await apiClient.post('/api/payments', formData);
         return data;
     },
 
-    // 4. VERIFY PAYMENT (Updated URL)
+    // 4. VERIFY PAYMENT
     verifyPayment: async (id: string, status: 'Verified' | 'Rejected', reason?: string) => {
-        // Matches router.patch('/:id/verify', ...)
         const { data } = await apiClient.patch(`/api/payments/${id}/verify`, { status, reason });
         return data;
     }

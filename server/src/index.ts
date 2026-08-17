@@ -1,3 +1,4 @@
+// server/src/index.ts
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -6,8 +7,7 @@ import fs from 'fs';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import crypto from 'crypto';
-import { poolPromise } from './config/dbConfig';
-import sql from 'mssql';
+import { chatRepository } from './repositories/chatRepository';
 
 // Import Route Modules
 import authRoutes from './routes/authRoutes';
@@ -90,10 +90,7 @@ io.on('connection', (socket) => {
         socketToUser.set(socket.id, userId);
 
         try {
-            const pool = await poolPromise;
-            await pool.request()
-                .input('uid', sql.VarChar(36), userId)
-                .query(`UPDATE users SET last_seen = GETDATE() WHERE id = @uid`);
+            await chatRepository.updateUserLastSeen(userId);
         } catch (err) {
             console.error("Failed to update user login last_seen", err);
         }
@@ -126,18 +123,14 @@ io.on('connection', (socket) => {
         const timestamp = new Date();
 
         try {
-            const pool = await poolPromise;
-            await pool.request()
-                .input('id', sql.VarChar(36), messageId)
-                .input('roomId', sql.VarChar(100), roomId)
-                .input('senderId', sql.VarChar(36), senderId)
-                .input('recipientId', sql.VarChar(36), recipientId || senderId)
-                .input('role', sql.VarChar(20), role)
-                .input('text', sql.NVarChar(sql.MAX), text)
-                .query(`
-                    INSERT INTO chat_messages (id, room_id, sender_id, recipient_id, sender_role, text, created_at)
-                    VALUES (@id, @roomId, @senderId, @recipientId, @role, @text, GETDATE())
-                `);
+            await chatRepository.saveMessage(
+                messageId,
+                roomId,
+                senderId,
+                recipientId || senderId,
+                role,
+                text
+            );
         } catch (err) {
             console.error("Failed to persist message:", err);
         }
@@ -168,10 +161,7 @@ io.on('connection', (socket) => {
 
             const now = new Date();
             try {
-                const pool = await poolPromise;
-                await pool.request()
-                    .input('uid', sql.VarChar(36), userId)
-                    .query(`UPDATE users SET last_seen = GETDATE() WHERE id = @uid`);
+                await chatRepository.updateUserLastSeen(userId);
             } catch (err) {
                 console.error("Failed to update last_seen on disconnect", err);
             }

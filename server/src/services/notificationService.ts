@@ -1,3 +1,4 @@
+// server/src/services/notificationService.ts
 import nodemailer from 'nodemailer';
 
 const hasEmailConfig = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
@@ -12,17 +13,19 @@ const transporter = hasEmailConfig
     })
     : null;
 
+const hasSMSConfig = Boolean(process.env.SEMAPHORE_API_KEY || process.env.SMS_API_KEY);
+
 export const notificationService = {
-    sendLandlordAlert: async (subject: string, message: string) => {
-        if (!transporter || !process.env.LANDLORD_EMAIL) {
-            console.log(`⚠️ SMTP Alert Skipped (Email credentials not configured in .env): [${subject}]`);
+    sendLandlordAlert: async (landlordEmail: string, subject: string, message: string) => {
+        if (!transporter || !landlordEmail) {
+            console.log(`⚠️ SMTP Alert Skipped (Email credentials not configured in .env or missing recipient): [${subject}]`);
             return;
         }
         try {
-            console.log(`📩 Sending Landlord Alert: ${subject}`);
+            console.log(`📩 Sending Landlord Alert to ${landlordEmail}: ${subject}`);
             await transporter.sendMail({
                 from: `"DormFix System" <${process.env.EMAIL_USER}>`,
-                to: process.env.LANDLORD_EMAIL, 
+                to: landlordEmail, 
                 subject: `[DormFix Alert] ${subject}`,
                 text: message,
             });
@@ -52,7 +55,43 @@ export const notificationService = {
         }
     },
 
-    sendEmergencySMS: async (message: string) => {
-        console.log(`📱 SMS TRIGGERED: ${message}`);
+    sendEmergencySMS: async (message: string, recipientNumber?: string): Promise<boolean> => {
+        const apiKey = process.env.SEMAPHORE_API_KEY || process.env.SMS_API_KEY;
+        const targetNumber = recipientNumber || process.env.LANDLORD_PHONE_NUMBER || process.env.EMERGENCY_SMS_RECIPIENT;
+        const senderName = process.env.SEMAPHORE_SENDER_NAME || process.env.SMS_SENDER_NAME;
+
+        if (!hasSMSConfig || !apiKey || !targetNumber) {
+            console.log(`⚠️ SMS Gateway Skipped (API key or recipient phone number not configured in .env): "${message}"`);
+            return false;
+        }
+
+        try {
+            console.log(`📱 Dispatching Emergency SMS to ${targetNumber}...`);
+            
+            const response = await fetch('https://api.semaphore.co/api/v4/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    apikey: apiKey,
+                    number: targetNumber,
+                    message: message,
+                    ...(senderName ? { sendername: senderName } : {})
+                }),
+            });
+
+            if (!response.ok) {
+                const errorPayload = await response.text().catch(() => 'Unknown network error');
+                console.error(`❌ SMS Gateway Error [HTTP ${response.status}]:`, errorPayload);
+                return false;
+            }
+
+            console.log(`✅ Emergency SMS successfully dispatched to ${targetNumber}`);
+            return true;
+        } catch (error) {
+            console.error("Notification Service: SMS network dispatch failed:", error);
+            return false;
+        }
     }
 };

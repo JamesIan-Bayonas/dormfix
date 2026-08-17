@@ -1,28 +1,64 @@
+// server/src/services/aiService.ts
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import Tesseract from 'tesseract.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+export interface PaymentAnalysisResult {
+    is_valid_receipt: boolean;
+    extracted_amount: number | null;
+    extracted_date: string | null;
+    reference_number: string | null;
+    confidence_score: number;
+    analysis_notes: string;
+}
 
-export const analyzePaymentImage = async (filePath: string) => {
+export interface MaintenanceTriageResult {
+    category: 'Plumbing' | 'Electrical' | 'HVAC' | 'Appliance' | 'Pest Control' | 'Other';
+    priority: 'Low' | 'Medium' | 'High' | 'Emergency';
+    landlord_summary: string;
+    tenant_auto_reply: string;
+}
+
+export class AIServiceError extends Error {
+    public readonly stage: 'CONFIG' | 'OCR' | 'LLM_PARSING';
+
+    constructor(message: string, stage: 'CONFIG' | 'OCR' | 'LLM_PARSING', public readonly originalError?: unknown) {
+        super(message);
+        this.name = 'AIServiceError';
+        this.stage = stage;
+    }
+}
+
+const getClient = (): GoogleGenerativeAI => {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        throw new AIServiceError('GEMINI_API_KEY is not configured in .env', 'CONFIG');
+    }
+    return new GoogleGenerativeAI(apiKey);
+};
+
+export const analyzePaymentImage = async (filePath: string): Promise<PaymentAnalysisResult | null> => {
     try {
-        if (!process.env.GEMINI_API_KEY) {
-            console.error("GEMINI_API_KEY is not configured in .env");
-            return null;
-        }
+        const genAI = getClient();
 
         // STEP 1: Running OCR to extract raw text
         console.log("Step 1: Running OCR to extract raw text...");
-        const { data: { text } } = await Tesseract.recognize(filePath, 'eng');
+        let text = '';
+        try {
+            const { data } = await Tesseract.recognize(filePath, 'eng');
+            text = data.text;
+        } catch (ocrErr) {
+            throw new AIServiceError('Tesseract OCR engine failed to process image file.', 'OCR', ocrErr);
+        }
+
         console.log("Extracted Text Preview:\n", text.substring(0, 200) + "...\n");
 
-        // STEP 2: Asking Gemini to organize and audit structured parameters
+        // STEP 2: Structured Optical Analysis via Gemini
         console.log("Step 2: Asking Gemini AI to structure and audit payment receipt...");
-
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
+            model: "gemini-2.5-flash",
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: {
@@ -56,26 +92,31 @@ ${text}`;
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
 
-        if (!responseText) return null;
-        return JSON.parse(responseText);
+        if (!responseText) {
+            return null;
+        }
+
+        const parsed = JSON.parse(responseText) as PaymentAnalysisResult;
+        return parsed;
 
     } catch (error) {
-        console.error("Analysis Pipeline Failed:", error);
+        if (error instanceof AIServiceError) {
+            console.error(`[AI Service Error | Stage: ${error.stage}]:`, error.message, error.originalError || '');
+        } else {
+            console.error("Payment Analysis Pipeline Failed:", error);
+        }
         return null; 
     }
 };
 
-export const analyzeMaintenanceRequest = async (tenantMessage: string) => {
+export const analyzeMaintenanceRequest = async (tenantMessage: string): Promise<MaintenanceTriageResult | null> => {
     try {
-        if (!process.env.GEMINI_API_KEY) {
-            console.error("GEMINI_API_KEY is not configured in .env");
-            return null;
-        }
+        const genAI = getClient();
 
         console.log("🤖 Asking Gemini AI to triage maintenance request...");
         
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
+            model: "gemini-2.5-flash",
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: {
@@ -111,11 +152,19 @@ Tenant Request: "${tenantMessage}"`;
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
 
-        if (!responseText) return null;
-        return JSON.parse(responseText);
+        if (!responseText) {
+            return null;
+        }
+
+        const parsed = JSON.parse(responseText) as MaintenanceTriageResult;
+        return parsed;
 
     } catch (error) {
-        console.error("Maintenance Triage Failed:", error);
+        if (error instanceof AIServiceError) {
+            console.error(`[AI Service Error | Stage: ${error.stage}]:`, error.message, error.originalError || '');
+        } else {
+            console.error("Maintenance Triage Failed:", error);
+        }
         return null; 
     }
 };

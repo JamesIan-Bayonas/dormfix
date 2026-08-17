@@ -1,3 +1,4 @@
+// client/src/types/types.ts
 export type UserRole = 'landlord' | 'tenant';
 
 export interface User {
@@ -5,20 +6,21 @@ export interface User {
   name: string;
   role: UserRole;
   email: string;
+  phoneNumber?: string;
   dormFixId: string;
-  isApproved: boolean; // Add for Gate Keeper logic
-  createdAt: string; // Add this to match SQL TIMESTAMP/DATETIME2
+  isApproved: boolean;
+  createdAt: string;
 }
 
 export interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>; 
   logout: () => void;
+  updateUser: (updatedData: Partial<User>) => void;
   isLoading: boolean;
   error: string | null; 
 }
-// --- NEW: Added Room Interface ---
-// Matches the SQL query: SELECT id, room_number, capacity, currentOccupants...
+
 export interface Room {
     id: string;
     room_number: string;
@@ -30,12 +32,11 @@ export interface TenantRequest {
   id: string;
   name: string;
   email: string;
-  is_approved: boolean; // often SQL returns snake_case for raw queries unless aliased
+  is_approved: boolean;
   room_number: string;
   joined_date: string;
 }
 
-// NEW: Maintenance specific types
 export type MaintenanceStatus = 'Pending' | 'In Progress' | 'Completed' | 'Rejected';
 export type IssueType = 'Plumbing' | 'Electrical' | 'Appliance' | 'Structural' | 'Other';
 export type UrgencyLevel = 'Low' | 'Medium' | 'High' | 'Emergency';
@@ -43,12 +44,13 @@ export type UrgencyLevel = 'Low' | 'Medium' | 'High' | 'Emergency';
 export interface MaintenanceRequest {
   id: string;
   tenantId: string;
-  dateSubmitted: string; // ISO Date string (e.g. "2025-10-24")
+  dateSubmitted: string;
   issueType: IssueType;
   description: string;
   urgency: UrgencyLevel;
   status: MaintenanceStatus;
-  adminRemarks?: string; // Optional: For landlord feedback (Transparency)
+  adminRemarks?: string;
+  notificationStatus?: string;
 }
 
 export interface Payment {
