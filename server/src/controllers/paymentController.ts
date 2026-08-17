@@ -29,7 +29,12 @@ export const processTenantPayment = async (req: Request & { file?: MulterFile },
 
         const assignmentResult = await pool.request()
             .input('tid', sql.VarChar(36), tenantId)
-            .query(`SELECT landlord_id, room_number FROM dorm_assignments WHERE tenant_id = @tid`);
+            .query(`
+                SELECT da.landlord_id, da.room_number, u.email AS landlord_email 
+                FROM dorm_assignments da
+                JOIN users u ON da.landlord_id = u.id
+                WHERE da.tenant_id = @tid
+            `);
         
         const assignment = assignmentResult.recordset[0];
         if (!assignment || !assignment.landlord_id) {
@@ -43,6 +48,7 @@ export const processTenantPayment = async (req: Request & { file?: MulterFile },
         }
 
         const landlordId = assignment.landlord_id;
+        const landlordEmail = assignment.landlord_email;
 
         console.log("AI is analyzing payment...");
         const aiAnalysis = await analyzePaymentImage(file.path);
@@ -71,10 +77,13 @@ export const processTenantPayment = async (req: Request & { file?: MulterFile },
         }
 
         if (finalStatus === 'Anomalous') {
-            await notificationService.sendLandlordAlert(
-                "Payment Anomaly Detected",
-                `A tenant just uploaded a receipt that failed the Zero-Trust audit.\nWarnings: ${anomalyFlags.join(', ')}`
-            );
+            if (landlordEmail) {
+                await notificationService.sendLandlordAlert(
+                    landlordEmail,
+                    "Payment Anomaly Detected",
+                    `A tenant just uploaded a receipt that failed the Zero-Trust audit.\nWarnings: ${anomalyFlags.join(', ')}`
+                );
+            }
         }
 
         const combinedRemarks = `[AI Audit: ${finalStatus}]\n` +

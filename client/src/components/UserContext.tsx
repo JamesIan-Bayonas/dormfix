@@ -1,7 +1,12 @@
 import React, { createContext, useState, useContext, useEffect, type ReactNode } from 'react';
 import type { User, AuthContextType } from '../types/types';
+import { io, Socket } from 'socket.io-client';
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined); 
+interface ExtendedAuthContextType extends AuthContextType {
+    globalSocket: Socket | null;
+}
+
+const AuthContext = createContext<ExtendedAuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(() => {
@@ -10,6 +15,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [globalSocket, setGlobalSocket] = useState<Socket | null>(null);
 
     useEffect(() => {
         if (user) {
@@ -19,27 +25,42 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [user]);
 
+    // Establish persistent global socket for presence tracking
+    useEffect(() => {
+        if (user?.id) {
+            const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
+            setGlobalSocket(socket);
+
+            socket.emit('register_user', user.id);
+
+            return () => {
+                socket.disconnect();
+            };
+        } else {
+            if (globalSocket) {
+                globalSocket.disconnect();
+                setGlobalSocket(null);
+            }
+        }
+    }, [user?.id]);
+
     const login = async (email: string, password: string) => {
         setIsLoading(true); 
         setError(null);
         
         try {
-                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/login`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/login`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
-    });
+            });
 
             const data = await response.json();
 
             if (response.ok) {
-                // Success! The backend returns the sanitized user object
                 setUser(data);
                 setIsLoading(false);
             } else {
-                // Failure (401 Unauthorized, etc.)
                 setError(data.error || 'Login failed');
                 setIsLoading(false);
             }
@@ -51,13 +72,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const logout = () => {
+        if (globalSocket) {
+            globalSocket.disconnect();
+        }
         setUser(null);
         setError(null);
         setIsLoading(false);
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, isLoading, error }}>
+        <AuthContext.Provider value={{ user, login, logout, isLoading, error, globalSocket }}>
             {children}
         </AuthContext.Provider>
     );
