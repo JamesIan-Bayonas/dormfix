@@ -1,7 +1,7 @@
+// server/src/controllers/maintenanceController.ts
 import type { Request, Response } from 'express';
-import { poolPromise } from '../config/dbConfig';
-import sql from 'mssql';
 import crypto from 'crypto';
+import { maintenanceRepository } from '../repositories/maintenanceRepository';
 import { analyzeMaintenanceRequest } from '../services/aiService';
 import { notificationService } from '../services/notificationService';
 
@@ -15,14 +15,11 @@ export const submitMaintenance = async (req: Request, res: Response) => {
 
     try {
         const id = crypto.randomUUID();
-        const pool = await poolPromise;
 
         // STEP 1: ROOM CONTEXT & GUARD
-        const roomResult = await pool.request()
-            .input('tid', sql.VarChar(36), tenantId)
-            .query(`SELECT room_number FROM dorm_assignments WHERE tenant_id = @tid`);
-        
-        const roomNumber = roomResult.recordset[0]?.room_number;
+        const assignment = await maintenanceRepository.getRoomContext(tenantId);
+        const roomNumber = assignment?.room_number;
+        const landlordEmail = assignment?.landlord_email;
 
         if (!roomNumber || roomNumber === 'Unassigned') {
             res.status(403).json({ error: "Cannot file maintenance tickets: No room currently assigned." });
@@ -34,33 +31,30 @@ export const submitMaintenance = async (req: Request, res: Response) => {
         let finalUrgency = urgency; 
 
         // STEP 3: THE NOTIFICATION LOOP
-        const aiPriority = aiMaintenanceVerdict?.priority;
-        const triggersAlert = aiPriority === 'Emergency' || aiPriority === 'High';
-
-        if (triggersAlert) {
-            finalUrgency = aiPriority; 
+        if (aiMaintenanceVerdict && (aiMaintenanceVerdict.priority === 'Emergency' || aiMaintenanceVerdict.priority === 'High')) {
+            finalUrgency = aiMaintenanceVerdict.priority; 
 
             await notificationService.sendEmergencySMS(
-                `ALERT [${aiPriority}]: Room ${roomNumber} reports ${aiMaintenanceVerdict.category}. Summary: ${aiMaintenanceVerdict.landlord_summary}`
+                `ALERT [${aiMaintenanceVerdict.priority}]: Room ${roomNumber} reports ${aiMaintenanceVerdict.category}. Summary: ${aiMaintenanceVerdict.landlord_summary}`
             );
             
-            await notificationService.sendLandlordAlert(
-                `URGENT: ${aiPriority} Maintenance Required`,
-                `Room: ${roomNumber}\nCategory: ${aiMaintenanceVerdict.category}\nAI Summary: ${aiMaintenanceVerdict.landlord_summary}\n\nTenant Description: ${description}`
-            );
+            if (landlordEmail) {
+                await notificationService.sendLandlordAlert(
+                    landlordEmail,
+                    `URGENT: ${aiMaintenanceVerdict.priority} Maintenance Required`,
+                    `Room: ${roomNumber}\nCategory: ${aiMaintenanceVerdict.category}\nAI Summary: ${aiMaintenanceVerdict.landlord_summary}\n\nTenant Description: ${description}`
+                );
+            }
         }
 
         // STEP 4: DATABASE PERSISTENCE
-        await pool.request()
-            .input('id', sql.VarChar(36), id)
-            .input('tenantId', sql.VarChar(36), tenantId)
-            .input('issueType', sql.VarChar(50), issueType)
-            .input('description', sql.VarChar(sql.MAX), description)
-            .input('urgency', sql.VarChar(20), finalUrgency) 
-            .query(`
-                INSERT INTO maintenance_requests (id, tenant_id, issue_type, description, urgency)
-                VALUES (@id, @tenantId, @issueType, @description, @urgency)
-            `);
+        await maintenanceRepository.create({
+            id,
+            tenantId,
+            issueType,
+            description,
+            urgency: finalUrgency
+        });
 
         res.status(201).json({ 
             message: "Request submitted successfully",
@@ -77,50 +71,13 @@ export const getMaintenance = async (req: Request, res: Response) => {
     const { role } = req.query;
 
     try {
-        let query = '';
-        const pool = await poolPromise;
-        const request = pool.request().input('userId', sql.VarChar, userId);
-
         if (role === 'landlord') {
-            query = `
-                SELECT 
-                    mr.id, 
-                    mr.tenant_id as tenantId,
-                    mr.issue_type as issueType, 
-                    mr.description, 
-                    mr.urgency, 
-                    mr.status, 
-                    mr.date_submitted as dateSubmitted,
-                    ISNULL(u.name, 'Unknown Tenant') as tenantName, 
-                    ISNULL(da.room_number, 'N/A') as roomNumber
-                FROM maintenance_requests mr
-                INNER JOIN dorm_assignments da ON mr.tenant_id = da.tenant_id
-                INNER JOIN users u ON mr.tenant_id = u.id
-                WHERE da.landlord_id = @userId
-                ORDER BY 
-                    CASE WHEN mr.urgency = 'Emergency' THEN 1 WHEN mr.urgency = 'High' THEN 2 ELSE 3 END,
-                    mr.date_submitted DESC
-            `;
+            const records = await maintenanceRepository.getByLandlord(userId);
+            res.json(records);
         } else {
-            query = `
-                SELECT 
-                    id, 
-                    tenant_id as tenantId,
-                    issue_type as issueType, 
-                    description, 
-                    urgency, 
-                    status, 
-                    date_submitted as dateSubmitted, 
-                    admin_remarks as adminRemarks
-                FROM maintenance_requests 
-                WHERE tenant_id = @userId
-                ORDER BY date_submitted DESC
-            `;
+            const records = await maintenanceRepository.getByTenant(userId);
+            res.json(records);
         }
-
-        const result = await request.query(query);
-        res.json(result.recordset);
-
     } catch (error) {
         console.error("Fetch Maintenance Error:", error);
         res.status(500).json({ error: "Failed to fetch requests" });
@@ -138,12 +95,7 @@ export const updateMaintenanceStatus = async (req: Request, res: Response) => {
     }
 
     try {
-        const pool = await poolPromise;
-        await pool.request()
-            .input('id', sql.VarChar(36), id)
-            .input('status', sql.VarChar(20), status)
-            .query(`UPDATE maintenance_requests SET status = @status WHERE id = @id`);
-
+        await maintenanceRepository.updateStatus(id, status);
         res.json({ message: "Status updated successfully" });
     } catch (error) {
         console.error("Update Status Error:", error);
