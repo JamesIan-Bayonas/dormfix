@@ -1,3 +1,4 @@
+// client/src/components/UserContext.tsx
 import React, { createContext, useState, useContext, useEffect, type ReactNode } from 'react';
 import type { User, AuthContextType } from '../types/types';
 import { io, Socket } from 'socket.io-client';
@@ -25,7 +26,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [user]);
 
-    // Establish persistent global socket for presence tracking
     useEffect(() => {
         if (user?.id) {
             const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
@@ -71,6 +71,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    const updateUser = (updatedData: Partial<User>) => {
+        setUser((prev) => {
+            if (!prev) return null;
+            const updated = { ...prev, ...updatedData };
+            localStorage.setItem('dormfixUser', JSON.stringify(updated));
+            return updated;
+        });
+    };
+
     const logout = () => {
         if (globalSocket) {
             globalSocket.disconnect();
@@ -81,7 +90,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, isLoading, error, globalSocket }}>
+        <AuthContext.Provider value={{ user, login, logout, updateUser, isLoading, error, globalSocket }}>
             {children}
         </AuthContext.Provider>
     );

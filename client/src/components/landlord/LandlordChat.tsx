@@ -1,6 +1,7 @@
+// client/src/components/landlord/LandlordChat.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../UserContext';
-import { Send, MicOff, ShieldAlert, MessageSquare, Clock } from 'lucide-react';
+import { Send, MicOff, ShieldAlert, MessageSquare, Clock, Phone, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatLastSeen } from '../../utils/presenceUtils';
 
@@ -16,6 +17,7 @@ interface ChatRoom {
     id: string;
     tenantId: string;
     tenantName: string;
+    phoneNumber?: string | null;
     isMuted: boolean;
     isOnline: boolean;
     lastSeen: string | null;
@@ -40,13 +42,13 @@ export const LandlordChat: React.FC = () => {
                         id: `${user.id}-${t.id}`,
                         tenantId: t.id,
                         tenantName: t.name,
+                        phoneNumber: t.phoneNumber || null,
                         isMuted: false,
                         isOnline: false,
                         lastSeen: t.createdAt
                     }));
                     setRooms(chatRooms);
 
-                    // Fetch presence for each tenant
                     approved.forEach((t: any) => {
                         fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/chat/presence/${t.id}`)
                             .then(r => r.json())
@@ -138,7 +140,7 @@ export const LandlordChat: React.FC = () => {
     // 4. Send Message
     const sendMessage = (e: React.FormEvent) => {
         e.preventDefault();
-        if (newMessage.trim() === '' || !globalSocket || !activeRoom || !user) return;
+        if (!newMessage.trim() || !globalSocket || !activeRoom || !user) return;
 
         const messageData = {
             roomId: activeRoom.id,
@@ -196,9 +198,15 @@ export const LandlordChat: React.FC = () => {
                                         <p className={`text-sm font-medium truncate ${isCurrent ? 'text-slate-900 font-semibold' : 'text-slate-700'}`}>
                                             {room.tenantName}
                                         </p>
-                                        <p className="text-[10px] text-slate-400 font-medium tracking-wide">
-                                            {formatLastSeen(room.lastSeen, room.isOnline)}
-                                        </p>
+                                        <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium tracking-wide">
+                                            <span>{formatLastSeen(room.lastSeen, room.isOnline)}</span>
+                                            {room.phoneNumber && (
+                                                <>
+                                                    <span>•</span>
+                                                    <span className="font-mono text-slate-500 truncate">{room.phoneNumber}</span>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 {room.isMuted && <MicOff size={12} className="text-amber-600 shrink-0 ml-2" />}
@@ -214,22 +222,49 @@ export const LandlordChat: React.FC = () => {
                     <div className="h-16 border-b border-gray-100 flex items-center justify-between px-6 bg-white/80 backdrop-blur-md z-10 absolute top-0 w-full">
                         <div className="flex items-center gap-3">
                             <div>
-                                <span className="font-medium text-slate-800 text-sm block leading-tight">{activeRoom.tenantName}</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-medium text-slate-800 text-sm leading-tight">{activeRoom.tenantName}</span>
+                                    {activeRoom.phoneNumber && (
+                                        <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-[#f8f9f5] border border-gray-200 text-slate-600">
+                                            {activeRoom.phoneNumber}
+                                        </span>
+                                    )}
+                                </div>
                                 <span className="text-[10px] text-slate-400 font-medium">
                                     {formatLastSeen(activeRoom.lastSeen, activeRoom.isOnline)}
                                 </span>
                             </div>
                         </div>
                         
-                        <button 
-                            onClick={toggleMute}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold tracking-wider uppercase transition-all border outline-none
-                                ${activeRoom.isMuted 
-                                    ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' 
-                                    : 'bg-white text-slate-500 border-gray-200 hover:bg-gray-50'}`}
-                        >
-                            {activeRoom.isMuted ? <><MicOff size={12}/> Restricted</> : <><ShieldAlert size={12}/> Restrict Tenant</>}
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {activeRoom.phoneNumber && (
+                                <>
+                                    <a 
+                                        href={`tel:${activeRoom.phoneNumber}`}
+                                        className="p-2 text-slate-600 hover:text-slate-900 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-colors shadow-xs"
+                                        title={`Call ${activeRoom.phoneNumber}`}
+                                    >
+                                        <Phone size={14} />
+                                    </a>
+                                    <a 
+                                        href={`sms:${activeRoom.phoneNumber}`}
+                                        className="p-2 text-slate-600 hover:text-slate-900 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl transition-colors shadow-xs"
+                                        title={`SMS ${activeRoom.phoneNumber}`}
+                                    >
+                                        <MessageCircle size={14} />
+                                    </a>
+                                </>
+                            )}
+                            <button 
+                                onClick={toggleMute}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold tracking-wider uppercase transition-all border outline-none
+                                    ${activeRoom.isMuted 
+                                        ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' 
+                                        : 'bg-white text-slate-500 border-gray-200 hover:bg-gray-50'}`}
+                            >
+                                {activeRoom.isMuted ? <><MicOff size={12}/> Restricted</> : <><ShieldAlert size={12}/> Restrict Tenant</>}
+                            </button>
+                        </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-6 pt-20 pb-24 bg-[#f8f9f5]/40 custom-scrollbar">

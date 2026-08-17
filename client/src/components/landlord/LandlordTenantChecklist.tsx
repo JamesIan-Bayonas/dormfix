@@ -1,12 +1,13 @@
 // client/src/components/landlord/LandlordTenantChecklist.tsx
 import React, { useState, useEffect } from 'react';
-import { User, Home, AlertCircle, UserPlus, ArrowLeft, Mail, UserX } from 'lucide-react';
+import { User, Home, AlertCircle, UserPlus, ArrowLeft, Mail, UserX, Phone } from 'lucide-react';
 import { useAuth } from '../UserContext';
 
 interface Tenant {
     id: string;
     name: string;
     email: string;
+    phoneNumber?: string | null;
     isApproved: boolean;
     roomNumber?: string;
 }
@@ -138,7 +139,7 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
                     <p className="text-slate-500 text-sm">Manage pending member verifications, room allocations, and active boarders.</p>
                 </div>
 
-                {/* PENDING REGISTER APPLICATIONS (Muted Warning Theme) */}
+                {/* PENDING REGISTER APPLICATIONS */}
                 {pendingTenants.length > 0 && (
                     <div className="bg-[#fef9eb] rounded-2xl border border-[#f5ead0] overflow-hidden shadow-xs">
                         <div className="px-6 py-4 border-b border-[#eecfba]/30 flex items-center justify-between">
@@ -155,8 +156,15 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
                                 <div key={tenant.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/40">
                                     <div>
                                         <div className="font-semibold text-slate-800">{tenant.name}</div>
-                                        <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                                            <Mail size={12} className="text-slate-400" /> {tenant.email}
+                                        <div className="text-xs text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                                            <span className="flex items-center gap-1">
+                                                <Mail size={12} className="text-slate-400" /> {tenant.email}
+                                            </span>
+                                            {tenant.phoneNumber && (
+                                                <span className="flex items-center gap-1 font-mono text-slate-600">
+                                                    <Phone size={11} className="text-slate-400" /> {tenant.phoneNumber}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex gap-2 shrink-0">
@@ -203,7 +211,17 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
                                         </div>
                                         <div>
                                             <div className="font-medium text-slate-800 text-sm">{tenant.name}</div>
-                                            <div className="text-xs text-slate-400 mt-0.5 font-medium">{tenant.email}</div>
+                                            <div className="text-xs text-slate-400 mt-0.5 font-medium flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
+                                                <span>{tenant.email}</span>
+                                                {tenant.phoneNumber && (
+                                                    <>
+                                                        <span>•</span>
+                                                        <span className="flex items-center gap-1 font-mono text-slate-500">
+                                                            <Phone size={10} className="text-slate-400" /> {tenant.phoneNumber}
+                                                        </span>
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                     

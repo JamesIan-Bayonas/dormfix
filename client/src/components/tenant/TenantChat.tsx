@@ -1,7 +1,8 @@
+// client/src/components/tenant/TenantChat.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../UserContext';
-import { Send, MessageSquare, Trash2, Minimize2 } from 'lucide-react';
+import { Send, MessageSquare, Trash2, Minimize2, Phone, MessageCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Message {
@@ -24,11 +25,12 @@ export const TenantChat: React.FC<TenantChatProps> = ({ isOpen, onClose }) => {
     const [newMessage, setNewMessage] = useState('');
     const [roomId, setRoomId] = useState<string | null>(null);
     const [landlordName, setLandlordName] = useState<string>('Landlord');
+    const [landlordPhone, setLandlordPhone] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // 1. Fetch Housing Details & Connect Socket
     useEffect(() => {
-        if (!user?.id || !isOpen) return; // Only connect when opened to save resources
+        if (!user?.id || !isOpen) return;
 
         fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/tenant/details/${user.id}`)
             .then(res => res.json())
@@ -37,6 +39,7 @@ export const TenantChat: React.FC<TenantChatProps> = ({ isOpen, onClose }) => {
                     const generatedRoomId = `${data.landlordId}-${user.id}`;
                     setRoomId(generatedRoomId);
                     setLandlordName(data.landlordName);
+                    setLandlordPhone(data.landlordPhone || null);
 
                     const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
                     setSocket(newSocket);
@@ -92,27 +95,51 @@ export const TenantChat: React.FC<TenantChatProps> = ({ isOpen, onClose }) => {
         toast.success("Message recalled", { position: 'bottom-center' });
     };
 
-    // 🛡️ CSS LOGIC: Hide the widget if not open
     if (!isOpen) return null;
 
     return (
-        /* 🛡️ WIDGET STYLING: Fixed bottom-right, floating, heavy shadow */
         <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-[90vw] sm:w-[400px] h-[550px] max-h-[80vh] bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-200 flex flex-col z-[100] animate-in slide-in-from-bottom-10 zoom-in-95 duration-200 overflow-hidden">
-            
             {/* Header */}
-            <div className="h-16 bg-indigo-600 text-white flex items-center px-4 justify-between shrink-0 shadow-sm z-10">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold border border-white/30 backdrop-blur-sm">
+            <div className="h-16 bg-[#425042] text-white flex items-center px-4 justify-between shrink-0 shadow-sm z-10">
+                <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold border border-white/30 backdrop-blur-sm shrink-0">
                         {landlordName.charAt(0)}
                     </div>
-                    <div>
-                        <h2 className="font-bold text-white leading-tight">{landlordName}</h2>
-                        <span className="text-xs text-indigo-200 font-medium tracking-wide">Property Manager</span>
+                    <div className="overflow-hidden">
+                        <h2 className="font-bold text-white text-sm leading-tight truncate">{landlordName}</h2>
+                        <div className="flex items-center gap-2 text-[11px] text-[#bac3ba]">
+                            <span>Manager</span>
+                            {landlordPhone && (
+                                <>
+                                    <span>•</span>
+                                    <span className="font-mono">{landlordPhone}</span>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
-                <div className="flex gap-1">
+
+                <div className="flex items-center gap-1 shrink-0">
+                    {landlordPhone && (
+                        <>
+                            <a 
+                                href={`tel:${landlordPhone}`} 
+                                className="p-2 hover:bg-white/20 rounded-lg transition-colors text-white/80 hover:text-white"
+                                title={`Call ${landlordPhone}`}
+                            >
+                                <Phone size={16} />
+                            </a>
+                            <a 
+                                href={`sms:${landlordPhone}`} 
+                                className="p-2 hover:bg-white/20 rounded-lg transition-colors text-white/80 hover:text-white"
+                                title={`SMS ${landlordPhone}`}
+                            >
+                                <MessageCircle size={16} />
+                            </a>
+                        </>
+                    )}
                     <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg transition-colors text-white/80 hover:text-white">
-                        <Minimize2 size={20} />
+                        <Minimize2 size={18} />
                     </button>
                 </div>
             </div>
@@ -124,7 +151,7 @@ export const TenantChat: React.FC<TenantChatProps> = ({ isOpen, onClose }) => {
                 ) : messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-slate-400">
                         <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
-                            <MessageSquare size={28} className="text-indigo-200"/>
+                            <MessageSquare size={28} className="text-[#657655]"/>
                         </div>
                         <p className="font-medium text-slate-600">Start a conversation</p>
                         <p className="text-xs text-center mt-1 max-w-[200px]">Ask your landlord about maintenance, rent, or house rules.</p>
@@ -147,7 +174,7 @@ export const TenantChat: React.FC<TenantChatProps> = ({ isOpen, onClose }) => {
                                             <Trash2 size={12} />
                                         </button>
                                     )}
-                                    <div className={`chat-bubble text-sm shadow-sm ${isMe ? 'bg-indigo-600 text-white' : 'bg-white text-slate-800 border border-slate-100'}`}>
+                                    <div className={`chat-bubble text-sm shadow-sm ${isMe ? 'bg-[#425042] text-white' : 'bg-white text-slate-800 border border-slate-100'}`}>
                                         {msg.text}
                                     </div>
                                 </div>
@@ -163,16 +190,16 @@ export const TenantChat: React.FC<TenantChatProps> = ({ isOpen, onClose }) => {
                 <input 
                     type="text" 
                     placeholder="Type a message..." 
-                    className="flex-1 bg-slate-50 border border-slate-200 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-slate-800"
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded-full px-4 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#425042] transition-all text-slate-800"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                 />
                 <button 
                     type="submit" 
                     disabled={!newMessage.trim()}
-                    className="p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2.5 bg-[#425042] hover:bg-[#344034] text-white rounded-full transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    <Send size={16} />
+                    <Send size={14} />
                 </button>
             </form>
         </div>

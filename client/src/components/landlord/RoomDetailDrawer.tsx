@@ -2,8 +2,21 @@
 import React, { useState } from 'react';
 import { 
     X, User, CreditCard, Wrench, CheckCircle2, 
-    AlertTriangle, Eye
+    AlertTriangle, Eye, Phone, MessageCircle
 } from 'lucide-react';
+
+export interface RoomOccupant {
+    id?: string;
+    name: string;
+    email?: string;
+    phoneNumber?: string | null;
+    joinedDate?: string;
+    status: string;
+    hasPendingPayment: boolean;
+    paymentId?: string;
+    paymentAmount?: number;
+    paymentProof?: string;
+}
 
 export interface RoomDetailData {
     id: string;
@@ -12,7 +25,7 @@ export interface RoomDetailData {
     currentOccupants: number;
     capacity: number;
     occupants: any[]; 
-    occupantPaymentStatus: any[];
+    occupantPaymentStatus: RoomOccupant[];
     activeIssues: any[];
     hasIssue: boolean;  
     isCritical: boolean;
@@ -104,11 +117,43 @@ export const RoomDetailDrawer: React.FC<RoomDetailDrawerProps> = React.memo(({
                                                     </div>
                                                     <div>
                                                         <p className="text-sm font-medium text-slate-800">{occ.name}</p>
-                                                        <p className="text-[11px] text-slate-400 font-medium">Joined {formatDate(occ.joinedDate || new Date().toISOString())}</p>
+                                                        <div className="text-[11px] text-slate-400 font-medium flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                                                            <span>Joined {formatDate(occ.joinedDate || new Date().toISOString())}</span>
+                                                            {occ.phoneNumber && (
+                                                                <>
+                                                                    <span>•</span>
+                                                                    <span className="font-mono text-slate-600 flex items-center gap-1">
+                                                                        <Phone size={10} className="text-slate-400" />
+                                                                        {occ.phoneNumber}
+                                                                    </span>
+                                                                </>
+                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${occ.hasPendingPayment ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-slate-500'}`}>
-                                                    {occ.status}
+                                                
+                                                <div className="flex items-center gap-2">
+                                                    {occ.phoneNumber && (
+                                                        <div className="flex items-center gap-1">
+                                                            <a 
+                                                                href={`tel:${occ.phoneNumber}`} 
+                                                                className="p-1.5 hover:bg-gray-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors border border-gray-200 shadow-xs"
+                                                                title={`Call ${occ.phoneNumber}`}
+                                                            >
+                                                                <Phone size={12} />
+                                                            </a>
+                                                            <a 
+                                                                href={`sms:${occ.phoneNumber}`} 
+                                                                className="p-1.5 hover:bg-gray-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors border border-gray-200 shadow-xs"
+                                                                title={`SMS ${occ.phoneNumber}`}
+                                                            >
+                                                                <MessageCircle size={12} />
+                                                            </a>
+                                                        </div>
+                                                    )}
+                                                    <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${occ.hasPendingPayment ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-slate-500'}`}>
+                                                        {occ.status}
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -134,13 +179,13 @@ export const RoomDetailDrawer: React.FC<RoomDetailDrawerProps> = React.memo(({
                                                             </div>
                                                             <div className="flex gap-2">
                                                                 <button 
-                                                                    onClick={() => handleRejectClick(occ.paymentId)} 
+                                                                    onClick={() => handleRejectClick(occ.paymentId!)} 
                                                                     className="flex-1 py-2 bg-white text-red-600 text-xs font-bold rounded-lg hover:bg-red-50 border border-red-200 transition-colors"
                                                                 >
                                                                     Reject
                                                                 </button>
                                                                 <button 
-                                                                    onClick={() => onVerifyPayment(occ.paymentId, 'Verified')} 
+                                                                    onClick={() => onVerifyPayment(occ.paymentId!, 'Verified')} 
                                                                     className="flex-1 py-2 bg-[#425042] hover:bg-[#344034] text-white text-xs font-bold rounded-xl transition-colors"
                                                                 >
                                                                     Verify
@@ -149,7 +194,7 @@ export const RoomDetailDrawer: React.FC<RoomDetailDrawerProps> = React.memo(({
                                                             <button type="button" onClick={() => setReviewPaymentId(null)} className="w-full mt-2.5 text-[10px] text-gray-400 hover:text-gray-600 font-medium">Cancel Review</button>
                                                         </div>
                                                     ) : (
-                                                        <button onClick={() => setReviewPaymentId(occ.paymentId)} className="w-full mt-2 py-2 bg-white border border-gray-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 shadow-sm">
+                                                        <button onClick={() => setReviewPaymentId(occ.paymentId || null)} className="w-full mt-2 py-2 bg-white border border-gray-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 shadow-sm">
                                                             <Eye size={14}/> Review Receipt
                                                         </button>
                                                     )}
