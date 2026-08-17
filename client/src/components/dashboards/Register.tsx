@@ -1,6 +1,6 @@
 // client/src/components/dashboards/Register.tsx
 import React, { useState } from 'react';
-import { Home, Mail, Lock, Key, AlertCircle, User, ArrowRight } from 'lucide-react';
+import { Home, Mail, Lock, Key, AlertCircle, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 interface RegisterProps {
     onToggleLogin: () => void;
@@ -14,6 +14,7 @@ const Register: React.FC<RegisterProps> = ({ onToggleLogin }) => {
         role: 'tenant' as 'tenant' | 'landlord',
         landlordCode: ''
     });
+    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -136,22 +137,33 @@ const Register: React.FC<RegisterProps> = ({ onToggleLogin }) => {
                                 </div>
                             </div>
 
-                            {/* PASSWORD */}
+                            {/* PASSWORD WITH VISIBILITY TOGGLE */}
                             <div>
                                 <label htmlFor="password" className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Password</label>
                                 <div className="relative group">
-                                    <Lock size={15} className="absolute left-3 top-3 text-gray-400 group-focus-within:text-[#5c6e4e] transition-colors pointer-events-none" />
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Lock size={15} className="text-gray-400 group-focus-within:text-[#5c6e4e] transition-colors" />
+                                    </div>
                                     <input
                                         id="password"
-                                        type="password"
+                                        name="password"
+                                        type={showPassword ? "text" : "password"}
                                         autoComplete="new-password"
                                         required
-                                        className="block w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-none bg-white text-xs text-slate-800 font-medium tracking-widest placeholder:tracking-normal
+                                        className="block w-full pl-9 pr-9 py-2.5 border border-gray-200 rounded-none bg-white text-xs text-slate-800 font-medium tracking-widest placeholder:tracking-normal
                                         focus:bg-[#f8f9f5] focus:ring-1 focus:ring-[#425042] focus:border-[#425042] transition-all outline-none"
                                         placeholder="••••••••"
                                         value={formData.password}
                                         onChange={(e) => setFormData({...formData, password: e.target.value})}
                                     />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-slate-600 cursor-pointer outline-none"
+                                        aria-label={showPassword ? "Hide password" : "Show password"}
+                                    >
+                                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                                    </button>
                                 </div>
                             </div>
 

@@ -1,6 +1,6 @@
 // client/src/components/landlord/LandlordTenantChecklist.tsx
 import React, { useState, useEffect } from 'react';
-import { User, Home, AlertCircle, UserPlus, ArrowLeft, Mail } from 'lucide-react';
+import { User, Home, AlertCircle, UserPlus, ArrowLeft, Mail, UserX } from 'lucide-react';
 import { useAuth } from '../UserContext';
 
 interface Tenant {
@@ -48,16 +48,29 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
             .catch(err => console.error("Failed to load rooms", err));
     };
 
-    const handleStatusUpdate = async (tenantId: string, status: 'approved' | 'rejected') => {
+    const handleApprove = async (tenantId: string) => {
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-            const res = await fetch(`${API_URL}/api/users/${tenantId}/status`, {
+            const res = await fetch(`${API_URL}/api/landlord/approve/${tenantId}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ isApproved: status === 'approved' })
+                headers: { 'Content-Type': 'application/json' }
             });
             if (res.ok) refreshData();
-            else alert("Failed to update status");
+            else alert("Failed to approve tenant.");
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const handleReject = async (tenantId: string) => {
+        if (!confirm("Are you sure you want to reject and remove this tenant?")) return;
+        try {
+            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const res = await fetch(`${API_URL}/api/landlord/reject/${tenantId}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) refreshData();
+            else alert("Failed to reject tenant.");
         } catch (error) {
             console.error(error);
         }
@@ -68,7 +81,7 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
 
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-            const res = await fetch(`${API_URL}/api/assign-room`, {
+            const res = await fetch(`${API_URL}/api/landlord/assign`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -86,7 +99,7 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
                 setSelectedRoom('');
                 refreshData(); 
             } else {
-                alert(data.message || "Failed to assign room.");
+                alert(data.error || data.message || "Failed to assign room.");
             }
         } catch (error) {
             console.error(error);
@@ -122,7 +135,7 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
                 {/* PAGE TYPOGRAPHY HEADER */}
                 <div className="border-b border-gray-200/60 pb-4">
                     <h1 className="text-4xl font-serif text-slate-800 mb-1">Tenant Records</h1>
-                    <p className="text-slate-500 text-sm">Manage pending member verifications and room allocations.</p>
+                    <p className="text-slate-500 text-sm">Manage pending member verifications, room allocations, and active boarders.</p>
                 </div>
 
                 {/* PENDING REGISTER APPLICATIONS (Muted Warning Theme) */}
@@ -148,13 +161,13 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
                                     </div>
                                     <div className="flex gap-2 shrink-0">
                                         <button 
-                                            onClick={() => handleStatusUpdate(tenant.id, 'rejected')} 
+                                            onClick={() => handleReject(tenant.id)} 
                                             className="px-4 py-2 bg-white hover:bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100 transition-colors"
                                         >
                                             Reject
                                         </button>
                                         <button 
-                                            onClick={() => handleStatusUpdate(tenant.id, 'approved')} 
+                                            onClick={() => handleApprove(tenant.id)} 
                                             className="px-4 py-2 bg-[#425042] hover:bg-[#344034] text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
                                         >
                                             Approve Access
@@ -177,7 +190,7 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
                         </span>
                     </div>
 
-                    {/* SOFT CARD LIST INSTEAD OF PRIMITIVE STARK TABLES */}
+                    {/* SOFT CARD LIST */}
                     <div className="p-6 space-y-3 max-h-[550px] overflow-y-auto custom-scrollbar">
                         {activeTenants.length === 0 ? (
                             <div className="text-center py-12 text-slate-400 text-sm font-medium">No active boarders currently logged in repository.</div>
@@ -194,7 +207,7 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
                                         </div>
                                     </div>
                                     
-                                    <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0">
+                                    <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
                                         {/* TONE-MATCHED BADGES & ACTIONS */}
                                         <div>
                                             {hasRoom(tenant) ? (
@@ -208,7 +221,7 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
                                             )}
                                         </div>
 
-                                        <div className="min-w-[90px] text-right">
+                                        <div className="flex items-center gap-2">
                                             {!hasRoom(tenant) && (
                                                 <button 
                                                     onClick={() => openAssignModal(tenant)}
@@ -217,6 +230,13 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
                                                     Assign Unit
                                                 </button>
                                             )}
+                                            <button 
+                                                onClick={() => handleReject(tenant.id)}
+                                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-100 transition-colors"
+                                                title="Revoke and Remove Tenant"
+                                            >
+                                                <UserX size={16} />
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

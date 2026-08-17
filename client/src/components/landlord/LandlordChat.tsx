@@ -1,12 +1,11 @@
-// client/src/components/landlord/LandlordChat.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../UserContext';
 import { Send, MicOff, ShieldAlert, MessageSquare, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatLastSeen } from '../../utils/presenceUtils';
 
 interface Message {
-    id: number;
+    id: string;
     senderId: string;
     senderRole: 'landlord' | 'tenant';
     text: string;
@@ -18,102 +17,152 @@ interface ChatRoom {
     tenantId: string;
     tenantName: string;
     isMuted: boolean;
+    isOnline: boolean;
+    lastSeen: string | null;
 }
 
 export const LandlordChat: React.FC = () => {
-    const { user } = useAuth();
-    const [socket, setSocket] = useState<Socket | null>(null);
+    const { user, globalSocket } = useAuth();
     const [rooms, setRooms] = useState<ChatRoom[]>([]);
     const [activeRoom, setActiveRoom] = useState<ChatRoom | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // 1. Initialize Socket Connection
-    useEffect(() => {
-        const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
-        setSocket(newSocket);
-
-        newSocket.on('receive_message', (data) => {
-            setMessages((prev) => [
-                ...prev, 
-                { id: Date.now(), senderId: data.senderId, senderRole: data.role, text: data.text, timestamp: new Date() }
-            ]);
-            setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-        });
-
-        newSocket.on('chat_error', (error) => {
-            toast.error(error.message);
-        });
-
-        return () => { newSocket.close(); };
-    }, []);
-
-    // 2. Fetch Active Contacts
+    // 1. Fetch Tenants & Initialize Room Presence
     useEffect(() => {
         if (user?.id) {
             fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/landlord/tenants/${user.id}`)
                 .then(res => res.json())
                 .then(data => {
-                    const chatRooms: ChatRoom[] = data
-                        .filter((t: any) => t.isApproved)
-                        .map((t: any) => ({
-                            id: `${user.id}-${t.id}`,
-                            tenantId: t.id,
-                            tenantName: t.name,
-                            isMuted: false
-                        }));
+                    const approved = data.filter((t: any) => t.isApproved);
+                    const chatRooms: ChatRoom[] = approved.map((t: any) => ({
+                        id: `${user.id}-${t.id}`,
+                        tenantId: t.id,
+                        tenantName: t.name,
+                        isMuted: false,
+                        isOnline: false,
+                        lastSeen: t.createdAt
+                    }));
                     setRooms(chatRooms);
+
+                    // Fetch presence for each tenant
+                    approved.forEach((t: any) => {
+                        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/chat/presence/${t.id}`)
+                            .then(r => r.json())
+                            .then(presence => {
+                                setRooms(prev => prev.map(room => 
+                                    room.tenantId === t.id 
+                                        ? { ...room, lastSeen: presence.lastSeen } 
+                                        : room
+                                ));
+                            })
+                            .catch(() => {});
+                    });
                 })
                 .catch(() => toast.error("Failed to load chat contacts."));
         }
     }, [user?.id]);
 
-    // 3. Connect to Chat Channel
-    const joinRoom = (room: ChatRoom) => {
-        if (socket && activeRoom?.id !== room.id) {
-            socket.emit('join_room', room.id);
+    // 2. Real-Time Presence & Messaging Listeners
+    useEffect(() => {
+        if (!globalSocket) return;
+
+        globalSocket.on('user_presence_update', (data: { userId: string; isOnline: boolean; lastSeen: string }) => {
+            setRooms(prev => prev.map(room => {
+                if (room.tenantId === data.userId) {
+                    return {
+                        ...room,
+                        isOnline: data.isOnline,
+                        lastSeen: data.lastSeen
+                    };
+                }
+                return room;
+            }));
+
+            if (activeRoom && activeRoom.tenantId === data.userId) {
+                setActiveRoom(prev => prev ? {
+                    ...prev,
+                    isOnline: data.isOnline,
+                    lastSeen: data.lastSeen
+                } : null);
+            }
+        });
+
+        globalSocket.on('receive_message', (data) => {
+            setMessages(prev => [
+                ...prev, 
+                { 
+                    id: data.id || Date.now().toString(), 
+                    senderId: data.senderId, 
+                    senderRole: data.role, 
+                    text: data.text, 
+                    timestamp: new Date(data.timestamp) 
+                }
+            ]);
+            setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+        });
+
+        return () => {
+            globalSocket.off('user_presence_update');
+            globalSocket.off('receive_message');
+        };
+    }, [globalSocket, activeRoom]);
+
+    // 3. Connect to Chat Channel & Load History
+    const joinRoom = async (room: ChatRoom) => {
+        if (globalSocket && activeRoom?.id !== room.id) {
+            globalSocket.emit('join_room', room.id);
             setActiveRoom(room);
-            setMessages([]); 
-            toast.success(`Connected to ${room.tenantName}`);
+            setMessages([]);
+
+            try {
+                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/chat/history/${room.id}`);
+                const history = await res.json();
+                if (Array.isArray(history)) {
+                    setMessages(history.map((m: any) => ({
+                        id: m.id,
+                        senderId: m.senderId,
+                        senderRole: m.senderRole,
+                        text: m.text,
+                        timestamp: new Date(m.timestamp)
+                    })));
+                    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+                }
+            } catch (err) {
+                console.error("Failed to load history", err);
+            }
         }
     };
 
-    // 4. Send Communication Packet
+    // 4. Send Message
     const sendMessage = (e: React.FormEvent) => {
         e.preventDefault();
-        if (newMessage.trim() === '' || !socket || !activeRoom || !user) return;
+        if (newMessage.trim() === '' || !globalSocket || !activeRoom || !user) return;
 
         const messageData = {
             roomId: activeRoom.id,
             senderId: user.id,
+            recipientId: activeRoom.tenantId,
             role: 'landlord',
             text: newMessage.trim(),
         };
 
-        socket.emit('send_message', messageData);
+        globalSocket.emit('send_message', messageData);
         setNewMessage('');
     };
 
-    // 5. Toggle Authority State (Mute Mappings)
     const toggleMute = () => {
-        if (!activeRoom || !socket) return;
-        
+        if (!activeRoom || !globalSocket) return;
         const newMuteStatus = !activeRoom.isMuted;
-        socket.emit('toggle_mute', { roomId: activeRoom.id, role: 'landlord', status: newMuteStatus });
-        
-        setActiveRoom({...activeRoom, isMuted: newMuteStatus});
-        toast(newMuteStatus ? `Muted ${activeRoom.tenantName}` : `Unmuted ${activeRoom.tenantName}`, {
-            icon: newMuteStatus ? '🔇' : '🔊'
-        });
-        
-        setRooms(rooms.map(r => r.id === activeRoom.id ? {...r, isMuted: newMuteStatus} : r));
+        globalSocket.emit('toggle_mute', { roomId: activeRoom.id, role: 'landlord', status: newMuteStatus });
+        setActiveRoom({ ...activeRoom, isMuted: newMuteStatus });
+        setRooms(rooms.map(r => r.id === activeRoom.id ? { ...r, isMuted: newMuteStatus } : r));
     };
 
     return (
         <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm flex h-[calc(100vh-12rem)] overflow-hidden animate-fade-in text-slate-800">
-            
-            {/* LEFT CONTACT LEDGER COMPONENT SHEET */}
+            {/* Contacts Column */}
             <div className="w-1/3 border-r border-gray-100 flex flex-col bg-[#f8f9f5]">
                 <div className="p-5 border-b border-gray-200/60 bg-white/60 backdrop-blur-md">
                     <h2 className="font-semibold text-base text-slate-800 flex items-center gap-2">
@@ -134,15 +183,22 @@ export const LandlordChat: React.FC = () => {
                                         : 'hover:bg-white/50 border border-transparent'}`}
                             >
                                 <div className="flex items-center gap-3 overflow-hidden">
-                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-xs shrink-0 transition-colors
-                                        ${isCurrent ? 'bg-[#e7efdb] text-[#3a4731]' : 'bg-white border border-gray-200 text-slate-500'}`}>
-                                        {room.tenantName.charAt(0)}
+                                    <div className="relative">
+                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-xs shrink-0
+                                            ${isCurrent ? 'bg-[#e7efdb] text-[#3a4731]' : 'bg-white border border-gray-200 text-slate-500'}`}>
+                                            {room.tenantName.charAt(0)}
+                                        </div>
+                                        {room.isOnline && (
+                                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white"></span>
+                                        )}
                                     </div>
                                     <div className="overflow-hidden">
                                         <p className={`text-sm font-medium truncate ${isCurrent ? 'text-slate-900 font-semibold' : 'text-slate-700'}`}>
                                             {room.tenantName}
                                         </p>
-                                        <p className="text-[10px] text-slate-400 font-medium tracking-wide">Click to open ledger channel</p>
+                                        <p className="text-[10px] text-slate-400 font-medium tracking-wide">
+                                            {formatLastSeen(room.lastSeen, room.isOnline)}
+                                        </p>
                                     </div>
                                 </div>
                                 {room.isMuted && <MicOff size={12} className="text-amber-600 shrink-0 ml-2" />}
@@ -152,15 +208,17 @@ export const LandlordChat: React.FC = () => {
                 </div>
             </div>
 
-            {/* RIGHT SIDE DIALOG WINDOW */}
+            {/* Chat Conversation Pane */}
             {activeRoom ? (
                 <div className="flex-1 flex flex-col bg-white relative">
-                    
-                    {/* CHAT TERMINAL SUB-HEADER */}
                     <div className="h-16 border-b border-gray-100 flex items-center justify-between px-6 bg-white/80 backdrop-blur-md z-10 absolute top-0 w-full">
                         <div className="flex items-center gap-3">
-                            <span className="font-medium text-slate-800 text-sm">{activeRoom.tenantName}</span>
-                            <span className="h-2 w-2 bg-[#5c6e4e] rounded-full"></span>
+                            <div>
+                                <span className="font-medium text-slate-800 text-sm block leading-tight">{activeRoom.tenantName}</span>
+                                <span className="text-[10px] text-slate-400 font-medium">
+                                    {formatLastSeen(activeRoom.lastSeen, activeRoom.isOnline)}
+                                </span>
+                            </div>
                         </div>
                         
                         <button 
@@ -174,7 +232,6 @@ export const LandlordChat: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* INTERACTION MESSAGES VIEW PANEL */}
                     <div className="flex-1 overflow-y-auto p-6 pt-20 pb-24 bg-[#f8f9f5]/40 custom-scrollbar">
                         {messages.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-slate-400">
@@ -210,7 +267,6 @@ export const LandlordChat: React.FC = () => {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* INPUT FORM ELEMENT BAR */}
                     <form onSubmit={sendMessage} className="p-4 bg-white border-t border-gray-100 flex gap-2 items-center absolute bottom-0 w-full">
                         <input 
                             type="text" 

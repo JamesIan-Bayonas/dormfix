@@ -1,13 +1,17 @@
-// client/src/components/dashboards/TenantDashboard.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { MessageSquare, Home, LogOut, Wrench, CreditCard, X, User, Calendar, Mail, ArrowRight, ArrowLeft, Send } from 'lucide-react'; 
+import { 
+    MessageSquare, Home, LogOut, Wrench, CreditCard, X, User, 
+    Calendar, Mail, ArrowRight, ArrowLeft, Send, Lock, AlertCircle, ShieldCheck 
+} from 'lucide-react'; 
 import { useAuth } from '../UserContext';
 import { MaintenanceList } from '../MaintenanceList';
 import { TenantPaymentForm } from '../tenant/TenantPaymentForm'; 
 import { TenantPaymentHistory } from '../tenant/TenantPaymentHistory';
+import { TenantRulesModal } from '../tenant/TenantRulesModal';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { formatLastSeen } from '../../utils/presenceUtils';
 
 interface HousingDetails {
     landlordId: string;
@@ -30,10 +34,9 @@ export const TenantDashboard: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const activeModal = location.pathname.includes('/pay') ? 'payment' : location.pathname.includes('/report') ? 'maintenance' : null;
-
     const [housing, setHousing] = useState<HousingDetails | null>(null);
     const [isLoadingHousing, setIsLoadingHousing] = useState(true);
+    const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
     
     // Core Isolated Dedicated Chat States
     const [socket, setSocket] = useState<Socket | null>(null);
@@ -64,33 +67,69 @@ export const TenantDashboard: React.FC = () => {
         }
     }, [user?.id]);
 
+    const isRoomAssigned = Boolean(housing?.roomNumber && housing.roomNumber !== 'Unassigned');
+
+    const activeModal = (location.pathname.includes('/pay') && isRoomAssigned) 
+        ? 'payment' 
+        : (location.pathname.includes('/report') && isRoomAssigned) 
+            ? 'maintenance' 
+            : null;
+
     // Dedicated Stateful Chat Core Engine Initialization
     useEffect(() => {
-        if (!user?.id || !housing?.landlordId || !location.pathname.includes('/chat')) return;
+    if (!user?.id || !housing?.landlordId || !location.pathname.includes('/chat')) return;
 
-        const channelRoomId = `${housing.landlordId}-${user.id}`;
-        const activeSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
-        setSocket(activeSocket);
+    const channelRoomId = `${housing.landlordId}-${user.id}`;
+    const activeSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
+    setSocket(activeSocket);
 
-        activeSocket.emit('join_room', channelRoomId);
+    activeSocket.emit('register_user', user.id);
+    activeSocket.emit('join_room', channelRoomId);
 
-        activeSocket.on('receive_message', (payload) => {
-            setChatMessages(prev => [...prev, {
-                id: payload.id || Date.now(),
-                senderId: payload.senderId,
-                senderRole: payload.role,
-                text: payload.text,
-                timestamp: new Date(payload.timestamp)
-            }]);
-            setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-        });
+    // Load persistent history
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/chat/history/${channelRoomId}`)
+        .then(res => res.json())
+        .then(data => {
+            if (Array.isArray(data)) {
+                setChatMessages(data.map((m: any) => ({
+                    id: m.id,
+                    senderId: m.senderId,
+                    senderRole: m.senderRole,
+                    text: m.text,
+                    timestamp: new Date(m.timestamp)
+                })));
+                setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+            }
+        })
+        .catch(() => {});
 
-        activeSocket.on('chat_error', (err) => {
-            toast.error(err.message, { icon: '🔒' });
-        });
+    // Fetch landlord initial presence
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/chat/presence/${housing.landlordId}`)
+        .then(r => r.json())
+        .then(p => setLandlordPresence({ isOnline: false, lastSeen: p.lastSeen }))
+        .catch(() => {});
 
-        return () => { activeSocket.close(); };
-    }, [user?.id, housing?.landlordId, location.pathname]);
+    activeSocket.on('user_presence_update', (data: { userId: string; isOnline: boolean; lastSeen: string }) => {
+        if (data.userId === housing.landlordId) {
+            setLandlordPresence({ isOnline: data.isOnline, lastSeen: data.lastSeen });
+        }
+    });
+
+    activeSocket.on('receive_message', (payload) => {
+        setChatMessages(prev => [...prev, {
+            id: payload.id || Date.now().toString(),
+            senderId: payload.senderId,
+            senderRole: payload.role,
+            text: payload.text,
+            timestamp: new Date(payload.timestamp)
+        }]);
+        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    });
+
+    return () => {
+        activeSocket.disconnect();
+    };
+}, [user?.id, housing?.landlordId, location.pathname]);
 
     const handleSendChatMessage = (e: React.FormEvent) => {
         e.preventDefault();
@@ -108,6 +147,11 @@ export const TenantDashboard: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!isRoomAssigned) {
+            toast.error("You cannot report issues until a room has been assigned.");
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/maintenance`, {
@@ -115,41 +159,61 @@ export const TenantDashboard: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tenantId: user?.id, ...formData })
             });
-            if (!res.ok) throw new Error("Submission failed");
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Submission failed");
             toast.success("Request sent to landlord successfully!");
             setFormData({ issueType: 'Plumbing', urgency: 'Low', description: '' }); 
             navigate('/');
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            toast.error("Failed to submit request.");
+            toast.error(error.message || "Failed to submit request.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
+    const [landlordPresence, setLandlordPresence] = useState<{ isOnline: boolean; lastSeen: string | null }>({
+    isOnline: false,
+    lastSeen: null
+});
+
     if (!user) return null;
 
     return (
         <Routes>
-            {/* HISTORIC TRANSACTIONAL LEDGER ROUTE */}
             <Route path="/history" element={
-                <div className="min-h-screen bg-[#f8f9f5] p-4 animate-fade-in text-slate-800">
-                    <div className="max-w-4xl mx-auto py-8">
-                        <TenantPaymentHistory onBack={() => navigate('/')} />
+                isRoomAssigned ? (
+                    <div className="min-h-screen bg-[#f8f9f5] p-4 animate-fade-in text-slate-800">
+                        <div className="max-w-4xl mx-auto py-8">
+                            <TenantPaymentHistory onBack={() => navigate('/')} />
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <div className="min-h-screen bg-[#f8f9f5] p-6 flex flex-col items-center justify-center text-center">
+                        <div className="p-6 bg-white border border-gray-200 rounded-[2rem] max-w-sm space-y-3 shadow-sm">
+                            <Lock className="mx-auto text-amber-600" size={32} />
+                            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Access Restricted</h3>
+                            <p className="text-xs text-slate-500 leading-relaxed">Transaction history is unavailable until your landlord assigns your unit.</p>
+                            <button onClick={() => navigate('/')} className="px-4 py-2 bg-[#425042] hover:bg-[#344034] text-white text-xs font-bold rounded-xl uppercase tracking-wider transition-colors">Return to Portal</button>
+                        </div>
+                    </div>
+                )
             } />
 
-            {/* DEDICATED FULL-PANEL CHAT WORKSPACE ROUTE (FIXED NAVIGATION MECHANISM) */}
             <Route path="/chat" element={
                 <div className="min-h-screen bg-[#f8f9f5] p-4 sm:p-8 animate-fade-in text-slate-800">
                     <div className="max-w-3xl mx-auto space-y-6 flex flex-col h-[calc(100vh-4rem)]">
                         <button onClick={() => navigate('/')} className="flex items-center gap-2 text-xs font-bold text-[#5c6e4e] uppercase tracking-wider hover:text-[#425042] transition-colors outline-none shrink-0">
                             <ArrowLeft size={14} /> Back to Dashboard
                         </button>
-                        <div className="border-b border-gray-200/60 pb-3 shrink-0">
-                            <h1 className="text-3xl font-serif text-slate-800">Property Manager Chat</h1>
-                            <p className="text-slate-500 text-xs mt-0.5">Secure operational communication ledger linked with {housing?.landlordName || 'Landlord'}.</p>
+                        <div className="border-b border-gray-200/60 pb-3 shrink-0 flex justify-between items-end">
+                            <div>
+                                <h1 className="text-3xl font-serif text-slate-800">Property Manager Chat</h1>
+                                <p className="text-slate-500 text-xs mt-0.5 flex items-center gap-1.5">
+                                    <span className={`w-2 h-2 rounded-full ${landlordPresence.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                                    <span>{housing?.landlordName || 'Landlord'} • {formatLastSeen(landlordPresence.lastSeen, landlordPresence.isOnline)}</span>
+                                </p>
+                            </div>
                         </div>
                         <div className="flex-1 bg-white rounded-3xl border border-gray-100 shadow-sm flex flex-col overflow-hidden min-h-0">
                             <div className="flex-1 overflow-y-auto p-6 bg-[#f8f9f5]/30 custom-scrollbar space-y-4">
@@ -190,7 +254,6 @@ export const TenantDashboard: React.FC = () => {
                 </div>
             } />
 
-            {/* BASE DASHBOARD ROOT WILDCARD PATH */}
             <Route path="*" element={
                 <div className="min-h-screen bg-[#f8f9f5] relative text-slate-800 font-sans">
                     <header className="bg-white border-b border-gray-200/60 sticky top-0 z-10">
@@ -204,6 +267,19 @@ export const TenantDashboard: React.FC = () => {
                     </header>
                     
                     <main className="max-w-5xl mx-auto py-10 px-6">
+                        {/* UNASSIGNED STATUS ADVISORY BANNER */}
+                        {!isLoadingHousing && !isRoomAssigned && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-8 flex items-start gap-3 shadow-xs">
+                                <AlertCircle className="text-amber-600 shrink-0 mt-0.5" size={18} />
+                                <div>
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-amber-800">Unit Allocation Pending</h4>
+                                    <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                                        Your account is approved, but your landlord has not assigned your specific room unit yet. Rent payments and maintenance reporting are disabled until your unit is confirmed.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 mb-8">
                             <h2 className="text-base font-semibold text-slate-800 mb-6 flex items-center gap-2"><User size={18} className="text-[#657655]"/> My Housing Profile</h2>
                             {isLoadingHousing ? (
@@ -221,7 +297,9 @@ export const TenantDashboard: React.FC = () => {
                                     </div>
                                     <div className="p-5 bg-[#f8f9f5] rounded-2xl border border-gray-200/50">
                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Unit</span>
-                                        <div className="font-serif font-bold text-slate-800 mt-1 text-xl">Room {housing.roomNumber}</div>
+                                        <div className={`font-serif font-bold mt-1 text-xl ${isRoomAssigned ? 'text-slate-800' : 'text-amber-600'}`}>
+                                            {isRoomAssigned ? `Room ${housing.roomNumber}` : 'Unassigned'}
+                                        </div>
                                     </div>
                                     <div className="p-5 bg-[#f8f9f5] rounded-2xl border border-gray-200/50">
                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tenancy Start</span>
@@ -233,30 +311,65 @@ export const TenantDashboard: React.FC = () => {
                             )}
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                            {/* CHANGED TO REDIRECT CLEANLY VIA CORE ROUTE ROUTER TRACK */}
+                        {/* ACTION CARDS GRID */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+                            {/* Message Landlord */}
                             <button onClick={() => navigate('/chat')} className="group flex flex-col items-center justify-center p-8 bg-white rounded-[2rem] shadow-sm border border-gray-100 hover:border-[#b7c4a9] hover:shadow-md transition-all outline-none">
                                 <div className="p-4 bg-[#e7efdb] rounded-full mb-4 group-hover:-translate-y-1 transition-transform border border-[#d3e0c0]"><MessageSquare size={28} className="text-[#5c6e4e]" /></div>
                                 <span className="text-base font-semibold text-slate-800">Message Landlord</span>
                                 <span className="text-[11px] text-slate-400 font-medium mt-1">Live Chat Support</span>
                             </button>
 
-                            <button onClick={() => navigate('/report')} className="group flex flex-col items-center justify-center p-8 bg-white rounded-[2rem] shadow-sm border border-gray-100 hover:border-amber-200 hover:shadow-md transition-all outline-none">
-                                <div className="p-4 bg-[#fef9eb] rounded-full mb-4 group-hover:-translate-y-1 transition-transform border border-[#f5ead0]"><Wrench size={28} className="text-[#b97a26]" /></div>
-                                <span className="text-base font-semibold text-slate-800">Report Issue</span>
-                                <span className="text-[11px] text-slate-400 font-medium mt-1">Maintenance & Repairs</span>
+                            {/* House Directives */}
+                            <button onClick={() => setIsRulesModalOpen(true)} className="group flex flex-col items-center justify-center p-8 bg-white rounded-[2rem] shadow-sm border border-gray-100 hover:border-[#b7c4a9] hover:shadow-md transition-all outline-none">
+                                <div className="p-4 bg-[#e7efdb] rounded-full mb-4 group-hover:-translate-y-1 transition-transform border border-[#d3e0c0]"><ShieldCheck size={28} className="text-[#5c6e4e]" /></div>
+                                <span className="text-base font-semibold text-slate-800">House Directives</span>
+                                <span className="text-[11px] text-slate-400 font-medium mt-1">Building Rules & Policies</span>
                             </button>
 
-                            <div className="group flex flex-col bg-white rounded-[2rem] shadow-sm border border-gray-100 hover:border-[#425042]/30 hover:shadow-md transition-all overflow-hidden h-full">
-                                <button onClick={() => navigate('/pay')} className="flex-1 flex flex-col items-center justify-center p-6 outline-none">
-                                    <div className="p-4 bg-[#425042] rounded-full mb-4 group-hover:-translate-y-1 transition-transform shadow-xs"><CreditCard size={28} className="text-white" /></div>
-                                    <span className="text-base font-semibold text-slate-800">Pay Rent</span>
-                                    <span className="text-[11px] text-slate-400 font-medium mt-1">Upload Digital Receipt</span>
+                            {/* Report Issue (Disabled when Unassigned) */}
+                            {isRoomAssigned ? (
+                                <button onClick={() => navigate('/report')} className="group flex flex-col items-center justify-center p-8 bg-white rounded-[2rem] shadow-sm border border-gray-100 hover:border-amber-200 hover:shadow-md transition-all outline-none">
+                                    <div className="p-4 bg-[#fef9eb] rounded-full mb-4 group-hover:-translate-y-1 transition-transform border border-[#f5ead0]"><Wrench size={28} className="text-[#b97a26]" /></div>
+                                    <span className="text-base font-semibold text-slate-800">Report Issue</span>
+                                    <span className="text-[11px] text-slate-400 font-medium mt-1">Maintenance & Repairs</span>
                                 </button>
-                                <button onClick={() => navigate('/history')} className="w-full py-3 bg-[#f8f9f5] border-t border-gray-100 text-[10px] font-bold uppercase tracking-wider text-[#5c6e4e] hover:bg-[#e7efdb] transition-colors outline-none flex items-center justify-center gap-1">
-                                    View Ledger History <ArrowRight size={12}/>
-                                </button>
-                            </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center p-8 bg-gray-50/80 rounded-[2rem] border border-dashed border-gray-200 cursor-not-allowed opacity-75">
+                                    <div className="p-4 bg-gray-100 rounded-full mb-4 text-slate-400"><Lock size={28} /></div>
+                                    <span className="text-base font-semibold text-slate-400">Report Issue</span>
+                                    <span className="text-[10px] text-amber-700 font-bold uppercase tracking-wider mt-1 flex items-center gap-1">
+                                        <AlertCircle size={10} /> Requires Room Assignment
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Pay Rent (Disabled when Unassigned) */}
+                            {isRoomAssigned ? (
+                                <div className="group flex flex-col bg-white rounded-[2rem] shadow-sm border border-gray-100 hover:border-[#425042]/30 hover:shadow-md transition-all overflow-hidden h-full">
+                                    <button onClick={() => navigate('/pay')} className="flex-1 flex flex-col items-center justify-center p-6 outline-none">
+                                        <div className="p-4 bg-[#425042] rounded-full mb-4 group-hover:-translate-y-1 transition-transform shadow-xs"><CreditCard size={28} className="text-white" /></div>
+                                        <span className="text-base font-semibold text-slate-800">Pay Rent</span>
+                                        <span className="text-[11px] text-slate-400 font-medium mt-1">Upload Digital Receipt</span>
+                                    </button>
+                                    <button onClick={() => navigate('/history')} className="w-full py-3 bg-[#f8f9f5] border-t border-gray-100 text-[10px] font-bold uppercase tracking-wider text-[#5c6e4e] hover:bg-[#e7efdb] transition-colors outline-none flex items-center justify-center gap-1">
+                                        View Ledger History <ArrowRight size={12}/>
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col bg-gray-50/80 rounded-[2rem] border border-dashed border-gray-200 overflow-hidden h-full opacity-75 select-none cursor-not-allowed">
+                                    <div className="flex-1 flex flex-col items-center justify-center p-8">
+                                        <div className="p-4 bg-gray-100 rounded-full mb-4 text-slate-400"><Lock size={28} /></div>
+                                        <span className="text-base font-semibold text-slate-400">Pay Rent</span>
+                                        <span className="text-[10px] text-amber-700 font-bold uppercase tracking-wider mt-1 flex items-center gap-1">
+                                            <AlertCircle size={10} /> Requires Room Assignment
+                                        </span>
+                                    </div>
+                                    <div className="w-full py-3 bg-gray-100/60 border-t border-gray-200 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-center gap-1">
+                                        <Lock size={10} /> History Locked
+                                    </div>
+                                </div>
+                            )}
                         </div>                        
 
                         <MaintenanceList /> 
@@ -307,6 +420,16 @@ export const TenantDashboard: React.FC = () => {
                                 {housing?.landlordId ? <TenantPaymentForm landlordId={housing.landlordId} onSuccess={() => navigate('/')} /> : <div className="bg-white p-6 rounded-xl text-center text-red-600 font-bold">Error: Connection severed.</div>}
                             </div>
                         </div>
+                    )}
+
+                    {/* House Rules Modal */}
+                    {housing?.landlordId && (
+                        <TenantRulesModal 
+                            isOpen={isRulesModalOpen}
+                            onClose={() => setIsRulesModalOpen(false)}
+                            landlordId={housing.landlordId}
+                            roomNumber={housing.roomNumber}
+                        />
                     )}
                 </div>
             } />
