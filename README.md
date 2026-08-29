@@ -2,7 +2,11 @@
 
 > **Executive Summary:** DormFix is an enterprise-grade, full-stack property and dormitory management ecosystem engineered to streamline tenant onboarding, room capacity allocation, maintenance issue triaging, and payment verification. Powered by a hybrid OCR and local LLM optical audit pipeline coupled with real-time WebSocket communication and ACID-compliant MSSQL transactions, DormFix replaces error-prone physical logbooks with an intelligent, automated property management infrastructure.
 
-[Live Demo](https://dormfix-jamesian-bayonas-projects.vercel.app/)
+<p align="center">
+  <a href="https://dormfix-jamesian-bayonas-projects.vercel.app" target="_blank">
+    <img src="https://img.shields.io/badge/Live%20Production%20Demo-Click%20To%20Launch-06b6d4?style=for-the-badge&logo=railway&logoColor=white" alt="Live Demo" />
+  </a>
+</p>
 
 ---
 
