@@ -1,6 +1,7 @@
 // server/src/services/aiService.ts
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
-import Tesseract from 'tesseract.js';
+import fs from 'fs';
+import path from 'path';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -22,9 +23,9 @@ export interface MaintenanceTriageResult {
 }
 
 export class AIServiceError extends Error {
-    public readonly stage: 'CONFIG' | 'OCR' | 'LLM_PARSING';
+    public readonly stage: 'CONFIG' | 'INGESTION' | 'OCR' | 'LLM_PARSING';
 
-    constructor(message: string, stage: 'CONFIG' | 'OCR' | 'LLM_PARSING', public readonly originalError?: unknown) {
+    constructor(message: string, stage: 'CONFIG' | 'INGESTION' | 'OCR' | 'LLM_PARSING', public readonly originalError?: unknown) {
         super(message);
         this.name = 'AIServiceError';
         this.stage = stage;
@@ -34,33 +35,56 @@ export class AIServiceError extends Error {
 const getClient = (): GoogleGenerativeAI => {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-        throw new AIServiceError('GEMINI_API_KEY is not configured in .env', 'CONFIG');
+        throw new AIServiceError('GEMINI_API_KEY is not configured in production environment variables.', 'CONFIG');
     }
     return new GoogleGenerativeAI(apiKey);
 };
 
-export const analyzePaymentImage = async (filePath: string): Promise<PaymentAnalysisResult | null> => {
+const resolveGenerativePart = (input: string | Buffer, explicitMimeType?: string) => {
+    if (Buffer.isBuffer(input)) {
+        return {
+            inlineData: {
+                data: input.toString('base64'),
+                mimeType: explicitMimeType || 'image/jpeg',
+            },
+        };
+    }
+
+    const resolvedPath = path.isAbsolute(input) ? input : path.resolve(process.cwd(), input);
+
+    if (!fs.existsSync(resolvedPath)) {
+        throw new AIServiceError(`Image file not found on disk at resolved path: ${resolvedPath}`, 'INGESTION');
+    }
+
+    const ext = path.extname(resolvedPath).toLowerCase();
+    const mimeMap: Record<string, string> = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.webp': 'image/webp',
+    };
+    const mimeType = explicitMimeType || mimeMap[ext] || 'image/jpeg';
+
+    return {
+        inlineData: {
+            data: fs.readFileSync(resolvedPath).toString('base64'),
+            mimeType,
+        },
+    };
+};
+
+export const analyzePaymentImage = async (
+    input: string | Buffer,
+    mimeType?: string
+): Promise<PaymentAnalysisResult | null> => {
     try {
         const genAI = getClient();
+        const imagePart = resolveGenerativePart(input, mimeType);
 
-        // STEP 1: Running OCR to extract raw text
-        console.log("Step 1: Running OCR to extract raw text...");
-        let text = '';
-        try {
-            const { data } = await Tesseract.recognize(filePath, 'eng');
-            text = data.text;
-        } catch (ocrErr) {
-            throw new AIServiceError('Tesseract OCR engine failed to process image file.', 'OCR', ocrErr);
-        }
-
-        console.log("Extracted Text Preview:\n", text.substring(0, 200) + "...\n");
-
-        // STEP 2: Structured Optical Analysis via Gemini
-        console.log("Step 2: Asking Gemini AI to structure and audit payment receipt...");
         const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
+            model: 'gemini-2.5-flash',
             generationConfig: {
-                responseMimeType: "application/json",
+                responseMimeType: 'application/json',
                 responseSchema: {
                     type: SchemaType.OBJECT,
                     properties: {
@@ -71,100 +95,39 @@ export const analyzePaymentImage = async (filePath: string): Promise<PaymentAnal
                         confidence_score: { type: SchemaType.NUMBER },
                         analysis_notes: { type: SchemaType.STRING }
                     },
-                    required: ["is_valid_receipt", "confidence_score", "analysis_notes"]
+                    required: ['is_valid_receipt', 'confidence_score', 'analysis_notes']
                 },
                 temperature: 0.0
             }
         });
 
-        const prompt = `You are a strict data parsing algorithm. I will provide you with raw text scanned via OCR from a utility bill, bank receipt, or e-wallet screenshot (e.g. GCash, Maya).
+        const prompt = `You are an expert Zero-Trust financial transaction auditor specializing in Philippine e-wallets (GCash, Maya, ShopeePay), bank transfers (InstaPay, PESONet), and utility receipts.
 
-RULES:
-1. Extract the exact Amount. Look for "Total Amount Sent", "Total Amount Due", "Amount", or numbers near PHP/₱/$.
-CRITICAL: Convert commas to pure numbers. If you see "10,000.00", return 10000.
-2. Extract the Date in YYYY-MM-DD format if identifiable.
-3. Extract the Reference Number or Account Number (e.g., "Ref No. 2012 202 833553" -> "2012202833553" or formatted string).
-4. Do NOT invent data. If a field is missing, return null.
+Analyze this image and execute the following extraction rules strictly:
+1. is_valid_receipt: Set true if this is a genuine payment confirmation or receipt slip. Set false if it is unrelated or corrupted.
+2. extracted_amount: Extract the exact total numeric value paid. Remove currency signs (₱, PHP, $) and comma separators (e.g., '₱2,000.00' -> 2000, '1,500' -> 1500).
+3. extracted_date: Normalize the payment execution date to 'YYYY-MM-DD'. If time is present without a full year, assume the current calendar year.
+4. reference_number: Extract the complete transaction/reference/control number. Remove all internal whitespace (e.g., 'Ref No. 8011 9196 6111 2' -> '8011919661112').
+5. confidence_score: Floating point from 0.0 to 1.0 indicating visual legibility.
+6. analysis_notes: Brief description of the detected issuer (e.g., 'GCash Express Send confirmation') and any observed anomalies.
 
-Here is the raw text from the document:
-${text}`;
+If any field is missing or unreadable, return null for that field. Never fabricate values.`;
 
-        const result = await model.generateContent(prompt);
+        const result = await model.generateContent([prompt, imagePart]);
         const responseText = result.response.text();
 
         if (!responseText) {
             return null;
         }
 
-        const parsed = JSON.parse(responseText) as PaymentAnalysisResult;
-        return parsed;
+        return JSON.parse(responseText) as PaymentAnalysisResult;
 
-    } catch (error) {
+    } catch (error: any) {
         if (error instanceof AIServiceError) {
-            console.error(`[AI Service Error | Stage: ${error.stage}]:`, error.message, error.originalError || '');
+            console.error(`❌ [AI Service Error | Stage: ${error.stage}]: ${error.message}`);
         } else {
-            console.error("Payment Analysis Pipeline Failed:", error);
+            console.error('❌ [AI Service Vision Pipeline Exception]:', error?.message || error);
         }
-        return null; 
-    }
-};
-
-export const analyzeMaintenanceRequest = async (tenantMessage: string): Promise<MaintenanceTriageResult | null> => {
-    try {
-        const genAI = getClient();
-
-        console.log("🤖 Asking Gemini AI to triage maintenance request...");
-        
-        const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: SchemaType.OBJECT,
-                    properties: {
-                        category: { 
-                            type: SchemaType.STRING, 
-                            format: "enum",
-                            enum: ["Plumbing", "Electrical", "HVAC", "Appliance", "Pest Control", "Other"] 
-                        },
-                        priority: { 
-                            type: SchemaType.STRING, 
-                            format: "enum",
-                            enum: ["Low", "Medium", "High", "Emergency"] 
-                        },
-                        landlord_summary: { type: SchemaType.STRING },
-                        tenant_auto_reply: { type: SchemaType.STRING }
-                    },
-                    required: ["category", "priority", "landlord_summary", "tenant_auto_reply"]
-                },
-                temperature: 0.2
-            }
-        });
-
-        const prompt = `You are an expert Property Manager assistant. Triage this tenant maintenance request:
-1. Categorize the issue strictly.
-2. Determine priority (Water leaks or exposed electrical wires are Emergency. Minor cosmetics are Low).
-3. Provide a concise 1-sentence landlord summary.
-4. Provide a polite 2-sentence auto-reply with immediate safety advice for the tenant.
-
-Tenant Request: "${tenantMessage}"`;
-
-        const result = await model.generateContent(prompt);
-        const responseText = result.response.text();
-
-        if (!responseText) {
-            return null;
-        }
-
-        const parsed = JSON.parse(responseText) as MaintenanceTriageResult;
-        return parsed;
-
-    } catch (error) {
-        if (error instanceof AIServiceError) {
-            console.error(`[AI Service Error | Stage: ${error.stage}]:`, error.message, error.originalError || '');
-        } else {
-            console.error("Maintenance Triage Failed:", error);
-        }
-        return null; 
+        return null;
     }
 };
