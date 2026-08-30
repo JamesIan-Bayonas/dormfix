@@ -102,16 +102,15 @@ export const analyzePaymentImage = async (
         });
 
         const prompt = `You are an expert Zero-Trust financial transaction auditor specializing in Philippine e-wallets (GCash, Maya, ShopeePay), bank transfers (InstaPay, PESONet), and utility receipts.
+            Analyze this image and execute the following extraction rules strictly:
+            1. is_valid_receipt: Set true if this is a genuine payment confirmation or receipt slip. Set false if it is unrelated or corrupted.
+            2. extracted_amount: Extract the exact total numeric value paid. Remove currency signs (₱, PHP, $) and comma separators (e.g., '₱2,000.00' -> 2000, '1,500' -> 1500).
+            3. extracted_date: Normalize the payment execution date to 'YYYY-MM-DD'. If time is present without a full year, assume the current calendar year.
+            4. reference_number: Extract the complete transaction/reference/control number. Remove all internal whitespace (e.g., 'Ref No. 8011 9196 6111 2' -> '8011919661112').
+            5. confidence_score: Floating point from 0.0 to 1.0 indicating visual legibility.
+            6. analysis_notes: Brief description of the detected issuer (e.g., 'GCash Express Send confirmation') and any observed anomalies.
 
-Analyze this image and execute the following extraction rules strictly:
-1. is_valid_receipt: Set true if this is a genuine payment confirmation or receipt slip. Set false if it is unrelated or corrupted.
-2. extracted_amount: Extract the exact total numeric value paid. Remove currency signs (₱, PHP, $) and comma separators (e.g., '₱2,000.00' -> 2000, '1,500' -> 1500).
-3. extracted_date: Normalize the payment execution date to 'YYYY-MM-DD'. If time is present without a full year, assume the current calendar year.
-4. reference_number: Extract the complete transaction/reference/control number. Remove all internal whitespace (e.g., 'Ref No. 8011 9196 6111 2' -> '8011919661112').
-5. confidence_score: Floating point from 0.0 to 1.0 indicating visual legibility.
-6. analysis_notes: Brief description of the detected issuer (e.g., 'GCash Express Send confirmation') and any observed anomalies.
-
-If any field is missing or unreadable, return null for that field. Never fabricate values.`;
+            If any field is missing or unreadable, return null for that field. Never fabricate values.`;
 
         const result = await model.generateContent([prompt, imagePart]);
         const responseText = result.response.text();
@@ -128,6 +127,60 @@ If any field is missing or unreadable, return null for that field. Never fabrica
         } else {
             console.error('❌ [AI Service Vision Pipeline Exception]:', error?.message || error);
         }
+        return null;
+    }
+};
+
+export const analyzeMaintenanceRequest = async (
+    description: string
+): Promise<MaintenanceTriageResult | null> => {
+    try {
+        const genAI = getClient();
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-2.5-flash',
+            generationConfig: {
+                responseMimeType: 'application/json',
+                responseSchema: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                        category: {
+                            type: SchemaType.STRING,
+                            format: 'enum',
+                            enum: ['Plumbing', 'Electrical', 'HVAC', 'Appl  iance', 'Pest Control', 'Other']
+                        },
+                        priority: {
+                            type: SchemaType.STRING,
+                            format: 'enum',
+                            enum: ['Low', 'Medium', 'High', 'Emergency']
+                        },
+                        landlord_summary: { type: SchemaType.STRING },
+                        tenant_auto_reply: { type: SchemaType.STRING }
+                    },
+                    required: ['category', 'priority', 'landlord_summary', 'tenant_auto_reply']
+                },
+                temperature: 0.1
+            }
+        });
+
+        const prompt = `Analyze this dormitory maintenance request issue description:
+"${description}"
+
+Strictly perform the following triage:
+1. category: Classify under 'Plumbing', 'Electrical', 'HVAC', 'Appliance', 'Pest Control', or 'Other'.
+2. priority: Evaluate urgency as 'Low', 'Medium', 'High', or 'Emergency' (e.g., live sparking wires or active flooding must be marked Emergency).
+3. landlord_summary: High-density actionable summary for property management dispatch.
+4. tenant_auto_reply: Direct, reassuring first-step instruction acknowledging the ticket.`;
+
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+
+        if (!responseText) {
+            return null;
+        }
+
+        return JSON.parse(responseText) as MaintenanceTriageResult;
+    } catch (error: any) {
+        console.error('❌ [AI Service Maintenance Pipeline Exception]:', error?.message || error);
         return null;
     }
 };
