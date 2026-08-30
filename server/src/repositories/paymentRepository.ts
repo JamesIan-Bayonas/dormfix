@@ -92,17 +92,17 @@ export const paymentRepository = {
 
     // 5. Get Tenant Assignment and Landlord Details for Payment Verification
     getTenantAssignment: async (tenantId: string): Promise<TenantAssignmentRecord | null> => {
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input('tid', sql.VarChar(36), tenantId)
-            .query(`
-                SELECT da.landlord_id, da.room_number, u.email AS landlord_email 
-                FROM dorm_assignments da
-                JOIN users u ON da.landlord_id = u.id
-                WHERE da.tenant_id = @tid
-            `);
-        return result.recordset[0] || null;
-    },
+    const pool = await poolPromise;
+    const result = await pool.request()
+        .input('tid', sql.VarChar(36), tenantId)
+        .query(`
+            SELECT da.landlord_id, da.room_number, u.email AS landlord_email 
+            FROM dorm_assignments da
+            JOIN users u ON da.landlord_id = u.id
+            WHERE da.tenant_id = @tid
+        `);
+    return result.recordset[0] || null;
+},
 
     // 6. Get Tenant Email by Payment ID
     getTenantEmailByPaymentId: async (paymentId: string): Promise<string | null> => {

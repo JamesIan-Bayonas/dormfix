@@ -44,17 +44,17 @@ export interface TenantMaintenanceRecord {
 export const maintenanceRepository = {
     // 1. Get room number, landlord email, and landlord phone context for a tenant
     getRoomContext: async (tenantId: string): Promise<TenantRoomContext | null> => {
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input('tid', sql.VarChar(36), tenantId)
-            .query(`
-                SELECT da.room_number, u.email AS landlord_email, u.phone_number AS landlord_phone
-                FROM dorm_assignments da
-                JOIN users u ON da.landlord_id = u.id
-                WHERE da.tenant_id = @tid
-            `);
-        return result.recordset[0] || null;
-    },
+    const pool = await poolPromise;
+    const result = await pool.request()
+        .input('tid', sql.VarChar(36), tenantId)
+        .query(`
+            SELECT da.room_number, u.email AS landlord_email, u.phone_number AS landlord_phone
+            FROM dorm_assignments da
+            JOIN users u ON da.landlord_id = u.id
+            WHERE da.tenant_id = @tid
+        `);
+    return result.recordset[0] || null;
+},
 
     // 2. Create a new maintenance request with notification telemetry
     create: async (data: MaintenanceRecordInput) => {

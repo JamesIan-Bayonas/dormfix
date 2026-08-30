@@ -1,5 +1,9 @@
 // server/src/services/notificationService.ts
 import nodemailer from 'nodemailer';
+import dns from 'dns';
+
+// Force Node.js DNS lookups to prioritize IPv4 to resolve ENETUNREACH in container runtimes
+dns.setDefaultResultOrder('ipv4first');
 
 const hasEmailConfig = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
 
@@ -16,16 +20,16 @@ const transporter = hasEmailConfig
 const hasSMSConfig = Boolean(process.env.SEMAPHORE_API_KEY || process.env.SMS_API_KEY);
 
 export const notificationService = {
-    sendLandlordAlert: async (landlordEmail: string, subject: string, message: string) => {
+        sendLandlordAlert: async (landlordEmail: string, subject: string, message: string) => {
         if (!transporter || !landlordEmail) {
-            console.log(`⚠️ SMTP Alert Skipped (Email credentials not configured in .env or missing recipient): [${subject}]`);
+            console.log(`⚠️ SMTP Alert Skipped...`);
             return;
         }
         try {
             console.log(`📩 Sending Landlord Alert to ${landlordEmail}: ${subject}`);
             await transporter.sendMail({
                 from: `"DormFix System" <${process.env.EMAIL_USER}>`,
-                to: landlordEmail, 
+                to: landlordEmail,  // <── Dynamically receives the queried landlord's email
                 subject: `[DormFix Alert] ${subject}`,
                 text: message,
             });
