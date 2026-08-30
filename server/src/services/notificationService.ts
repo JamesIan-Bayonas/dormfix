@@ -1,67 +1,65 @@
 // server/src/services/notificationService.ts
-import nodemailer from 'nodemailer';
-import dns from 'dns';
 
-// Force Node.js DNS lookups to prioritize IPv4 to resolve ENETUNREACH in container runtimes
-dns.setDefaultResultOrder('ipv4first');
-
-const hasEmailConfig = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
-
-const transporter = hasEmailConfig
-    ? nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 587,
-        secure: false, // Use STARTTLS on port 587 to prevent cloud container port 465 timeouts
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 15000,
-    })
-    : null;
-
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const SENDER_EMAIL = process.env.EMAIL_USER || 'onboarding@resend.dev';
 const hasSMSConfig = Boolean(process.env.SEMAPHORE_API_KEY || process.env.SMS_API_KEY);
 
+// Helper for HTTPS REST-based email dispatch over standard Port 443 (Bypasses SMTP port blocking)
+const sendEmailViaRest = async (to: string, subject: string, text: string): Promise<boolean> => {
+    if (!RESEND_API_KEY) {
+        console.log(`⚠️ Email Skipped: RESEND_API_KEY is not configured in .env. Target: ${to}`);
+        return false;
+    }
+
+    try {
+        console.log(`📩 Dispatching HTTPS Email to ${to}: ${subject}`);
+        const response = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${RESEND_API_KEY}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                from: `DormFix System <${SENDER_EMAIL}>`,
+                to: [to],
+                subject: subject,
+                text: text,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorPayload = await response.text().catch(() => 'Unknown error');
+            console.error(`❌ Email API Error [HTTP ${response.status}]:`, errorPayload);
+            return false;
+        }
+
+        console.log(`✅ Email successfully delivered to ${to}`);
+        return true;
+    } catch (error) {
+        console.error("Notification Service: HTTPS Email dispatch failed:", error);
+        return false;
+    }
+};
+
 export const notificationService = {
-        sendLandlordAlert: async (landlordEmail: string, subject: string, message: string) => {
-        if (!transporter || !landlordEmail) {
-            console.log(`⚠️ SMTP Alert Skipped...`);
+    sendLandlordAlert: async (landlordEmail: string, subject: string, message: string) => {
+        if (!landlordEmail) {
+            console.log(`⚠️ Landlord Alert Skipped: No recipient email provided.`);
             return;
         }
-        try {
-            console.log(`📩 Sending Landlord Alert to ${landlordEmail}: ${subject}`);
-            await transporter.sendMail({
-                from: `"DormFix System" <${process.env.EMAIL_USER}>`,
-                to: landlordEmail,  // <── Dynamically receives the queried landlord's email
-                subject: `[DormFix Alert] ${subject}`,
-                text: message,
-            });
-        } catch (error) {
-            console.error("Notification Service: Email failed", error);
-        }
+        await sendEmailViaRest(landlordEmail, `[DormFix Alert] ${subject}`, message);
     },
 
     sendTenantUpdate: async (tenantEmail: string, status: string, reason?: string) => {
-        if (!transporter) {
-            console.log(`⚠️ SMTP Tenant Update Skipped (Email credentials not configured in .env): [${status}] to ${tenantEmail}`);
+        if (!tenantEmail) {
+            console.log(`⚠️ Tenant Update Skipped: No recipient email provided.`);
             return;
         }
-        try {
-            const message = status === 'Verified' 
-                ? "Your payment has been successfully cleared."
-                : `Your payment was rejected. Reason: ${reason || 'Contact management.'}`;
+        const message = status === 'Verified'
+            ? "Your payment has been successfully cleared."
+            : `Your payment was rejected. Reason: ${reason || 'Contact management.'}`;
 
-            await transporter.sendMail({
-                from: `"DormFix Management" <${process.env.EMAIL_USER}>`,
-                to: tenantEmail,
-                subject: `Payment Update: ${status}`,
-                text: message,
-            });
-        } catch (error) {
-            console.error("Notification Service: Tenant email failed", error);
-        }
+        await sendEmailViaRest(tenantEmail, `Payment Update: ${status}`, message);
     },
 
     sendEmergencySMS: async (message: string, recipientNumber?: string): Promise<boolean> => {

@@ -13,13 +13,15 @@ interface MulterFile {
     size: number;
 }
 
+// server/src/controllers/paymentController.ts (Lines 16 - 105)
+
 export const processTenantPayment = async (req: Request & { file?: MulterFile }, res: Response) => {
     const file = req.file;
     const { tenantId, amount, paymentType, remarks } = req.body;
 
     if (!file || !tenantId || !amount || !paymentType) {
-         res.status(400).json({ error: "Missing required fields or proof of payment" });
-         return;
+        res.status(400).json({ error: "Missing required fields or proof of payment" });
+        return;
     }
 
     try {
@@ -39,6 +41,7 @@ export const processTenantPayment = async (req: Request & { file?: MulterFile },
 
         const landlordId = assignment.landlord_id;
         const landlordEmail = assignment.landlord_email;
+        const roomNumber = assignment.room_number;
 
         console.log("AI is analyzing payment...");
         const aiAnalysis = await analyzePaymentImage(file.path);
@@ -66,12 +69,19 @@ export const processTenantPayment = async (req: Request & { file?: MulterFile },
             anomalyFlags.push("SYSTEM WARNING: AI failed to read the document clearly.");
         }
 
-        if (finalStatus === 'Anomalous') {
-            if (landlordEmail) {
+        // DISPATCH LANDLORD NOTIFICATION (ANOMALOUS OR NEW SUBMISSION)
+        if (landlordEmail) {
+            if (finalStatus === 'Anomalous') {
                 await notificationService.sendLandlordAlert(
                     landlordEmail,
-                    "Payment Anomaly Detected",
-                    `A tenant just uploaded a receipt that failed the Zero-Trust audit.\nWarnings: ${anomalyFlags.join(', ')}`
+                    `URGENT: Payment Anomaly Detected (Room ${roomNumber})`,
+                    `A tenant in Room ${roomNumber} uploaded a receipt that triggered an audit flag.\n\nAmount: ₱${expectedAmount}\nPayment Type: ${paymentType}\nWarnings:\n- ${anomalyFlags.join('\n- ')}`
+                );
+            } else {
+                await notificationService.sendLandlordAlert(
+                    landlordEmail,
+                    `New Payment Remittance (Room ${roomNumber})`,
+                    `A tenant in Room ${roomNumber} submitted a payment of ₱${expectedAmount.toFixed(2)} for ${paymentType}.\nReceipt verified by AI OCR and queued for clearance.`
                 );
             }
         }
