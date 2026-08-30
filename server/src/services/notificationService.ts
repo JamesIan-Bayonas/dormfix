@@ -9,11 +9,16 @@ const hasEmailConfig = Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS)
 
 const transporter = hasEmailConfig
     ? nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false, // Use STARTTLS on port 587 to prevent cloud container port 465 timeouts
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS,
         },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
     })
     : null;
 
