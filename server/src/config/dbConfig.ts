@@ -1,9 +1,9 @@
+// server/src/config/dbConfig.ts
 import sql from 'mssql';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Determine if running in cloud production
 const isProduction = process.env.NODE_ENV === 'production';
 
 const dbConfig: sql.config = {
@@ -12,15 +12,22 @@ const dbConfig: sql.config = {
     server: process.env.DB_SERVER || 'localhost',
     database: process.env.DB_NAME || 'dormfix',
     port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 1433,
+
+    // Allow 60 seconds for Azure Serverless to resume compute
+    connectionTimeout: 60000,
+    requestTimeout: 60000,
+
     options: {
-        // Enforce encryption for cloud databases (e.g., Azure SQL)
-        encrypt: isProduction, 
-        trustServerCertificate: !isProduction
+        encrypt: isProduction,
+        trustServerCertificate: !isProduction,
+        connectTimeout: 60000, // Tedious handshake timeout
+        enableArithAbort: true
     },
     pool: {
         max: 10,
         min: 0,
-        idleTimeoutMillis: 30000
+        idleTimeoutMillis: 30000,
+        acquireTimeoutMillis: 60000 // Allow queries waiting on the pool to hold for 60s
     }
 };
 
