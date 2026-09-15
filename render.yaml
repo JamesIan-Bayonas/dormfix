@@ -1,0 +1,29 @@
+services:
+  - type: web
+    runtime: node
+    name: dormfix-api
+    rootDir: server
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      - key: FRONTEND_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: SEMAPHORE_API_KEY
+        sync: false
+      - key: LANDLORD_PHONE_NUMBER
+        sync: false
+      - key: SEMAPHORE_SENDER_NAME
+        value: dormfix

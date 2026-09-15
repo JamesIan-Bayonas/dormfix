@@ -8,6 +8,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import crypto from 'crypto';
 import { chatRepository } from './repositories/chatRepository';
+import { pool } from './config/dbConfig';
 
 // Import Route Modules
 import authRoutes from './routes/authRoutes';
@@ -26,7 +27,6 @@ const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = [
     "http://localhost:5173",
-    "https://dormfix-jamesian-bayonas-projects.vercel.app",
     process.env.FRONTEND_URL
 ].filter(Boolean) as string[];
 
@@ -34,7 +34,7 @@ const corsOptions: cors.CorsOptions = {
     origin: (origin, callback) => {
         if (!origin) return callback(null, true);
         const isLocalhost = /^http:\/\/localhost:\d+$/.test(origin);
-        if (isLocalhost || allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin)) {
+        if (isLocalhost || allowedOrigins.includes(origin)) {
             return callback(null, true);
         }
         return callback(new Error(`CORS blocked for origin: ${origin}`));
@@ -46,6 +46,10 @@ const corsOptions: cors.CorsOptions = {
 
 app.use(express.json());    
 app.use(cors(corsOptions));
+
+app.get('/health', (_req, res) => {
+    res.status(200).json({ status: 'ok' });
+});
 
 const uploadDir = path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadDir)) {
@@ -67,7 +71,7 @@ const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: {
         origin: (origin, callback) => {
-            if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin)) {
+            if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || allowedOrigins.includes(origin)) {
                 return callback(null, true);
             }
             return callback(new Error(`Socket CORS blocked for origin: ${origin}`));
@@ -175,6 +179,31 @@ io.on('connection', (socket) => {
     });
 });
 
-httpServer.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+async function start() {
+    try {
+        await pool.query('SELECT 1');
+        httpServer.listen(PORT, () => {
+            console.log(`DormFix API connected to PostgreSQL and listening on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error('PostgreSQL startup check failed:', error instanceof Error ? error.message : 'Unknown error');
+        await pool.end();
+        process.exitCode = 1;
+    }
+}
+
+void start();
+
+let shuttingDown = false;
+async function shutdown() {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    const timeout = setTimeout(() => process.exit(1), 10000);
+    timeout.unref();
+    io.close(async () => {
+        await pool.end();
+        clearTimeout(timeout);
+    });
+}
+process.on('SIGTERM', () => { void shutdown(); });
+process.on('SIGINT', () => { void shutdown(); });

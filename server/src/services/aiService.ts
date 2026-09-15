@@ -111,6 +111,7 @@ export const analyzePaymentImage = async (
             6. analysis_notes: Brief description of the detected issuer (e.g., 'GCash Express Send confirmation') and any observed anomalies.
 
             If any field is missing or unreadable, return null for that field. Never fabricate values.`;
+            
 
         const result = await model.generateContent([prompt, imagePart]);
         const responseText = result.response.text();

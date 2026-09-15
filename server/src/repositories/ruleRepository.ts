@@ -1,5 +1,5 @@
 // server/src/repositories/ruleRepository.ts
-import { sql, poolPromise } from '../config/dbConfig';
+import { pool } from '../config/dbConfig';
 
 export interface HouseRuleRecord {
     id: string;
@@ -22,10 +22,8 @@ export interface CreateHouseRuleInput {
 export const ruleRepository = {
     // 1. Get all rules for a landlord
     getByLandlord: async (landlordId: string): Promise<HouseRuleRecord[]> => {
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input('lid', sql.VarChar(36), landlordId)
-            .query(`
+
+        const result = await pool.query(`
                 SELECT 
                     id, 
                     rule_text, 
@@ -34,33 +32,24 @@ export const ruleRepository = {
                     is_priority,
                     created_at
                 FROM house_rules 
-                WHERE landlord_id = @lid 
+                WHERE landlord_id = $1 
                 ORDER BY created_at DESC
-            `);
-        return result.recordset;
+            `, [landlordId]);
+        return result.rows;
     },
 
     // 2. Create a house rule
     create: async (input: CreateHouseRuleInput) => {
-        const pool = await poolPromise;
-        await pool.request()
-            .input('id', sql.VarChar(36), input.id)
-            .input('lid', sql.VarChar(36), input.landlordId)
-            .input('text', sql.NVarChar(sql.MAX), input.ruleText)
-            .input('target', sql.VarChar(50), input.roomNumber || null)
-            .input('category', sql.VarChar(50), input.category || 'General')
-            .input('isPriority', sql.Bit, input.isPriority ? 1 : 0)
-            .query(`
+
+        await pool.query(`
                 INSERT INTO house_rules (id, landlord_id, rule_text, target_room_number, category, is_priority)
-                VALUES (@id, @lid, @text, @target, @category, @isPriority)
-            `);
+                VALUES ($1, $2, $3, $4, $5, $6)
+            `, [input.id, input.landlordId, input.ruleText, input.roomNumber || null, input.category || 'General', Boolean(input.isPriority ? 1 : 0)]);
     },
 
     // 3. Delete a house rule by ID
     delete: async (id: string) => {
-        const pool = await poolPromise;
-        await pool.request()
-            .input('id', sql.VarChar(36), id)
-            .query('DELETE FROM house_rules WHERE id = @id');
+
+        await pool.query(`DELETE FROM house_rules WHERE id = $1`, [id]);
     }
 };

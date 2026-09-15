@@ -1,5 +1,5 @@
 // server/src/repositories/maintenanceRepository.ts
-import { sql, poolPromise } from '../config/dbConfig';
+import { pool } from '../config/dbConfig';
 
 export interface MaintenanceRecordInput {
     id: string;
@@ -44,91 +44,75 @@ export interface TenantMaintenanceRecord {
 export const maintenanceRepository = {
     // 1. Get room number, landlord email, and landlord phone context for a tenant
     getRoomContext: async (tenantId: string): Promise<TenantRoomContext | null> => {
-    const pool = await poolPromise;
-    const result = await pool.request()
-        .input('tid', sql.VarChar(36), tenantId)
-        .query(`
+
+    const result = await pool.query(`
             SELECT da.room_number, u.email AS landlord_email, u.phone_number AS landlord_phone
             FROM dorm_assignments da
             JOIN users u ON da.landlord_id = u.id
-            WHERE da.tenant_id = @tid
-        `);
-    return result.recordset[0] || null;
+            WHERE da.tenant_id = $1
+        `, [tenantId]);
+    return result.rows[0] || null;
 },
 
     // 2. Create a new maintenance request with notification telemetry
     create: async (data: MaintenanceRecordInput) => {
-        const pool = await poolPromise;
-        await pool.request()
-            .input('id', sql.VarChar(36), data.id)
-            .input('tenantId', sql.VarChar(36), data.tenantId)
-            .input('issueType', sql.VarChar(50), data.issueType)
-            .input('description', sql.NVarChar(sql.MAX), data.description)
-            .input('urgency', sql.VarChar(20), data.urgency)
-            .input('notificationStatus', sql.VarChar(50), data.notificationStatus || 'Not Required')
-            .query(`
+
+        await pool.query(`
                 INSERT INTO maintenance_requests (id, tenant_id, issue_type, description, urgency, status, notification_status, date_submitted)
-                VALUES (@id, @tenantId, @issueType, @description, @urgency, 'Pending', @notificationStatus, GETDATE())
-            `);
+                VALUES ($1, $2, $3, $4, $5, 'Pending', $6, now())
+            `, [data.id, data.tenantId, data.issueType, data.description, data.urgency, data.notificationStatus || 'Not Required']);
     },
 
     // 3. Get all maintenance requests for a landlord
     getByLandlord: async (landlordId: string): Promise<LandlordMaintenanceRecord[]> => {
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input('userId', sql.VarChar(36), landlordId)
-            .query(`
+
+        const result = await pool.query(`
                 SELECT 
                     mr.id, 
-                    mr.tenant_id as tenantId,
-                    mr.issue_type as issueType, 
+                    mr.tenant_id as "tenantId",
+                    mr.issue_type as "issueType", 
                     mr.description, 
                     mr.urgency, 
                     mr.status, 
-                    mr.notification_status as notificationStatus,
-                    mr.date_submitted as dateSubmitted,
-                    ISNULL(u.name, 'Unknown Tenant') as tenantName, 
-                    ISNULL(da.room_number, 'N/A') as roomNumber
+                    mr.notification_status as "notificationStatus",
+                    mr.date_submitted as "dateSubmitted",
+                    COALESCE(u.name, 'Unknown Tenant') as "tenantName", 
+                    COALESCE(da.room_number, 'N/A') as "roomNumber"
                 FROM maintenance_requests mr
                 INNER JOIN dorm_assignments da ON mr.tenant_id = da.tenant_id
                 INNER JOIN users u ON mr.tenant_id = u.id
-                WHERE da.landlord_id = @userId
+                WHERE da.landlord_id = $1
                 ORDER BY 
                     CASE WHEN mr.urgency = 'Emergency' THEN 1 WHEN mr.urgency = 'High' THEN 2 ELSE 3 END,
                     mr.date_submitted DESC
-            `);
-        return result.recordset;
+            `, [landlordId]);
+        return result.rows;
     },
 
     // 4. Get all maintenance requests for a tenant
     getByTenant: async (tenantId: string): Promise<TenantMaintenanceRecord[]> => {
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input('userId', sql.VarChar(36), tenantId)
-            .query(`
+
+        const result = await pool.query(`
                 SELECT 
                     id, 
-                    tenant_id as tenantId,
-                    issue_type as issueType, 
+                    tenant_id as "tenantId",
+                    issue_type as "issueType", 
                     description, 
                     urgency, 
                     status, 
-                    notification_status as notificationStatus,
-                    date_submitted as dateSubmitted, 
-                    admin_remarks as adminRemarks
+                    notification_status as "notificationStatus",
+                    date_submitted as "dateSubmitted", 
+                    admin_remarks as "adminRemarks"
                 FROM maintenance_requests 
-                WHERE tenant_id = @userId
+                WHERE tenant_id = $1
                 ORDER BY date_submitted DESC
-            `);
-        return result.recordset;
+            `, [tenantId]);
+        return result.rows;
     },
 
     // 5. Update request status
     updateStatus: async (id: string, status: string) => {
-        const pool = await poolPromise;
-        await pool.request()
-            .input('id', sql.VarChar(36), id)
-            .input('status', sql.VarChar(20), status)
-            .query(`UPDATE maintenance_requests SET status = @status WHERE id = @id`);
+
+        await pool.query(`UPDATE maintenance_requests SET status = $1 WHERE id = $2`, [status, id]);
     }
 };
