@@ -1,3 +1,5 @@
+import { Button } from './ui/Button';
+import { ErrorState } from './ui/Feedback';
 // client/src/components/MaintenanceList.tsx
 import React, { useEffect, useState } from 'react';
 import { Clock, CheckCircle, AlertTriangle, MoreHorizontal, Wrench, Calendar, MapPin } from 'lucide-react';
@@ -17,9 +19,12 @@ export const MaintenanceList: React.FC = () => {
     const { user } = useAuth();
     const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [retry, setRetry] = useState(0);
 
     useEffect(() => {
         if (user?.id) {
+            setIsLoading(true);
             // FIX: Point the API string to the true backend target path
             fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/maintenance/${user.id}`)
                 .then(res => {
@@ -27,12 +32,13 @@ export const MaintenanceList: React.FC = () => {
                     return res.json();
                 })
                 .then(data => {
-                    setRequests(data);
+                    if (!Array.isArray(data)) throw new Error('Invalid maintenance response');
+                    setRequests(data); setError(null);
                 })
-                .catch(err => console.error("Failed to load requests", err))
+                .catch(() => setError("Maintenance history could not be loaded. Please try again."))
                 .finally(() => setIsLoading(false));
         }
-    }, [user?.id]);
+    }, [user?.id, retry]);
 
     const getUrgencyBadge = (urgency: string) => {
         if (urgency === 'Emergency') {
@@ -68,6 +74,7 @@ export const MaintenanceList: React.FC = () => {
             </div>
         );
     }
+    if (error) return <ErrorState title="Maintenance history unavailable" description={error} action={<Button variant="secondary" onClick={() => setRetry(value => value + 1)}>Try again</Button>} />;
 
     return (
         <div className="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm flex flex-col">

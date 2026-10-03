@@ -1,9 +1,13 @@
-// client/src/components/landlord/RoomDetailDrawer.tsx
-import React, { useState } from 'react';
-import { 
-    X, User, CreditCard, Wrench, CheckCircle2, 
-    AlertTriangle, Eye, Phone, MessageCircle
-} from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Phone, MessageCircle, Eye } from 'lucide-react';
+import type { LandlordMaintenanceRequest } from '../../types/types';
+import { Drawer, Dialog, ConfirmationDialog } from '../ui/Dialog';
+import { Button } from '../ui/Button';
+import { FormField, Select, Textarea } from '../ui/FormField';
+import { ErrorMessage, EmptyState } from '../ui/Feedback';
+import { StatusBadge } from '../ui/StatusBadge';
+import { ImageLightbox, ReceiptPreview } from '../ui/ImageLightbox';
 
 export interface RoomOccupant {
     id?: string;
@@ -17,305 +21,128 @@ export interface RoomOccupant {
     paymentAmount?: number;
     paymentProof?: string;
 }
-
 export interface RoomDetailData {
     id: string;
     room_number: string;
     status: 'vacant' | 'occupied' | 'maintenance';
     currentOccupants: number;
     capacity: number;
-    occupants: any[]; 
+    occupants: { id: string; name: string }[];
     occupantPaymentStatus: RoomOccupant[];
-    activeIssues: any[];
-    hasIssue: boolean;  
+    activeIssues: LandlordMaintenanceRequest[];
+    hasIssue: boolean;
     isCritical: boolean;
+    paymentStatusAvailable?: boolean;
 }
-
-interface RoomDetailDrawerProps {
+interface Props {
     isOpen: boolean;
     onClose: () => void;
     roomData: RoomDetailData | null;
-    onVerifyPayment: (paymentId: string, status: 'Verified' | 'Rejected', reason?: string) => void;
-    onResolveIssue: (issueId: string) => void;
+    onVerifyPayment: (id: string, status: 'Verified' | 'Rejected', reason?: string) => Promise<boolean>;
+    onResolveIssue: (id: string) => Promise<boolean>;
 }
 
-export const RoomDetailDrawer: React.FC<RoomDetailDrawerProps> = React.memo(({ 
-    isOpen, onClose, roomData, onVerifyPayment, onResolveIssue 
-}) => {
-    const [reviewPaymentId, setReviewPaymentId] = useState<string | null>(null);
-    const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
-    const [paymentToReject, setPaymentToReject] = useState<string | null>(null);
-    const [rejectionReason, setRejectionReason] = useState<string>('Screenshot is blurry / unreadable');
+export const RoomDetailDrawer: React.FC<Props> = React.memo(({ isOpen, onClose, roomData, onVerifyPayment, onResolveIssue }) => {
+    const [reviewId, setReviewId] = useState<string | null>(null);
+    const [rejectId, setRejectId] = useState<string | null>(null);
+    const [resolveId, setResolveId] = useState<string | null>(null);
+    const [reason, setReason] = useState('Screenshot is blurry / unreadable');
     const [customReason, setCustomReason] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [image, setImage] = useState<string | null>(null);
+    const pending = useRef(false);
 
-    if (!roomData) return null;
-
-    const formatDate = (d: string) => { 
-        try { return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); } 
-        catch { return d; }
-    };
-
-    const handleRejectClick = (paymentId: string) => {
-        setPaymentToReject(paymentId);
-        setIsRejectModalOpen(true);
-        setRejectionReason('Screenshot is blurry / unreadable');
-        setCustomReason('');
-    };
-
-    const confirmRejection = () => {
-        if (paymentToReject) {
-            const finalReason = rejectionReason === 'Other' ? customReason : rejectionReason;
-            onVerifyPayment(paymentToReject, 'Rejected', finalReason);
-            setIsRejectModalOpen(false);
-            setPaymentToReject(null);
-            setReviewPaymentId(null);
+    async function run(operation: () => Promise<boolean>, afterSuccess: () => void) {
+        if (pending.current) return;
+        pending.current = true;
+        setBusy(true);
+        setError(null);
+        try {
+            if (await operation()) afterSuccess();
+            else setError('The change could not be saved. Please try again.');
+        } catch {
+            setError('The change could not be saved. Please check your connection and try again.');
+        } finally {
+            pending.current = false;
+            setBusy(false);
         }
-    };
+    }
+    if (!roomData) return null;
 
     return (
         <>
-            {/* BACKGROUND CANVAS OVERLAY */}
-            <div className={`fixed inset-0 z-40 overflow-hidden transition-all duration-300 ${isOpen ? 'visible' : 'invisible pointer-events-none'}`}>
-                <div 
-                    className={`absolute inset-0 bg-black/10 backdrop-blur-[1px] transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`} 
-                    onClick={onClose}
-                />
-                
-                {/* SLIDING PANEL CONTAINER */}
-                <div className={`absolute inset-y-0 right-0 w-full max-w-md bg-[#f8f9f5] border-l border-gray-200 shadow-xl transform transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-                    
-                    {/* PREMIUM DRAWER HEADER */}
-                    <div className="h-20 flex items-center justify-between px-6 border-b border-gray-200 bg-white">
-                        <div>
-                            <h2 className="text-xl font-serif text-slate-800">Room {roomData.room_number}</h2>
-                            <p className="text-[11px] font-bold text-[#5c6e4e] uppercase tracking-wider mt-0.5">
-                                {roomData.status} • {roomData.currentOccupants}/{roomData.capacity} Occupied
-                            </p>
-                        </div>
-                        <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors">
-                            <X size={18} />
-                        </button>
-                    </div>
-
-                    {/* INTERFACE CONTENT AREA */}
-                    <div className="overflow-y-auto p-6 space-y-8 h-[calc(100vh-5rem)] custom-scrollbar">
-                        
-                        {/* OCCUPANTS & PROPERTY LEDGER SECTION */}
-                        <div>
-                            <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                <User size={14} className="text-slate-400" /> Occupants
-                            </h3>
-                            
-                            {roomData.occupants.length > 0 ? (
-                                <div className="space-y-3">
-                                    {roomData.occupantPaymentStatus.map((occ, idx) => (
-                                        <div key={idx} className="bg-white rounded-xl p-4 border border-gray-200 shadow-xs">
-                                            <div className="flex justify-between items-center mb-3">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-8 w-8 rounded-full bg-[#e7efdb] text-[#3a4731] flex items-center justify-center font-bold text-xs">
-                                                        {occ.name.charAt(0)}
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm font-medium text-slate-800">{occ.name}</p>
-                                                        <div className="text-[11px] text-slate-400 font-medium flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                                                            <span>Joined {formatDate(occ.joinedDate || new Date().toISOString())}</span>
-                                                            {occ.phoneNumber && (
-                                                                <>
-                                                                    <span>•</span>
-                                                                    <span className="font-mono text-slate-600 flex items-center gap-1">
-                                                                        <Phone size={10} className="text-slate-400" />
-                                                                        {occ.phoneNumber}
-                                                                    </span>
-                                                                </>
-                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div className="flex items-center gap-2">
-                                                    {occ.phoneNumber && (
-                                                        <div className="flex items-center gap-1">
-                                                            <a 
-                                                                href={`tel:${occ.phoneNumber}`} 
-                                                                className="p-1.5 hover:bg-gray-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors border border-gray-200 shadow-xs"
-                                                                title={`Call ${occ.phoneNumber}`}
-                                                            >
-                                                                <Phone size={12} />
-                                                            </a>
-                                                            <a 
-                                                                href={`sms:${occ.phoneNumber}`} 
-                                                                className="p-1.5 hover:bg-gray-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors border border-gray-200 shadow-xs"
-                                                                title={`SMS ${occ.phoneNumber}`}
-                                                            >
-                                                                <MessageCircle size={12} />
-                                                            </a>
-                                                        </div>
-                                                    )}
-                                                    <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${occ.hasPendingPayment ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-slate-500'}`}>
-                                                        {occ.status}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* PAYMENT ACTION DRAWER LINK */}
-                                            {occ.hasPendingPayment ? (
-                                                <div className="mt-3 pt-3 border-t border-gray-100 bg-[#fef9eb] border border-[#f5ead0] p-3 rounded-xl">
-                                                    <div className="flex justify-between items-center mb-2">
-                                                        <span className="text-[11px] font-bold text-[#8b7235] uppercase tracking-wider flex items-center gap-1">
-                                                            <CreditCard size={12}/> Pending Payment
-                                                        </span>
-                                                        <span className="text-sm font-serif font-bold text-[#5c4b22]">₱{occ.paymentAmount}</span>
-                                                    </div>
-                                                    
-                                                    {reviewPaymentId === occ.paymentId ? (
-                                                        <div className="mt-3 pt-2 border-t border-gray-200/60">
-                                                            <div className="aspect-video bg-gray-100 rounded-xl mb-3 overflow-hidden relative border border-gray-200">
-                                                                <img 
-                                                                    src={occ.paymentProof ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${occ.paymentProof}` : "https://placehold.co/600x400"}
-                                                                    alt="Proof" 
-                                                                    className="w-full h-full object-cover"
-                                                                    onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/600x400?text=Receipt+Image+Not+Found"; }}
-                                                                />
-                                                            </div>
-                                                            <div className="flex gap-2">
-                                                                <button 
-                                                                    onClick={() => handleRejectClick(occ.paymentId!)} 
-                                                                    className="flex-1 py-2 bg-white text-red-600 text-xs font-bold rounded-lg hover:bg-red-50 border border-red-200 transition-colors"
-                                                                >
-                                                                    Reject
-                                                                </button>
-                                                                <button 
-                                                                    onClick={() => onVerifyPayment(occ.paymentId!, 'Verified')} 
-                                                                    className="flex-1 py-2 bg-[#425042] hover:bg-[#344034] text-white text-xs font-bold rounded-xl transition-colors"
-                                                                >
-                                                                    Verify
-                                                                </button>
-                                                            </div>
-                                                            <button type="button" onClick={() => setReviewPaymentId(null)} className="w-full mt-2.5 text-[10px] text-gray-400 hover:text-gray-600 font-medium">Cancel Review</button>
-                                                        </div>
-                                                    ) : (
-                                                        <button onClick={() => setReviewPaymentId(occ.paymentId || null)} className="w-full mt-2 py-2 bg-white border border-gray-200 text-slate-700 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 shadow-sm">
-                                                            <Eye size={14}/> Review Receipt
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                               <div className="text-xs text-slate-400 text-center py-1 font-medium">No pending payments</div> 
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center p-8 bg-white rounded-2xl border border-dashed border-gray-200">
-                                    <p className="text-gray-400 text-sm font-medium">Room is vacant.</p>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* MAINTENANCE ISSUES */}
-                        <div>
-                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                <Wrench size={16}/> Active Issues
-                            </h3>
-                            
-                            {roomData.activeIssues.length > 0 ? (
-                                <div className="space-y-3">
-                                    {roomData.activeIssues.map(issue => (
-                                        <div key={issue.id} className={`p-5 rounded-2xl border flex flex-col gap-3 transition-colors ${
-                                            issue.urgency === 'High' || issue.urgency === 'Emergency' 
-                                                ? 'bg-[#fff7f7] border-[#fce8e8]' 
-                                                : 'bg-[#faf8f4] border border-[#f0ebd9]'
-                                        }`}>
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase mb-1.5 ${
-                                                        issue.urgency === 'High' || issue.urgency === 'Emergency' ? 'bg-red-100 text-red-700' : 'bg-[#fdf2e3] text-[#b97a26]'
-                                                    }`}>
-                                                        {issue.urgency}
-                                                    </span>
-                                                    <h4 className="text-sm font-medium text-slate-800">{issue.issueType}</h4>
-                                                </div>
-                                                <button onClick={() => onResolveIssue(issue.id)} className="p-2 bg-white border border-gray-200 rounded-xl shadow-xs hover:text-[#5c6e4e] hover:border-[#c2ceae] transition-colors">
-                                                    <CheckCircle2 size={16}/>
-                                                </button>
-                                            </div>
-                                            <p className="text-xs text-slate-600 bg-white/60 p-3 rounded-xl border border-gray-100/40 leading-relaxed">{issue.description}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-2 text-[#5c6e4e] bg-[#e7efdb] px-4 py-3 rounded-xl border border-[#d3e0c0]">
-                                    <CheckCircle2 size={14} />
-                                    <span className="text-xs font-semibold">No active units issues logged</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* REJECTION REASON MODAL BLOCK */}
-            {isRejectModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-[1px]">
-                    <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl p-6 border border-gray-100">
-                        <div className="flex items-center gap-3 text-[#cc4747] mb-4">
-                            <div className="p-2 bg-red-50 rounded-full">
-                                <AlertTriangle size={20} />
+            <Drawer open={isOpen} onClose={onClose} title={`Room ${roomData.room_number}`} busy={busy}
+                description={`${roomData.status} · ${roomData.currentOccupants} of ${roomData.capacity} places occupied`}>
+                {error && !rejectId && !resolveId && <ErrorMessage>{error}</ErrorMessage>}
+                {roomData.paymentStatusAvailable === false && <div className="space-y-3 rounded-control border border-divider p-4">
+                    <p className="text-sm text-muted">Review receipts in Payments. Payment records cannot be reliably linked to an individual tenant from this room view.</p>
+                    <Link to="/payments" onClick={onClose} className="df-button df-button--secondary">Open payments</Link>
+                </div>}
+                <section className="space-y-4" aria-label="Occupants">
+                    <h3 className="df-section-title">Occupants</h3>
+                    {roomData.occupants.length === 0 && <EmptyState title="This room is vacant" description="No tenants are assigned to this room." />}
+                    {roomData.occupantPaymentStatus.map((occupant, index) => (
+                        <div key={occupant.id || index} className="df-panel space-y-4">
+                            <div className="space-y-2">
+                                <h4 className="font-semibold text-ink">{occupant.name}</h4>
+                                {occupant.joinedDate && <p className="text-sm text-muted">Joined {new Date(occupant.joinedDate).toLocaleDateString()}</p>}
+                                {roomData.paymentStatusAvailable !== false && <StatusBadge tone={occupant.hasPendingPayment ? 'warning' : 'neutral'}>{occupant.status}</StatusBadge>}
+                                {occupant.phoneNumber && <div className="flex flex-wrap gap-3">
+                                    <a href={`tel:${occupant.phoneNumber}`} className="df-button df-button--secondary" aria-label={`Call ${occupant.name}`}><Phone size={16} aria-hidden="true" />Call</a>
+                                    <a href={`sms:${occupant.phoneNumber}`} className="df-button df-button--secondary" aria-label={`Text ${occupant.name}`}><MessageCircle size={16} aria-hidden="true" />Text</a>
+                                </div>}
                             </div>
-                            <h3 className="text-lg font-medium text-slate-800">Reject Payment Entry</h3>
+                            {occupant.hasPendingPayment && occupant.paymentId ? (
+                                <div className="space-y-3 border-t border-divider pt-4">
+                                    <p className="text-sm font-semibold">Pending payment: ₱{occupant.paymentAmount}</p>
+                                    {reviewId === occupant.paymentId ? <>
+                                        {occupant.paymentProof && <ReceiptPreview key={occupant.paymentProof} src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${occupant.paymentProof}`} />}
+                                        {occupant.paymentProof ? <Button variant="secondary" disabled={busy} onClick={() => setImage(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${occupant.paymentProof}`)}><Eye size={18} aria-hidden="true" />View full receipt</Button> : <p className="text-sm text-muted">No receipt image available.</p>}
+                                        <div className="flex flex-wrap gap-3">
+                                            <Button variant="secondary" disabled={busy} onClick={() => { setRejectId(occupant.paymentId!); setReason('Screenshot is blurry / unreadable'); setCustomReason(''); setError(null); }}>Reject</Button>
+                                            <Button loading={busy} loadingText="Saving…" onClick={() => run(() => onVerifyPayment(occupant.paymentId!, 'Verified'), () => setReviewId(null))}>Verify payment</Button>
+                                            <Button variant="quiet" disabled={busy} onClick={() => setReviewId(null)}>Cancel review</Button>
+                                        </div>
+                                    </> : <Button variant="secondary" disabled={busy} onClick={() => setReviewId(occupant.paymentId!)}>Review receipt</Button>}
+                                </div>
+                            ) : roomData.paymentStatusAvailable !== false ? <p className="text-sm text-muted">No pending payments.</p> : null}
                         </div>
-                        
-                        <p className="text-xs text-slate-500 mb-4 leading-relaxed">Please select a reason for rejection. This audit will log directly to the tenant's transaction views.</p>
-
-                        <div className="space-y-2 mb-6">
-                            {[
-                                "Screenshot is blurry / unreadable",
-                                "Payment not received in account",
-                                "Incorrect amount / reference",
-                                "Other"
-                            ].map((reason) => (
-                                <label key={reason} className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-all">
-                                    <input 
-                                        type="radio" 
-                                        name="rejectionReason" 
-                                        value={reason}
-                                        checked={rejectionReason === reason}
-                                        onChange={(e) => setRejectionReason(e.target.value)}
-                                        className="checkbox checkbox-xs text-[#425042]"
-                                    />
-                                    <span className="text-xs font-medium text-slate-600">{reason}</span>
-                                </label>
-                            ))}
-
-                            {rejectionReason === 'Other' && (
-                                <textarea
-                                    className="w-full mt-2 p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-slate-700 focus:bg-white focus:ring-1 focus:ring-[#425042] outline-none min-h-[70px]"
-                                    placeholder="State precise reason manually..."
-                                    value={customReason}
-                                    onChange={(e) => setCustomReason(e.target.value)}
-                                />
-                            )}
-                        </div>
-
-                        <div className="flex gap-2">
-                            <button 
-                                type="button"
-                                onClick={() => setIsRejectModalOpen(false)}
-                                className="flex-1 py-2 bg-gray-50 border border-gray-200 text-slate-600 text-xs font-medium rounded-lg hover:bg-gray-100 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button 
-                                type="button"
-                                onClick={confirmRejection}
-                                className="flex-1 py-2 bg-[#cc4747] hover:bg-[#b03a3a] text-white text-xs font-bold rounded-lg transition-colors"
-                            >
-                                Confirm Rejection
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                    ))}
+                </section>
+                <section className="space-y-4" aria-label="Active maintenance requests">
+                    <h3 className="df-section-title">Active maintenance requests</h3>
+                    {roomData.activeIssues.length === 0 && <p className="text-sm text-muted">No active requests for this room.</p>}
+                    {roomData.activeIssues.map((issue) => <div key={issue.id} className="df-panel space-y-3">
+                        <h4 className="font-semibold">{issue.issueType}</h4>
+                        <StatusBadge tone={issue.urgency === 'High' || issue.urgency === 'Emergency' ? 'error' : 'neutral'}>{issue.urgency}</StatusBadge>
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">{issue.description}</p>
+                        <Button variant="secondary" disabled={busy} onClick={() => { setResolveId(issue.id); setError(null); }}>Mark completed</Button>
+                    </div>)}
+                </section>
+            </Drawer>
+            <Dialog open={!!rejectId && isOpen} onClose={() => setRejectId(null)} title="Reject payment" busy={busy}>
+                <form className="space-y-4" onSubmit={(event) => {
+                    event.preventDefault();
+                    if (rejectId) run(() => onVerifyPayment(rejectId, 'Rejected', reason === 'Other' ? customReason : reason), () => { setRejectId(null); setReviewId(null); });
+                }}>
+                    <FormField id="drawer-rejection-reason" label="Rejection reason">
+                        {(field) => <Select {...field} value={reason} disabled={busy} onChange={(event) => setReason(event.target.value)}>
+                            {['Screenshot is blurry / unreadable', 'Payment not received in account', 'Incorrect amount / reference', 'Other'].map((value) => <option key={value}>{value}</option>)}
+                        </Select>}
+                    </FormField>
+                    {reason === 'Other' && <FormField id="drawer-custom-reason" label="Explain the reason">
+                        {(field) => <Textarea {...field} required value={customReason} disabled={busy} onChange={(event) => setCustomReason(event.target.value)} />}
+                    </FormField>}
+                    {error && <ErrorMessage>{error}</ErrorMessage>}
+                    <div className="flex flex-wrap justify-end gap-3"><Button variant="secondary" disabled={busy} onClick={() => setRejectId(null)}>Cancel</Button><Button type="submit" variant="danger" loading={busy} loadingText="Saving…">Reject payment</Button></div>
+                </form>
+            </Dialog>
+            <ConfirmationDialog open={!!resolveId && isOpen} onClose={() => setResolveId(null)} title="Complete maintenance request?" confirmLabel="Mark completed" destructive={false} busy={busy} error={error}
+                onConfirm={() => { if (resolveId) run(() => onResolveIssue(resolveId), () => setResolveId(null)); }}>
+                The request will be marked Completed in the tenant's maintenance history.
+            </ConfirmationDialog>
+            <ImageLightbox src={isOpen ? image : null} onClose={() => setImage(null)} />
         </>
     );
 });
