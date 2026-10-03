@@ -1,5 +1,8 @@
+import { ConfirmationDialog } from '../ui/Dialog';
+import { Button } from '../ui/Button';
+import { ErrorState, ErrorMessage, LoadingState } from '../ui/Feedback';
 // client/src/components/landlord/LandlordRules.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Plus, Trash2, ScrollText, ShieldCheck, AlertTriangle
 } from 'lucide-react';
@@ -9,7 +12,7 @@ import { useRooms } from '../../hooks/useRooms';
 
 export const LandlordRules: React.FC = () => {
     const { user } = useAuth();
-    const { rooms } = useRooms(user?.id);
+    const { rooms, error: roomsError, refreshRooms } = useRooms(user?.id);
     
     const [rules, setRules] = useState<HouseRule[]>([]);
     const [newRule, setNewRule] = useState('');
@@ -18,24 +21,29 @@ export const LandlordRules: React.FC = () => {
     const [isPriority, setIsPriority] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    useEffect(() => {
-        if (user?.id) loadRules();
-    }, [user?.id]);
-
-    const loadRules = async () => {
+    const [rulesError, setRulesError] = useState<string | null>(null);
+    const [isLoadingRules, setIsLoadingRules] = useState(true);
+    const [actionError, setActionError] = useState<string | null>(null);
+    const [deletingRule, setDeletingRule] = useState<HouseRule | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+    const loadRules = useCallback(async () => {
         if (!user?.id) return;
+        setIsLoadingRules(true);
         try {
             const data = await ruleService.getRules(user.id);
-            setRules(data);
-        } catch (error) {
-            console.error("Failed to load rules", error);
-        }
-    };
+            setRules(data); setRulesError(null);
+        } catch { setRulesError('House rules could not be loaded. Please try again.'); }
+        finally { setIsLoadingRules(false); }
+    }, [user?.id]);
+    useEffect(() => { loadRules(); }, [loadRules]);
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newRule.trim() || !user?.id) return;
         
+        if (isLoading) return;
+        setActionError(null);
         setIsLoading(true);
         try {
             await ruleService.addRule(user.id, newRule, targetScope, category, isPriority);
@@ -46,38 +54,42 @@ export const LandlordRules: React.FC = () => {
             await loadRules();
         } catch (error) {
             console.error("Failed to add rule", error);
+            setActionError("The rule could not be saved. Your text is retained; try again.");
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if(!confirm("Remove this rule from the ledger?")) return;
+    const handleDelete = async () => {
+        if (!deletingRule || isDeleting) return;
+        setIsDeleting(true); setDeleteError(null);
         try {
-            await ruleService.deleteRule(id);
-            setRules(rules.filter(r => r.id !== id));
-        } catch (error) {
-            console.error("Failed to delete rule", error);
-        }
+            await ruleService.deleteRule(deletingRule.id);
+            setRules(current => current.filter(rule => rule.id !== deletingRule.id));
+            setDeletingRule(null);
+        } catch { setDeleteError('The rule could not be deleted. Please try again.'); }
+        finally { setIsDeleting(false); }
     };
 
     return (
-        <div className="min-h-screen bg-[#f8f9f5] p-4 sm:p-8 animate-fade-in text-slate-800">
-            <div className="max-w-4xl mx-auto space-y-8">
+        <div className="space-y-6 text-ink">
+            <div className="space-y-6">
                 
                 {/* PAGE TYPOGRAPHY HEADER */}
                 <div className="border-b border-gray-200/60 pb-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                     <div>
-                        <h1 className="text-4xl font-serif text-slate-800 mb-1">House Rules</h1>
-                        <p className="text-slate-500 text-sm">Define, configure, and maintain building policies and boarder protocols.</p>
+                        <h1 tabIndex={-1} data-focus-fallback className="df-page-title mb-2">House rules</h1>
+                        <p className="text-slate-500 text-sm">Manage the rules tenants see for the dormitory and their room.</p>
                     </div>
                     <div className="shrink-0 self-start sm:self-auto">
                         <span className="px-4 py-2 bg-[#e7efdb] text-[#5c6e4e] text-xs font-bold rounded-full uppercase tracking-wider border border-[#d3e0c0]">
-                            {rules.length} Active Rules
+                            {isLoadingRules || rulesError ? '—' : rules.length} Active Rules
                         </span>
                     </div>
                 </div>
 
+                {roomsError && <ErrorState title="Room scopes unavailable" description={roomsError} action={<Button variant="secondary" onClick={refreshRooms}>Retry rooms</Button>} />}
+                {actionError && <ErrorMessage>{actionError}</ErrorMessage>}
                 {/* TWO-COLUMN INTUITIVE WORKSPACE LAYOUT */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
                     
@@ -165,7 +177,7 @@ export const LandlordRules: React.FC = () => {
                         </div>
 
                         <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
-                            {rules.length === 0 ? (
+                            {isLoadingRules ? <LoadingState>Loading house rules…</LoadingState> : rulesError ? <ErrorState title="House rules unavailable" description={rulesError} action={<Button variant="secondary" onClick={loadRules}>Try again</Button>} /> : rules.length === 0 ? (
                                 <div className="text-center py-16 text-slate-400 text-sm font-medium flex flex-col items-center justify-center h-full">
                                     <ScrollText size={32} className="mb-2 opacity-30 text-slate-400"/>
                                     <p>No house policies configured yet</p>
@@ -213,7 +225,7 @@ export const LandlordRules: React.FC = () => {
 
                                         <button 
                                             type="button"
-                                            onClick={() => handleDelete(rule.id)}
+                                            onClick={() => { setDeletingRule(rule); setDeleteError(null); }} aria-label="Delete house rule" disabled={isDeleting}
                                             className="text-slate-300 hover:text-[#cc4747] transition-colors p-1 absolute top-4 right-4 outline-none"
                                             title="Delete Rule"
                                         >
@@ -226,6 +238,11 @@ export const LandlordRules: React.FC = () => {
                     </div>
                 </div>
             </div>
+            <ConfirmationDialog open={!!deletingRule} onClose={() => setDeletingRule(null)} onConfirm={handleDelete} title="Delete house rule?" confirmLabel="Delete rule" busy={isDeleting} error={deleteError}>
+                <p>This rule will be removed from the dormitory's published rules.</p>
+                <p className="mt-3 whitespace-pre-wrap font-semibold text-ink">{deletingRule?.rule_text}</p>
+            </ConfirmationDialog>
+
         </div>
     );
 };
