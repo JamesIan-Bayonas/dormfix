@@ -1,5 +1,9 @@
+import { Dialog, ConfirmationDialog } from '../ui/Dialog';
+import { Button } from '../ui/Button';
+import { FormField, Select } from '../ui/FormField';
+import { ErrorState, ErrorMessage, LoadingState } from '../ui/Feedback';
 // client/src/components/landlord/LandlordTenantChecklist.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { User, Home, AlertCircle, UserPlus, ArrowLeft, Mail, UserX, Phone } from 'lucide-react';
 import { useAuth } from '../UserContext';
 
@@ -32,86 +36,91 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
     const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
     const [selectedRoom, setSelectedRoom] = useState('');
 
-    useEffect(() => {
-        if (user?.id) refreshData();
+    const [isLoadingData, setIsLoadingData] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [roomsError, setRoomsError] = useState<string | null>(null);
+    const [actionError, setActionError] = useState<string | null>(null);
+    const [actionBusy, setActionBusy] = useState(false);
+    const [assignError, setAssignError] = useState<string | null>(null);
+    const [isAssigning, setIsAssigning] = useState(false);
+    const [removalTenant, setRemovalTenant] = useState<Tenant | null>(null);
+    const [removalError, setRemovalError] = useState<string | null>(null);
+    const [isRemoving, setIsRemoving] = useState(false);
+
+    const refreshData = useCallback(async () => {
+        if (!user?.id) return;
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        setIsLoadingData(true);
+        const results = await Promise.allSettled([
+            fetch(`${API_URL}/api/landlord/tenants/${user.id}`).then(async res => {
+                if (!res.ok) throw new Error('Tenant list could not be loaded.');
+                const data = await res.json();
+                if (!Array.isArray(data)) throw new Error('Tenant list could not be loaded.');
+                setTenants(data); setLoadError(null);
+            }),
+            fetch(`${API_URL}/api/landlord/rooms/${user.id}`).then(async res => {
+                if (!res.ok) throw new Error('Rooms could not be loaded.');
+                const data = await res.json();
+                if (!Array.isArray(data)) throw new Error('Rooms could not be loaded.');
+                setRooms(data); setRoomsError(null);
+            })
+        ]);
+        if (results[0].status === 'rejected') setLoadError('Tenant list could not be loaded. Please try again.');
+        if (results[1].status === 'rejected') setRoomsError('Rooms could not be loaded. Please try again before assigning a room.');
+        setIsLoadingData(false);
     }, [user?.id]);
 
-    const refreshData = () => {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        fetch(`${API_URL}/api/landlord/tenants/${user?.id}`)
-            .then(res => res.json())
-            .then(data => setTenants(data))
-            .catch(err => console.error("Failed to load tenants", err));
-
-        fetch(`${API_URL}/api/landlord/rooms/${user?.id}`)
-            .then(res => res.json())
-            .then(setRooms)
-            .catch(err => console.error("Failed to load rooms", err));
-    };
+    useEffect(() => { refreshData(); }, [refreshData]);
 
     const handleApprove = async (tenantId: string) => {
+        if (actionBusy) return;
+        setActionBusy(true); setActionError(null);
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
             const res = await fetch(`${API_URL}/api/landlord/approve/${tenantId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' }
+                method: 'PATCH', headers: { 'Content-Type': 'application/json' }
             });
-            if (res.ok) refreshData();
-            else alert("Failed to approve tenant.");
-        } catch (error) {
-            console.error(error);
-        }
+            if (!res.ok) throw new Error('Failed to approve tenant.');
+            await refreshData();
+        } catch { setActionError('Approval could not be saved. Please try again.'); }
+        finally { setActionBusy(false); }
     };
 
-    const handleReject = async (tenantId: string) => {
-        if (!confirm("Are you sure you want to reject and remove this tenant?")) return;
+    const handleReject = async () => {
+        if (!removalTenant || isRemoving) return;
+        setIsRemoving(true); setRemovalError(null);
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-            const res = await fetch(`${API_URL}/api/landlord/reject/${tenantId}`, {
-                method: 'DELETE'
-            });
-            if (res.ok) refreshData();
-            else alert("Failed to reject tenant.");
-        } catch (error) {
-            console.error(error);
-        }
+            const res = await fetch(`${API_URL}/api/landlord/reject/${removalTenant.id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Failed to remove tenant.');
+            setRemovalTenant(null);
+            await refreshData();
+        } catch { setRemovalError('The tenant could not be removed. Please try again.'); }
+        finally { setIsRemoving(false); }
     };
 
     const handleAssign = async () => {
-        if (!selectedTenant || !selectedRoom) return;
-
+        if (!selectedTenant || !selectedRoom || isAssigning || roomsError) return;
+        setIsAssigning(true); setAssignError(null);
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
             const res = await fetch(`${API_URL}/api/landlord/assign`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    tenantId: selectedTenant.id,
-                    landlordId: user?.id,
-                    roomNumber: selectedRoom
-                })
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tenantId: selectedTenant.id, landlordId: user?.id, roomNumber: selectedRoom })
             });
-
             const data = await res.json();
-            
-            if (res.ok) {
-                setAssignModalOpen(false);
-                setSelectedTenant(null);
-                setSelectedRoom('');
-                refreshData(); 
-            } else {
-                alert(data.error || data.message || "Failed to assign room.");
-            }
-        } catch (error) {
-            console.error(error);
-            alert("Assignment failed.");
-        }
+            if (!res.ok) throw new Error(data.error || data.message || 'Failed to assign room.');
+            setAssignModalOpen(false); setSelectedTenant(null); setSelectedRoom('');
+            await refreshData();
+        } catch (err) { setAssignError(err instanceof Error ? err.message : 'Assignment failed. Please try again.'); }
+        finally { setIsAssigning(false); }
     };
 
     const openAssignModal = (tenant: Tenant) => {
         setSelectedTenant(tenant);
         setAssignModalOpen(true);
         setSelectedRoom('');
+        setAssignError(null);
     };
 
     const hasRoom = (t: Tenant) => {
@@ -122,23 +131,27 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
     const activeTenants = tenants.filter(t => t.isApproved);
 
     return (
-        <div className="min-h-screen bg-[#f8f9f5] p-4 sm:p-8 animate-fade-in text-slate-800">
-            <div className="max-w-4xl mx-auto space-y-8">
+        <div className="space-y-6 text-ink">
+            <div className="space-y-6">
                 
                 {/* ELEGANT BACK NAVIGATION TRACK */}
                 <button 
                     onClick={onBack} 
                     className="group flex items-center gap-2 text-xs font-bold text-[#5c6e4e] uppercase tracking-wider hover:text-[#425042] transition-colors outline-none"
                 >
-                    <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" /> Back to Dashboard
+                    <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" /> Back to overview
                 </button>
 
                 {/* PAGE TYPOGRAPHY HEADER */}
                 <div className="border-b border-gray-200/60 pb-4">
-                    <h1 className="text-4xl font-serif text-slate-800 mb-1">Tenant Records</h1>
+                    <h1 tabIndex={-1} data-focus-fallback className="df-page-title mb-2">Tenants</h1>
                     <p className="text-slate-500 text-sm">Manage pending member verifications, room allocations, and active boarders.</p>
                 </div>
 
+                {actionError && <ErrorMessage>{actionError}</ErrorMessage>}
+                {isLoadingData ? <LoadingState>Loading tenants…</LoadingState> : loadError ? (
+                    <ErrorState title="Tenants could not be loaded" description={loadError} action={<Button variant="secondary" onClick={refreshData}>Try again</Button>} />
+                ) : <>
                 {/* PENDING REGISTER APPLICATIONS */}
                 {pendingTenants.length > 0 && (
                     <div className="bg-[#fef9eb] rounded-2xl border border-[#f5ead0] overflow-hidden shadow-xs">
@@ -169,13 +182,13 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
                                     </div>
                                     <div className="flex gap-2 shrink-0">
                                         <button 
-                                            onClick={() => handleReject(tenant.id)} 
+                                            onClick={() => { setRemovalTenant(tenant); setRemovalError(null); }} disabled={actionBusy || isRemoving}
                                             className="px-4 py-2 bg-white hover:bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100 transition-colors"
                                         >
                                             Reject
                                         </button>
                                         <button 
-                                            onClick={() => handleApprove(tenant.id)} 
+                                            onClick={() => handleApprove(tenant.id)} disabled={actionBusy || isRemoving}
                                             className="px-4 py-2 bg-[#425042] hover:bg-[#344034] text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
                                         >
                                             Approve Access
@@ -249,9 +262,9 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
                                                 </button>
                                             )}
                                             <button 
-                                                onClick={() => handleReject(tenant.id)}
+                                                onClick={() => { setRemovalTenant(tenant); setRemovalError(null); }} disabled={actionBusy || isRemoving}
                                                 className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-100 transition-colors"
-                                                title="Revoke and Remove Tenant"
+                                                aria-label={`Remove ${tenant.name}`} title="Remove tenant"
                                             >
                                                 <UserX size={16} />
                                             </button>
@@ -262,46 +275,33 @@ export const LandlordTenantChecklist: React.FC<ChecklistProps> = ({ onBack }) =>
                         )}
                     </div>
                 </div>
+                </>}
             </div>
 
-            {/* ASSIGN UNIT MODAL VIEW CONFIG */}
-            {isAssignModalOpen && selectedTenant && (
-                <div className="fixed inset-0 bg-black/30 backdrop-blur-[1px] flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 border border-gray-100 animate-in zoom-in-95 duration-150">
-                        <h3 className="text-md font-bold text-slate-800 mb-1">Allocate Dormitory Spot</h3>
-                        <p className="text-xs text-slate-400 font-medium mb-6">Select an open space configuration for <span className="font-semibold text-slate-700">{selectedTenant.name}</span>.</p>
-                        <div className="space-y-4">
-                            <select 
-                                className="w-full p-3 border border-gray-200 rounded-xl bg-[#f8f9f5] text-xs text-slate-700 font-medium outline-none focus:ring-1 focus:ring-[#425042] transition-all"
-                                value={selectedRoom}
-                                onChange={(e) => setSelectedRoom(e.target.value)}
-                            >
-                                <option value="">-- Choose Unit Reference --</option>
-                                {rooms.filter(r => r.currentOccupants < r.capacity).map(room => (
-                                    <option key={room.room_number} value={room.room_number}>
-                                        Unit {room.room_number} ({room.capacity - room.currentOccupants} slots remaining)
-                                    </option>
-                                ))}
-                            </select>
-                            <div className="flex gap-2 pt-2">
-                                <button 
-                                    onClick={() => setAssignModalOpen(false)} 
-                                    className="flex-1 py-2 bg-gray-50 border border-gray-200 text-slate-600 text-xs font-medium rounded-lg hover:bg-gray-100 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button 
-                                    onClick={handleAssign} 
-                                    disabled={!selectedRoom} 
-                                    className="flex-1 py-2 bg-[#425042] hover:bg-[#344034] text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
-                                >
-                                    Confirm Unit
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+            <Dialog open={isAssignModalOpen && !!selectedTenant} onClose={() => setAssignModalOpen(false)} title="Assign room" busy={isAssigning}>
+                <p className="text-sm text-muted">Choose a room for {selectedTenant?.name}.</p>
+                {roomsError ? <ErrorState title="Room availability unavailable" description={roomsError} action={<Button variant="secondary" onClick={refreshData}>Try again</Button>} /> : <>
+                    <FormField id="assign-room" label="Available room">
+                        {(field) => <Select {...field} disabled={isAssigning || isLoadingData} value={selectedRoom} onChange={(event) => setSelectedRoom(event.target.value)}>
+                            <option value="">Choose a room</option>
+                            {rooms.filter(room => room.currentOccupants < room.capacity).map(room => <option key={room.room_number} value={room.room_number}>Room {room.room_number} ({room.capacity - room.currentOccupants} places available)</option>)}
+                        </Select>}
+                    </FormField>
+                    {!isLoadingData && !rooms.some(room => room.currentOccupants < room.capacity) && <p className="text-sm text-muted">No rooms currently have available capacity.</p>}
+                </>}
+                {assignError && <ErrorMessage>{assignError}</ErrorMessage>}
+                <div className="flex flex-wrap justify-end gap-3">
+                    <Button variant="secondary" disabled={isAssigning} onClick={() => setAssignModalOpen(false)}>Cancel</Button>
+                    <Button loading={isAssigning} loadingText="Assigning…" disabled={!selectedRoom || !!roomsError || isLoadingData} onClick={handleAssign}>Assign room</Button>
                 </div>
-            )}
+            </Dialog>
+            <ConfirmationDialog open={!!removalTenant} onClose={() => setRemovalTenant(null)} onConfirm={handleReject}
+                title={removalTenant?.isApproved ? 'Remove tenant?' : 'Reject application?'}
+                confirmLabel={removalTenant?.isApproved ? 'Remove tenant' : 'Reject application'} busy={isRemoving} error={removalError}>
+                <p>This removes <strong>{removalTenant?.name}</strong> from this dormitory and resets their approval.</p>
+                <p className="mt-3 font-semibold text-error">Their room assignment, payment records, and maintenance requests will be deleted. These records cannot be restored through DormFix.</p>
+                <p className="mt-3">Their user account will remain. They can apply again with a dorm code.</p>
+            </ConfirmationDialog>
         </div>
     );
 };

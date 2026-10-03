@@ -1,5 +1,7 @@
+import { Button } from '../ui/Button';
+import { ErrorState, ErrorMessage } from '../ui/Feedback';
 // client/src/components/landlord/LandlordMaintenanceList.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { 
     Clock, CheckCircle, AlertTriangle, MapPin, MoreHorizontal, ArrowRight, Wrench 
 } from 'lucide-react';
@@ -10,7 +12,12 @@ export const LandlordMaintenanceList: React.FC = () => {
     const { user } = useAuth();
     
     // FETCH LIVE TELEMETRY LOGIC VIA SYSTEM HOOK
-    const { requests, isLoading, changeStatus } = useMaintenance(user?.id, user?.role || 'landlord');
+    const { requests, isLoading, error, refresh, changeStatus: saveStatus } = useMaintenance(user?.id, user?.role || 'landlord');
+    const [actionError, setActionError] = useState<string | null>(null);
+    const changeStatus = async (id: string, status: Parameters<typeof saveStatus>[1]) => {
+        setActionError(null);
+        if (!await saveStatus(id, status)) setActionError('The status change could not be saved. Please try again.');
+    };
 
     // LOW-CONTRAST BALANCED PRIORITY TAG MAPPINGS
     const getUrgencyBadge = (urgency: string) => {
@@ -39,17 +46,20 @@ export const LandlordMaintenanceList: React.FC = () => {
         return <div className="p-8 text-center text-slate-400 text-sm font-medium">Loading complaints structure...</div>;
     }
 
+    if (error) return <ErrorState title="Maintenance requests unavailable" description={error} action={<Button variant="secondary" onClick={refresh}>Try again</Button>} />;
+
     const pendingCount = requests.filter(r => r.status === 'Pending').length;
 
     return (
-        <div className="min-h-screen bg-[#f8f9f5] p-4 sm:p-8 animate-fade-in text-slate-800">
-            <div className="max-w-4xl mx-auto space-y-8">
+        <div className="space-y-6 text-ink">
+            <div className="space-y-6">
+                {actionError && <ErrorMessage>{actionError}</ErrorMessage>}
                 
                 {/* PAGE TYPOGRAPHY HEADER */}
                 <div className="border-b border-gray-200/60 pb-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                     <div>
-                        <h1 className="text-4xl font-serif text-slate-800 mb-1">Maintenance Triage</h1>
-                        <p className="text-slate-500 text-sm">Review, authorize, and archive incoming tenant infrastructure tickets.</p>
+                        <h1 className="df-page-title mb-2">Maintenance</h1>
+                        <p className="text-slate-500 text-sm">Review tenant requests and update maintenance progress.</p>
                     </div>
                     <div className="shrink-0 self-start sm:self-auto">
                         <span className={`px-4 py-2 text-xs font-bold rounded-full uppercase tracking-wider border transition-all shadow-xs
