@@ -1,3 +1,6 @@
+import { ImageLightbox } from '../ui/ImageLightbox';
+import { ErrorState, LoadingState } from '../ui/Feedback';
+import { Button } from '../ui/Button';
 // client/src/components/tenant/TenantPaymentHistory.tsx
 import React, { useState } from 'react';
 import { ArrowLeft, ShieldAlert, AlertTriangle, FileText, Info, Eye } from 'lucide-react';
@@ -46,12 +49,14 @@ const parseRemarks = (rawRemarks?: string) => {
 
 export const TenantPaymentHistory: React.FC<Props> = ({ onBack }) => {
     const { user } = useAuth();
-    const { payments, isLoading } = useMyPayments(user?.id);
+    const { payments, isLoading, error, refresh } = useMyPayments(user?.id);
     const [viewImage, setViewImage] = useState<string | null>(null);
 
     if (isLoading) {
-        return <div className="p-8 text-center text-slate-400 text-sm font-medium">Loading digital ledger logs...</div>;
+        return <LoadingState>Loading payment history…</LoadingState>;
     }
+
+    if (error) return <ErrorState title="Payment history could not be loaded" description={error} action={<><Button variant="secondary" onClick={refresh}>Try again</Button><Button variant="quiet" onClick={onBack}>Back to dashboard</Button></>} />;
 
     return (
         <div className="space-y-6 text-slate-800 font-sans">
@@ -61,13 +66,13 @@ export const TenantPaymentHistory: React.FC<Props> = ({ onBack }) => {
                 onClick={onBack} 
                 className="group flex items-center gap-2 text-xs font-bold text-[#5c6e4e] uppercase tracking-wider hover:text-[#425042] transition-colors outline-none"
             >
-                <ArrowLeft size={14} /> Close Transaction History
+                <ArrowLeft size={14} /> Back to home
             </button>
 
             {/* PAGE TITLE COMPONENT */}
             <div>
-                <h1 className="text-4xl font-serif text-slate-800 mb-1">My Payment History</h1>
-                <p className="text-slate-500 text-sm">Review real-time verification logs and local Zero-Trust AI accounting audits.</p>
+                <h1 className="df-page-title mb-2">Payment history</h1>
+                <p className="text-slate-500 text-sm">Review submitted receipts and their verification status.</p>
             </div>
 
             {/* THE SYSTEM LEDGER CONTROL WRAPPER */}
@@ -200,27 +205,7 @@ export const TenantPaymentHistory: React.FC<Props> = ({ onBack }) => {
             </div>
 
             {/* LIGHTBOX POPUP CONTAINER */}
-            {viewImage && (
-                <div 
-                    className="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center z-50 p-4" 
-                    onClick={() => setViewImage(null)}
-                >
-                    <div className="relative max-w-2xl max-h-[85vh] animate-in zoom-in-95 duration-150">
-                        <img 
-                            src={viewImage} 
-                            alt="Payment Proof Statement Document" 
-                            className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl border-4 border-white object-contain" 
-                        />
-                        <button 
-                            type="button"
-                            className="absolute -top-10 right-0 text-white hover:text-gray-200 text-xs font-bold bg-[#425042] px-3 py-1.5 rounded-full shadow-md"
-                            onClick={() => setViewImage(null)}
-                        >
-                            Close View [X]
-                        </button>
-                    </div>
-                </div>
-            )}
+            <ImageLightbox src={viewImage} onClose={() => setViewImage(null)} />
         </div>
     );
 };

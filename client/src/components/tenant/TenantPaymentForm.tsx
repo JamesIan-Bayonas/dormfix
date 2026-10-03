@@ -1,15 +1,16 @@
 // client/src/components/tenant/TenantPaymentForm.tsx
-import React, { useState } from 'react';
-import { Upload, DollarSign, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../UserContext';
 import toast from 'react-hot-toast';
 
 interface PaymentFormProps {
     landlordId: string; 
     onSuccess?: () => void;
+    onBusyChange?: (busy: boolean) => void;
 }
 
-export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSuccess }) => {
+export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSuccess, onBusyChange }) => {
     const { user } = useAuth();
     
     // Form State
@@ -21,6 +22,7 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
 
     // UI & Security State
     const [isSubmitting, setIsSubmitting] = useState(false);
+    useEffect(() => { onBusyChange?.(isSubmitting); }, [isSubmitting, onBusyChange]);
     const [paymentStatus, setPaymentStatus] = useState<'Idle' | 'Verified' | 'Anomalous' | 'Rejected'>('Idle');
     const [alertMessages, setAlertMessages] = useState<string[]>([]);
 
@@ -90,10 +92,8 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
     };
 
     return (
-        <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-xl max-w-lg mx-auto text-slate-800 animate-fade-in">
-            <h2 className="text-xl font-serif text-slate-800 mb-6 flex items-center gap-2">
-                <DollarSign className="text-[#5c6e4e]" size={22} /> Make a Payment
-            </h2>
+        <div className="text-ink">
+
 
             {/* --- ZERO TRUST TELEMETRY REAL-TIME UI NOTIFICATIONS --- */}
             {paymentStatus === 'Verified' && (
@@ -193,10 +193,10 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
                             type="file" 
                             id="proof-upload" 
                             accept="image/*"
-                            className="hidden" 
+                            className="sr-only peer" aria-label="Choose payment receipt image" disabled={isSubmitting}
                             onChange={handleFileChange}
                         />
-                        <label htmlFor="proof-upload" className="cursor-pointer block select-none">
+                        <label htmlFor="proof-upload" className="cursor-pointer block rounded-control select-none peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-focus">
                             {selectedFile ? (
                                 <div className="flex flex-col items-center text-[#5c6e4e]">
                                     <FileText size={28} className="mb-2 text-[#657655]" />
@@ -207,7 +207,7 @@ export const TenantPaymentForm: React.FC<PaymentFormProps> = ({ landlordId, onSu
                                 <div className="flex flex-col items-center text-slate-400">
                                     <Upload size={28} className="mb-2 text-slate-400 group-hover:text-slate-500" />
                                     <span className="text-xs font-medium text-slate-600">Attach digital transactional receipt</span>
-                                    <span className="text-[10px] text-slate-400 mt-0.5 font-medium">PNG, JPG formats verified via AI OCR</span>
+                                    <span className="text-[10px] text-slate-400 mt-0.5 font-medium">Choose a receipt image</span>
                                 </div>
                             )}
                         </label>

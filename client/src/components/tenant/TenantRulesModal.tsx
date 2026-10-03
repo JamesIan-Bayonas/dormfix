@@ -1,125 +1,39 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, AlertTriangle, X, ScrollText, CheckCircle2 } from 'lucide-react';
 import { ruleService, type HouseRule } from '../../services/ruleService';
+import { Dialog } from '../ui/Dialog';
+import { Button } from '../ui/Button';
+import { ErrorState, EmptyState, LoadingState } from '../ui/Feedback';
+import { StatusBadge } from '../ui/StatusBadge';
 
-interface TenantRulesModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    landlordId: string;
-    roomNumber?: string;
-}
-
-export const TenantRulesModal: React.FC<TenantRulesModalProps> = ({
-    isOpen,
-    onClose,
-    landlordId,
-    roomNumber
-}) => {
+interface Props { isOpen: boolean; onClose: () => void; landlordId: string; roomNumber?: string }
+export const TenantRulesModal: React.FC<Props> = ({ isOpen, onClose, landlordId, roomNumber }) => {
     const [rules, setRules] = useState<HouseRule[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-
+    const [error, setError] = useState<string | null>(null);
+    const [retry, setRetry] = useState(0);
     useEffect(() => {
-        if (isOpen && landlordId) {
-            setIsLoading(true);
-            ruleService.getRules(landlordId)
-                .then(data => {
-                    // Filter: Keep Global rules and rules matching this specific room
-                    const applicable = data.filter(r => 
-                        !r.target_room_number || 
-                        r.target_room_number === 'Global' || 
-                        r.target_room_number === roomNumber
-                    );
-                    // Sort: Priority rules first
-                    applicable.sort((a, b) => (b.is_priority ? 1 : 0) - (a.is_priority ? 1 : 0));
-                    setRules(applicable);
-                })
-                .catch(err => console.error("Failed to load rules", err))
-                .finally(() => setIsLoading(false));
-        }
-    }, [isOpen, landlordId, roomNumber]);
-
-    if (!isOpen) return null;
-
+        if (!isOpen || !landlordId) return;
+        let active = true;
+        setIsLoading(true);
+        ruleService.getRules(landlordId).then(data => {
+            if (!active) return;
+            const applicable = data.filter(rule => !rule.target_room_number || rule.target_room_number === 'Global' || rule.target_room_number === roomNumber);
+            applicable.sort((a,b) => Number(!!b.is_priority) - Number(!!a.is_priority));
+            setRules(applicable); setError(null);
+        }).catch(() => { if (active) setError('House rules could not be loaded. Please try again.'); })
+          .finally(() => { if (active) setIsLoading(false); });
+        return () => { active = false; };
+    }, [isOpen, landlordId, roomNumber, retry]);
     return (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center z-50 p-4 animate-in fade-in">
-            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 p-8 space-y-6 bg-[#f8f9f5]">
-                
-                {/* Header */}
-                <div className="flex justify-between items-center pb-3 border-b border-gray-200/60">
-                    <div className="flex items-center gap-2.5">
-                        <div className="p-2 bg-[#e7efdb] text-[#5c6e4e] rounded-xl border border-[#d3e0c0]">
-                            <ShieldCheck size={20} />
-                        </div>
-                        <div>
-                            <h3 className="font-semibold text-base text-slate-800">Building Policies & Rules</h3>
-                            <p className="text-slate-400 text-[11px] font-medium">Standard operating guidelines for your tenancy</p>
-                        </div>
-                    </div>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 outline-none p-1">
-                        <X size={20} />
-                    </button>
-                </div>
-
-                {/* Rules List Container */}
-                <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
-                    {isLoading ? (
-                        <div className="p-8 text-center text-slate-400 text-xs font-medium">Loading building directives...</div>
-                    ) : rules.length === 0 ? (
-                        <div className="text-center py-12 text-slate-400 text-xs font-medium flex flex-col items-center justify-center">
-                            <ScrollText size={32} className="mb-2 opacity-30 text-slate-400" />
-                            <p>No active building policies published by your property manager.</p>
-                        </div>
-                    ) : (
-                        rules.map((rule, idx) => (
-                            <div 
-                                key={rule.id || idx}
-                                className={`p-4 rounded-2xl border transition-all relative space-y-2
-                                    ${rule.is_priority 
-                                        ? 'bg-[#fff7f7] border-[#fce8e8]' 
-                                        : 'bg-white border-gray-200/60 shadow-xs'}`}
-                            >
-                                <div className="flex items-center justify-between gap-2">
-                                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border
-                                        ${rule.is_priority 
-                                            ? 'bg-red-100 text-red-700 border-red-200' 
-                                            : 'bg-[#e7efdb] text-[#5c6e4e] border-[#d3e0c0]'}`}
-                                    >
-                                        {rule.category || 'General'}
-                                    </span>
-
-                                    {rule.target_room_number && rule.target_room_number !== 'Global' ? (
-                                        <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 uppercase tracking-wider">
-                                            Unit {rule.target_room_number} Only
-                                        </span>
-                                    ) : (
-                                        <span className="text-[9px] font-medium text-slate-400">
-                                            Global Policy
-                                        </span>
-                                    )}
-                                </div>
-
-                                <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                                    {rule.rule_text}
-                                </p>
-
-                                {rule.is_priority && (
-                                    <div className="flex items-center gap-1 text-[10px] font-bold text-red-600">
-                                        <AlertTriangle size={11} /> Critical Building Rule
-                                    </div>
-                                )}
-                            </div>
-                        ))
-                    )}
-                </div>
-
-                {/* Footer Confirmation */}
-                <button 
-                    onClick={onClose}
-                    className="w-full py-3 bg-[#425042] hover:bg-[#344034] text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5"
-                >
-                    <CheckCircle2 size={14} /> Understood & Acknowledged
-                </button>
-            </div>
-        </div>
+        <Dialog open={isOpen} onClose={onClose} title="House rules" description="Rules that apply to your dormitory and room.">
+            {isLoading ? <LoadingState>Loading house rules…</LoadingState> : error ? <ErrorState title="House rules unavailable" description={error} action={<Button variant="secondary" onClick={() => setRetry(value => value + 1)}>Try again</Button>} /> : rules.length === 0 ? <EmptyState title="No rules published" description="Your landlord has not published rules for your room or dormitory." /> : rules.map((rule,index) => (
+                <article key={rule.id || index} className="df-panel space-y-3">
+                    <div className="flex flex-wrap gap-2"><StatusBadge tone={rule.is_priority ? 'warning' : 'neutral'}>{rule.category || 'General'}</StatusBadge><StatusBadge>{rule.target_room_number && rule.target_room_number !== 'Global' ? `Room ${rule.target_room_number}` : 'All rooms'}</StatusBadge></div>
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{rule.rule_text}</p>
+                    {rule.is_priority && <p className="text-sm font-semibold text-warning">Priority rule</p>}
+                </article>
+            ))}
+            <div className="flex justify-end"><Button onClick={onClose}>Close</Button></div>
+        </Dialog>
     );
 };
