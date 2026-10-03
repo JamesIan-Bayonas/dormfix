@@ -5,6 +5,7 @@ import type { LandlordMaintenanceRequest, MaintenanceStatus, UserRole } from '..
 export const useMaintenance = (userId: string | undefined, role: UserRole) => {
     const [requests, setRequests] = useState<LandlordMaintenanceRequest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchRequests = useCallback(async () => {
         //  If no userId, stop loading and return. Don't leave it true!
@@ -17,8 +18,10 @@ export const useMaintenance = (userId: string | undefined, role: UserRole) => {
         try {
             const data = await maintenanceService.getRequests(userId, role as 'landlord' | 'tenant');
             setRequests(data);
-        } catch (error) {
-            console.error("Failed to load maintenance requests", error);
+            setError(null);
+        } catch (err) {
+            console.error("Failed to load maintenance requests", err);
+            setError('Maintenance requests could not be loaded. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -42,17 +45,19 @@ export const useMaintenance = (userId: string | undefined, role: UserRole) => {
             // Send to API
             await maintenanceService.updateStatus(id, newStatus);
             console.log("Status saved successfully");
+            return true;
         } catch (error) {
             console.error("Save failed:", error);
             // Revert if API fails
             setRequests(previousRequests);
-            alert("Failed to save changes. Please check your connection.");
+            return false;
         }
     };
 
     return { 
         requests, 
         isLoading, 
+        error,
         changeStatus, // Exposed action
         refresh: fetchRequests 
     };

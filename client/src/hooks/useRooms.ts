@@ -6,6 +6,7 @@ export const useRooms = (landlordId: string | undefined) => {
     const [rooms, setRooms] = useState<Room[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [addError, setAddError] = useState<string | null>(null);
 
     // useCallback ensures this function doesn't get recreated on every render
     const fetchRooms = useCallback(async () => {
@@ -15,9 +16,9 @@ export const useRooms = (landlordId: string | undefined) => {
             const data = await roomService.getRooms(landlordId);
             setRooms(data);
             setError(null);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            setError(err.message || "Failed to load rooms");
+            setError(err instanceof Error ? err.message : "Failed to load rooms");
         } finally {
             setIsLoading(false);
         }
@@ -30,17 +31,18 @@ export const useRooms = (landlordId: string | undefined) => {
 
     // Logic for adding a room
     const addRoom = async (roomNumber: string, capacity: number) => {
-        if (!landlordId) return;
+        if (!landlordId) return false;
+        setAddError(null);
         try {
             await roomService.addRoom(landlordId, roomNumber, capacity);
             // Refresh the list after successful addition
             await fetchRooms();
             return true; // Indicate success
-        } catch (err: any) {
-            alert(err.message);
+        } catch (err: unknown) {
+            setAddError(err instanceof Error ? err.message : 'Failed to add room. Please try again.');
             return false; // Indicate failure
         }
     };
 
-    return { rooms, isLoading, error, addRoom, refreshRooms: fetchRooms };
+    return { rooms, isLoading, error, addError, addRoom, refreshRooms: fetchRooms };
 };
