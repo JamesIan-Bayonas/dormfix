@@ -1,6 +1,6 @@
 // src/App.tsx
 import { BrowserRouter as Router } from 'react-router-dom';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './components/UserContext';
 import Login from './components/Login';
@@ -9,38 +9,50 @@ import { TenantDashboard } from './components/dashboards/TenantDashboard';
 import { LandlordDashboard } from './components/dashboards/LandlordDashboard';
 import { PendingApproval } from './components/tenant/PendingApproval';
 import { RejectedAccess } from './components/tenant/RejectedAccess';
+import { LoadingState, ErrorState } from './components/ui/Feedback';
+import { Button } from './components/ui/Button';
+import { readHousingLink } from './utils/housingLink';
 
 const AppContent: React.FC = () => {
-    const { user, isLoading } = useAuth();
+    const { user, isLoading, logout } = useAuth();
     const [showRegister, setShowRegister] = useState(false);
     const [hasHousingLink, setHasHousingLink] = useState<boolean | null>(null);
     const [isCheckingLink, setIsCheckingLink] = useState(false);
+    const [linkError, setLinkError] = useState<string | null>(null);
+    const linkRequest = useRef(0);
+    const [lookupTenantId, setLookupTenantId] = useState<string | null>(null);
 
-    const checkTenantHousing = async () => {
-        if (!user || user.role !== 'tenant') return;
+    const checkTenantHousing = useCallback(async () => {
+        if (!user?.id || user.role !== 'tenant') return;
+        const request = ++linkRequest.current;
+        setLookupTenantId(user.id);
         setIsCheckingLink(true);
+        setLinkError(null);
+        setHasHousingLink(null);
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
             const res = await fetch(`${API_URL}/api/tenant/details/${user.id}`);
-            const data = await res.json();
-            setHasHousingLink(!data.error && !data.isUnlinked);
+            const linked = await readHousingLink(res);
+            if (request !== linkRequest.current) return;
+            setHasHousingLink(linked);
         } catch {
-            setHasHousingLink(false);
+            if (request === linkRequest.current) setLinkError('Your dormitory link could not be checked. Please try again.');
         } finally {
-            setIsCheckingLink(false);
+            if (request === linkRequest.current) setIsCheckingLink(false);
         }
-    };
+    }, [user?.id, user?.role]);
 
     useEffect(() => {
         if (user?.role === 'tenant') {
             checkTenantHousing();
         }
-    }, [user?.id, user?.role]);
+        return () => { linkRequest.current += 1; };
+    }, [checkTenantHousing, user?.role]);
 
-    if (isLoading || (user?.role === 'tenant' && isCheckingLink && hasHousingLink === null)) {
+    if (isLoading || (user?.role === 'tenant' && (lookupTenantId !== user.id || ((isCheckingLink || hasHousingLink === null) && !linkError)))) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+            <div className="min-h-dvh bg-canvas flex items-center justify-center">
+                <LoadingState>Loading your workspace…</LoadingState>
             </div>
         );
     }
@@ -55,6 +67,8 @@ const AppContent: React.FC = () => {
 
     // Tenant Gatekeepers
     if (user.role === 'tenant') {
+        if (linkError) return <main className="mx-auto max-w-form p-4 sm:p-6"><ErrorState title="Dormitory connection unavailable" description={linkError}
+            action={<div className="flex flex-wrap gap-3"><Button onClick={checkTenantHousing}>Try again</Button><Button variant="secondary" onClick={logout}>Sign out</Button></div>} /></main>;
         if (hasHousingLink === false) {
             return <RejectedAccess onRelinkSuccess={checkTenantHousing} />;
         }
