@@ -63,6 +63,7 @@ export interface Payment {
     status: 'Pending' | 'Verified' | 'Rejected' | 'Anomalous';
     proofImage: string;
     remarks?: string;
+    rejectionReason?: string;
 }
 
 export interface LandlordMaintenanceRequest extends MaintenanceRequest {

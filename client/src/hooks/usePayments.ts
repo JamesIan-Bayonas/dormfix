@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { paymentService, type Payment } from '../services/paymentService';
+import { verdictRemarks } from '../utils/paymentPresentation';
 
 export const usePayments = (landlordId: string | undefined) => {
     const [payments, setPayments] = useState<Payment[]>([]);
@@ -32,9 +33,9 @@ export const usePayments = (landlordId: string | undefined) => {
     const verifyPayment = async (id: string, status: 'Verified' | 'Rejected', reason?: string) => {
         try {
             await paymentService.verifyPayment(id, status, reason);
-            // Optimistic Update (Instant Feedback)
+            // Update the visible record only after the server confirms the request.
             setPayments(current => current.map(p => 
-                p.id === id ? { ...p, status, rejectionReason: reason } : p
+                p.id === id ? { ...p, status, rejectionReason: reason, remarks: verdictRemarks(p.remarks, status, reason) } : p
             ));
             return true;
         } catch (err) {
