@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import type { InputHTMLAttributes, ReactNode, Ref, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
 
 interface ControlDescription {
     id: string;
@@ -32,6 +32,7 @@ export function FormField({ id, label, optional, hint, error, children }: FormFi
     );
 }
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+    ref?: Ref<HTMLInputElement>;
     leadingIcon?: ReactNode;
     trailingAction?: ReactNode;
 }
@@ -47,6 +48,6 @@ export function Input({ leadingIcon, trailingAction, className = '', ...props }:
 export function Select({ className = '', ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
     return <select {...props} className={`df-control ${className}`} />;
 }
-export function Textarea({ className = '', ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function Textarea({ className = '', ...props }: TextareaHTMLAttributes<HTMLTextAreaElement> & { ref?: Ref<HTMLTextAreaElement> }) {
     return <textarea {...props} className={`df-control min-h-28 resize-y ${className}`} />;
 }

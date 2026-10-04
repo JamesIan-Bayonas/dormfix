@@ -1,8 +1,9 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 import { LoaderCircle } from 'lucide-react';
 
 type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger';
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+    ref?: Ref<HTMLButtonElement>;
     variant?: ButtonVariant;
     loading?: boolean;
     loadingText?: string;

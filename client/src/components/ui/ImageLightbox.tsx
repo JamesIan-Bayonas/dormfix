@@ -5,7 +5,7 @@ import { ErrorMessage, LoadingState } from './Feedback';
 
 interface Props { src: string | null; onClose: () => void; title?: string }
 
-export function ReceiptPreview({ src }: { src: string }) {
+export function ReceiptPreview({ src, alt = 'Submitted payment receipt' }: { src: string; alt?: string }) {
     const [failed, setFailed] = useState(false);
     const [loading, setLoading] = useState(true);
     return failed ? (
@@ -13,7 +13,7 @@ export function ReceiptPreview({ src }: { src: string }) {
     ) : (
         <div className="space-y-3">
             {loading && <LoadingState>Loading receipt image…</LoadingState>}
-            <img src={src} alt="Submitted payment receipt" className="max-h-[70dvh] w-full object-contain"
+            <img src={src} alt={alt} className="max-h-[70dvh] w-full object-contain"
                 onLoad={() => setLoading(false)} onError={() => { setLoading(false); setFailed(true); }} />
         </div>
     );
