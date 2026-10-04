@@ -7,6 +7,7 @@ import { Button } from '../ui/Button';
 import { FormField, Select, Textarea } from '../ui/FormField';
 import { ErrorMessage, EmptyState } from '../ui/Feedback';
 import { StatusBadge } from '../ui/StatusBadge';
+import { maintenanceStatus, urgencyTone } from '../../utils/maintenancePresentation';
 import { ImageLightbox, ReceiptPreview } from '../ui/ImageLightbox';
 
 export interface RoomOccupant {
@@ -115,7 +116,7 @@ export const RoomDetailDrawer: React.FC<Props> = React.memo(({ isOpen, onClose, 
                     {roomData.activeIssues.length === 0 && <p className="text-sm text-muted">No active requests for this room.</p>}
                     {roomData.activeIssues.map((issue) => <div key={issue.id} className="df-panel space-y-3">
                         <h4 className="font-semibold">{issue.issueType}</h4>
-                        <StatusBadge tone={issue.urgency === 'High' || issue.urgency === 'Emergency' ? 'error' : 'neutral'}>{issue.urgency}</StatusBadge>
+                        <div className="flex flex-wrap gap-2"><StatusBadge tone={maintenanceStatus(issue.status).tone}>{maintenanceStatus(issue.status).label}</StatusBadge><StatusBadge tone={urgencyTone(issue.urgency)}>Urgency: {issue.urgency}</StatusBadge></div>
                         <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">{issue.description}</p>
                         <Button variant="secondary" disabled={busy} onClick={() => { setResolveId(issue.id); setError(null); }}>Mark completed</Button>
                     </div>)}
