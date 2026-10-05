@@ -13,7 +13,7 @@ export function ReceiptPreview({ src, alt = 'Submitted payment receipt' }: { src
     ) : (
         <div className="space-y-3">
             {loading && <LoadingState>Loading receipt image…</LoadingState>}
-            <img src={src} alt={alt} className="max-h-[70dvh] w-full object-contain"
+            <img src={src} alt={alt} className="max-h-[70dvh] w-full rounded-control bg-surface-muted p-2 object-contain"
                 onLoad={() => setLoading(false)} onError={() => { setLoading(false); setFailed(true); }} />
         </div>
     );
