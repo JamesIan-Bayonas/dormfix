@@ -20,7 +20,7 @@ const Login: React.FC<LoginProps> = ({ onToggleRegister }) => {
     };
 
     return (
-        <AuthLayout title="Welcome back" description="Sign in to manage your dormitory or view your tenant workspace." brandPosition="right">
+        <AuthLayout title="Welcome back" description="Sign in to manage your dormitory or view your tenant workspace.">
             <form onSubmit={handleSubmit} className="space-y-6" aria-busy={isLoading}>
                 <FormField id="email" label="Email address">
                     {(field) => (

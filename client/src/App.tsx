@@ -11,6 +11,7 @@ import { PendingApproval } from './components/tenant/PendingApproval';
 import { RejectedAccess } from './components/tenant/RejectedAccess';
 import { LoadingState, ErrorState } from './components/ui/Feedback';
 import { Button } from './components/ui/Button';
+import { AppearanceHeader } from './components/ui/AppearanceHeader';
 import { readHousingLink } from './utils/housingLink';
 
 const AppContent: React.FC = () => {
@@ -67,7 +68,7 @@ const AppContent: React.FC = () => {
 
     // Tenant Gatekeepers
     if (user.role === 'tenant') {
-        if (linkError) return <main className="mx-auto max-w-form p-4 sm:p-6"><ErrorState title="Dormitory connection unavailable" description={linkError}
+        if (linkError) return <main className="mx-auto max-w-form space-y-6 p-4 sm:p-6"><AppearanceHeader /><ErrorState title="Dormitory connection unavailable" description={linkError}
             action={<div className="flex flex-wrap gap-3"><Button onClick={checkTenantHousing}>Try again</Button><Button variant="secondary" onClick={logout}>Sign out</Button></div>} /></main>;
         if (hasHousingLink === false) {
             return <RejectedAccess onRelinkSuccess={checkTenantHousing} />;
@@ -95,14 +96,16 @@ const App: React.FC = () => {
                     toastOptions={{
                         duration: 4000,
                         style: {
-                            background: '#1e293b', 
-                            color: '#fff',
+                            background: 'var(--df-raised)',
+                            color: 'var(--df-ink)',
+                            border: '1px solid var(--df-divider)',
+                            boxShadow: 'var(--df-overlay-shadow)',
                         },
                         success: {
-                            iconTheme: { primary: '#10b981', secondary: '#fff' }, 
+                            iconTheme: { primary: 'var(--color-success)', secondary: 'var(--color-success-content)' },
                         },
                         error: {
-                            iconTheme: { primary: '#ef4444', secondary: '#fff' }, 
+                            iconTheme: { primary: 'var(--color-error)', secondary: 'var(--color-error-content)' },
                         },
                     }} 
                 />
