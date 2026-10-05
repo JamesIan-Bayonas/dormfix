@@ -4,6 +4,7 @@ import '../../src/index.css';
 import { Dialog, Drawer, ConfirmationDialog } from '../../src/components/ui/Dialog';
 import { ImageLightbox } from '../../src/components/ui/ImageLightbox';
 import { Button } from '../../src/components/ui/Button';
+import { AppearanceHeader } from '../../src/components/ui/AppearanceHeader';
 import { AddRoomDialog } from '../../src/components/landlord/AddRoomDialog';
 
 /* Development-only fixture: imports real UI components, never calls an API or auth provider. */
@@ -21,6 +22,7 @@ export default function OverlayFixture() {
     const image = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="640"><rect width="320" height="640" fill="#f8f9f5"/><text x="20" y="60" font-size="20">Fixture receipt</text><text x="20" y="600" font-size="20">Bottom stays visible</text></svg>');
     return (
         <main className="df-page space-y-6">
+            <AppearanceHeader />
             <h1 className="df-page-title" tabIndex={-1} data-focus-fallback>Overlay and recovery verification</h1>
             <p className="max-w-prose text-muted">Isolated frontend fixture. All operations are simulated; no accounts, records, or backend requests are involved.</p>
             <div className="flex flex-wrap gap-3">
