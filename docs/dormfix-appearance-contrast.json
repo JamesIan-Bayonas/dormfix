@@ -1,0 +1,327 @@
+{
+  "note": "Calculated opaque color pairs; rendered states still require validation.",
+  "palette": {
+    "light": {
+      "canvas": "#F5F7F2",
+      "surface": "#FFFFFF",
+      "raised": "#FFFFFF",
+      "mutedSurface": "#ECF1E8",
+      "sidebar": "#F0F4ED",
+      "ink": "#1F2C24",
+      "muted": "#536457",
+      "divider": "#D8E0D4",
+      "control": "#73816F",
+      "primary": "#425042",
+      "onPrimary": "#FFFFFF",
+      "hover": "#344034",
+      "focus": "#2F6B4F",
+      "selected": "#E4EDE0",
+      "onSelected": "#425042",
+      "info": "#285E86",
+      "infoSoft": "#EEF5FC",
+      "success": "#24633D",
+      "successSoft": "#ECF6EF",
+      "warning": "#805717",
+      "warningSoft": "#FFF5DF",
+      "error": "#A43132",
+      "errorSoft": "#FCEEEF"
+    },
+    "dark": {
+      "canvas": "#101713",
+      "surface": "#18221B",
+      "raised": "#202C23",
+      "mutedSurface": "#263329",
+      "sidebar": "#131D16",
+      "ink": "#E7EEE3",
+      "muted": "#ADBAAA",
+      "divider": "#34483B",
+      "control": "#718A75",
+      "primary": "#A9C6A4",
+      "onPrimary": "#122017",
+      "hover": "#BDD4B8",
+      "focus": "#C8DEAC",
+      "selected": "#293C2E",
+      "onSelected": "#C1D8B9",
+      "info": "#A8CDEA",
+      "infoSoft": "#1C3040",
+      "success": "#A8D5AF",
+      "successSoft": "#203629",
+      "warning": "#E8C27A",
+      "warningSoft": "#3A2E18",
+      "error": "#F1AAAB",
+      "errorSoft": "#3D2326"
+    }
+  },
+  "checks": [
+    {
+      "theme": "light",
+      "label": "Main text",
+      "foreground": "#1F2C24",
+      "background": "#FFFFFF",
+      "ratio": "14.54",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "label": "Secondary text",
+      "foreground": "#536457",
+      "background": "#FFFFFF",
+      "ratio": "6.31",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "label": "Secondary on canvas",
+      "foreground": "#536457",
+      "background": "#F5F7F2",
+      "ratio": "5.85",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "label": "Secondary on raised",
+      "foreground": "#536457",
+      "background": "#FFFFFF",
+      "ratio": "6.31",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "label": "Secondary on muted",
+      "foreground": "#536457",
+      "background": "#ECF1E8",
+      "ratio": "5.50",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "label": "Primary action",
+      "foreground": "#FFFFFF",
+      "background": "#425042",
+      "ratio": "8.54",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "label": "Hovered action",
+      "foreground": "#FFFFFF",
+      "background": "#344034",
+      "ratio": "10.89",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "label": "Selected text",
+      "foreground": "#425042",
+      "background": "#E4EDE0",
+      "ratio": "7.12",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "label": "Input border",
+      "foreground": "#73816F",
+      "background": "#FFFFFF",
+      "ratio": "4.12",
+      "target": 3,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "label": "Focus on surface",
+      "foreground": "#2F6B4F",
+      "background": "#FFFFFF",
+      "ratio": "6.29",
+      "target": 3,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "label": "Focus on raised",
+      "foreground": "#2F6B4F",
+      "background": "#FFFFFF",
+      "ratio": "6.29",
+      "target": 3,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "label": "Info",
+      "foreground": "#285E86",
+      "background": "#EEF5FC",
+      "ratio": "6.29",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "label": "Success",
+      "foreground": "#24633D",
+      "background": "#ECF6EF",
+      "ratio": "6.49",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "label": "Warning",
+      "foreground": "#805717",
+      "background": "#FFF5DF",
+      "ratio": "5.88",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "light",
+      "label": "Error",
+      "foreground": "#A43132",
+      "background": "#FCEEEF",
+      "ratio": "6.08",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "label": "Main text",
+      "foreground": "#E7EEE3",
+      "background": "#18221B",
+      "ratio": "13.82",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "label": "Secondary text",
+      "foreground": "#ADBAAA",
+      "background": "#18221B",
+      "ratio": "8.09",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "label": "Secondary on canvas",
+      "foreground": "#ADBAAA",
+      "background": "#101713",
+      "ratio": "9.00",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "label": "Secondary on raised",
+      "foreground": "#ADBAAA",
+      "background": "#202C23",
+      "ratio": "7.18",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "label": "Secondary on muted",
+      "foreground": "#ADBAAA",
+      "background": "#263329",
+      "ratio": "6.54",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "label": "Primary action",
+      "foreground": "#122017",
+      "background": "#A9C6A4",
+      "ratio": "9.08",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "label": "Hovered action",
+      "foreground": "#122017",
+      "background": "#BDD4B8",
+      "ratio": "10.66",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "label": "Selected text",
+      "foreground": "#C1D8B9",
+      "background": "#293C2E",
+      "ratio": "7.75",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "label": "Input border",
+      "foreground": "#718A75",
+      "background": "#18221B",
+      "ratio": "4.36",
+      "target": 3,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "label": "Focus on surface",
+      "foreground": "#C8DEAC",
+      "background": "#18221B",
+      "ratio": "11.30",
+      "target": 3,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "label": "Focus on raised",
+      "foreground": "#C8DEAC",
+      "background": "#202C23",
+      "ratio": "10.03",
+      "target": 3,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "label": "Info",
+      "foreground": "#A8CDEA",
+      "background": "#1C3040",
+      "ratio": "8.14",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "label": "Success",
+      "foreground": "#A8D5AF",
+      "background": "#203629",
+      "ratio": "7.90",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "label": "Warning",
+      "foreground": "#E8C27A",
+      "background": "#3A2E18",
+      "ratio": "7.85",
+      "target": 4.5,
+      "passes": true
+    },
+    {
+      "theme": "dark",
+      "label": "Error",
+      "foreground": "#F1AAAB",
+      "background": "#3D2326",
+      "ratio": "7.55",
+      "target": 4.5,
+      "passes": true
+    }
+  ]
+}

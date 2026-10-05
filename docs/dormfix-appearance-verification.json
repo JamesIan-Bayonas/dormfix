@@ -1,0 +1,1005 @@
+{
+  "note": "Fictional frontend fixtures, not authenticated backend or accessibility certification.",
+  "roleLayouts": [
+    {
+      "heading": "Overview",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-light",
+      "width": 320
+    },
+    {
+      "heading": "Overview",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-light",
+      "width": 390
+    },
+    {
+      "heading": "Overview",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-light",
+      "width": 768
+    },
+    {
+      "heading": "Overview",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-light",
+      "width": 1024
+    },
+    {
+      "heading": "Overview",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-light",
+      "width": 1366
+    },
+    {
+      "heading": "Overview",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-light",
+      "width": 1920
+    },
+    {
+      "heading": "Overview",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-dark",
+      "width": 320
+    },
+    {
+      "heading": "Overview",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-dark",
+      "width": 390
+    },
+    {
+      "heading": "Overview",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-dark",
+      "width": 768
+    },
+    {
+      "heading": "Overview",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-dark",
+      "width": 1024
+    },
+    {
+      "heading": "Overview",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-dark",
+      "width": 1366
+    },
+    {
+      "heading": "Overview",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-dark",
+      "width": 1920
+    },
+    {
+      "heading": "Home",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-light",
+      "width": 320
+    },
+    {
+      "heading": "Home",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-light",
+      "width": 390
+    },
+    {
+      "heading": "Home",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-light",
+      "width": 768
+    },
+    {
+      "heading": "Home",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-light",
+      "width": 1024
+    },
+    {
+      "heading": "Home",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-light",
+      "width": 1366
+    },
+    {
+      "heading": "Home",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-light",
+      "width": 1920
+    },
+    {
+      "heading": "Home",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-dark",
+      "width": 320
+    },
+    {
+      "heading": "Home",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-dark",
+      "width": 390
+    },
+    {
+      "heading": "Home",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-dark",
+      "width": 768
+    },
+    {
+      "heading": "Home",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-dark",
+      "width": 1024
+    },
+    {
+      "heading": "Home",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-dark",
+      "width": 1366
+    },
+    {
+      "heading": "Home",
+      "overflow": false,
+      "shortControls": [],
+      "theme": "dormfix-dark",
+      "width": 1920
+    }
+  ],
+  "featureLayouts": [
+    {
+      "overflow": false,
+      "page": "Landlord receipts",
+      "theme": "dormfix-light",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "page": "Landlord receipts",
+      "theme": "dormfix-light",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "page": "Landlord receipts",
+      "theme": "dormfix-light",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "page": "Landlord receipts",
+      "theme": "dormfix-light",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "page": "Landlord receipts",
+      "theme": "dormfix-light",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "page": "Landlord receipts",
+      "theme": "dormfix-light",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "page": "Landlord receipts",
+      "theme": "dormfix-dark",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "page": "Landlord receipts",
+      "theme": "dormfix-dark",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "page": "Landlord receipts",
+      "theme": "dormfix-dark",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "page": "Landlord receipts",
+      "theme": "dormfix-dark",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "page": "Landlord receipts",
+      "theme": "dormfix-dark",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "page": "Landlord receipts",
+      "theme": "dormfix-dark",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "page": "Tenant directory",
+      "theme": "dormfix-light",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "page": "Tenant directory",
+      "theme": "dormfix-light",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "page": "Tenant directory",
+      "theme": "dormfix-light",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "page": "Tenant directory",
+      "theme": "dormfix-light",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "page": "Tenant directory",
+      "theme": "dormfix-light",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "page": "Tenant directory",
+      "theme": "dormfix-light",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "page": "Tenant directory",
+      "theme": "dormfix-dark",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "page": "Tenant directory",
+      "theme": "dormfix-dark",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "page": "Tenant directory",
+      "theme": "dormfix-dark",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "page": "Tenant directory",
+      "theme": "dormfix-dark",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "page": "Tenant directory",
+      "theme": "dormfix-dark",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "page": "Tenant directory",
+      "theme": "dormfix-dark",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "page": "#/maintenance",
+      "theme": "dormfix-light",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "page": "#/maintenance",
+      "theme": "dormfix-light",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "page": "#/maintenance",
+      "theme": "dormfix-light",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "page": "#/maintenance",
+      "theme": "dormfix-light",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "page": "#/maintenance",
+      "theme": "dormfix-light",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "page": "#/maintenance",
+      "theme": "dormfix-light",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "page": "#/maintenance",
+      "theme": "dormfix-dark",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "page": "#/maintenance",
+      "theme": "dormfix-dark",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "page": "#/maintenance",
+      "theme": "dormfix-dark",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "page": "#/maintenance",
+      "theme": "dormfix-dark",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "page": "#/maintenance",
+      "theme": "dormfix-dark",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "page": "#/maintenance",
+      "theme": "dormfix-dark",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "page": "#/rules",
+      "theme": "dormfix-light",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "page": "#/rules",
+      "theme": "dormfix-light",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "page": "#/rules",
+      "theme": "dormfix-light",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "page": "#/rules",
+      "theme": "dormfix-light",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "page": "#/rules",
+      "theme": "dormfix-light",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "page": "#/rules",
+      "theme": "dormfix-light",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "page": "#/rules",
+      "theme": "dormfix-dark",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "page": "#/rules",
+      "theme": "dormfix-dark",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "page": "#/rules",
+      "theme": "dormfix-dark",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "page": "#/rules",
+      "theme": "dormfix-dark",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "page": "#/rules",
+      "theme": "dormfix-dark",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "page": "#/rules",
+      "theme": "dormfix-dark",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "page": "#/tenant",
+      "theme": "dormfix-light",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "page": "#/tenant",
+      "theme": "dormfix-light",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "page": "#/tenant",
+      "theme": "dormfix-light",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "page": "#/tenant",
+      "theme": "dormfix-light",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "page": "#/tenant",
+      "theme": "dormfix-light",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "page": "#/tenant",
+      "theme": "dormfix-light",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "page": "#/tenant",
+      "theme": "dormfix-dark",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "page": "#/tenant",
+      "theme": "dormfix-dark",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "page": "#/tenant",
+      "theme": "dormfix-dark",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "page": "#/tenant",
+      "theme": "dormfix-dark",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "page": "#/tenant",
+      "theme": "dormfix-dark",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "page": "#/tenant",
+      "theme": "dormfix-dark",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "page": "Landlord messages",
+      "theme": "dormfix-light",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "page": "Landlord messages",
+      "theme": "dormfix-light",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "page": "Landlord messages",
+      "theme": "dormfix-light",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "page": "Landlord messages",
+      "theme": "dormfix-light",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "page": "Landlord messages",
+      "theme": "dormfix-light",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "page": "Landlord messages",
+      "theme": "dormfix-light",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "page": "Landlord messages",
+      "theme": "dormfix-dark",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "page": "Landlord messages",
+      "theme": "dormfix-dark",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "page": "Landlord messages",
+      "theme": "dormfix-dark",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "page": "Landlord messages",
+      "theme": "dormfix-dark",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "page": "Landlord messages",
+      "theme": "dormfix-dark",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "page": "Landlord messages",
+      "theme": "dormfix-dark",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "page": "Tenant messages",
+      "theme": "dormfix-light",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "page": "Tenant messages",
+      "theme": "dormfix-light",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "page": "Tenant messages",
+      "theme": "dormfix-light",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "page": "Tenant messages",
+      "theme": "dormfix-light",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "page": "Tenant messages",
+      "theme": "dormfix-light",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "page": "Tenant messages",
+      "theme": "dormfix-light",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "page": "Tenant messages",
+      "theme": "dormfix-dark",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "page": "Tenant messages",
+      "theme": "dormfix-dark",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "page": "Tenant messages",
+      "theme": "dormfix-dark",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "page": "Tenant messages",
+      "theme": "dormfix-dark",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "page": "Tenant messages",
+      "theme": "dormfix-dark",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "page": "Tenant messages",
+      "theme": "dormfix-dark",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "page": "Room occupancy",
+      "theme": "dormfix-light",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "page": "Room occupancy",
+      "theme": "dormfix-light",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "page": "Room occupancy",
+      "theme": "dormfix-light",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "page": "Room occupancy",
+      "theme": "dormfix-light",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "page": "Room occupancy",
+      "theme": "dormfix-light",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "page": "Room occupancy",
+      "theme": "dormfix-light",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "page": "Room occupancy",
+      "theme": "dormfix-dark",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "page": "Room occupancy",
+      "theme": "dormfix-dark",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "page": "Room occupancy",
+      "theme": "dormfix-dark",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "page": "Room occupancy",
+      "theme": "dormfix-dark",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "page": "Room occupancy",
+      "theme": "dormfix-dark",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "page": "Room occupancy",
+      "theme": "dormfix-dark",
+      "width": 1920
+    }
+  ],
+  "authAndComponentLayouts": [
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-light",
+      "view": "Components",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-light",
+      "view": "Components",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-light",
+      "view": "Components",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-light",
+      "view": "Components",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-light",
+      "view": "Components",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-light",
+      "view": "Components",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-dark",
+      "view": "Components",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-dark",
+      "view": "Components",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-dark",
+      "view": "Components",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-dark",
+      "view": "Components",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-dark",
+      "view": "Components",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-dark",
+      "view": "Components",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-light",
+      "view": "Login",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-light",
+      "view": "Login",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-light",
+      "view": "Login",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "photoVisible": true,
+      "theme": "dormfix-light",
+      "view": "Login",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "photoVisible": true,
+      "theme": "dormfix-light",
+      "view": "Login",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "photoVisible": true,
+      "theme": "dormfix-light",
+      "view": "Login",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-dark",
+      "view": "Login",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-dark",
+      "view": "Login",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-dark",
+      "view": "Login",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "photoVisible": true,
+      "theme": "dormfix-dark",
+      "view": "Login",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "photoVisible": true,
+      "theme": "dormfix-dark",
+      "view": "Login",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "photoVisible": true,
+      "theme": "dormfix-dark",
+      "view": "Login",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-light",
+      "view": "Registration",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-light",
+      "view": "Registration",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-light",
+      "view": "Registration",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "photoVisible": true,
+      "theme": "dormfix-light",
+      "view": "Registration",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "photoVisible": true,
+      "theme": "dormfix-light",
+      "view": "Registration",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "photoVisible": true,
+      "theme": "dormfix-light",
+      "view": "Registration",
+      "width": 1920
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-dark",
+      "view": "Registration",
+      "width": 320
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-dark",
+      "view": "Registration",
+      "width": 390
+    },
+    {
+      "overflow": false,
+      "photoVisible": false,
+      "theme": "dormfix-dark",
+      "view": "Registration",
+      "width": 768
+    },
+    {
+      "overflow": false,
+      "photoVisible": true,
+      "theme": "dormfix-dark",
+      "view": "Registration",
+      "width": 1024
+    },
+    {
+      "overflow": false,
+      "photoVisible": true,
+      "theme": "dormfix-dark",
+      "view": "Registration",
+      "width": 1366
+    },
+    {
+      "overflow": false,
+      "photoVisible": true,
+      "theme": "dormfix-dark",
+      "view": "Registration",
+      "width": 1920
+    }
+  ]
+}
