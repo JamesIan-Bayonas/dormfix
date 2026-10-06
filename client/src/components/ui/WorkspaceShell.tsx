@@ -41,7 +41,25 @@ export function WorkspaceShell({ role, user, onLogout, onEditProfile, children }
     const previousPath = useRef(location.pathname);
     const routeFocusPending = useRef(false);
     const mainRef = useRef<HTMLElement>(null);
+    const headerRef = useRef<HTMLElement>(null);
     const title = role === 'landlord' ? landlordNavigation.find(item => item.path === location.pathname)?.label ?? 'Workspace' : 'Tenant workspace';
+
+    useEffect(() => {
+        const header = headerRef.current;
+        if (!header) return;
+        const root = document.documentElement;
+        const property = '--df-workspace-header-height';
+        const previousHeight = root.style.getPropertyValue(property);
+        const updateHeight = () => root.style.setProperty(property, `${header.getBoundingClientRect().height}px`);
+        updateHeight();
+        const observer = new ResizeObserver(updateHeight);
+        observer.observe(header);
+        return () => {
+            observer.disconnect();
+            if (previousHeight) root.style.setProperty(property, previousHeight);
+            else root.style.removeProperty(property);
+        };
+    }, []);
 
     useEffect(() => {
         if (previousPath.current !== location.pathname) {
@@ -88,7 +106,7 @@ export function WorkspaceShell({ role, user, onLogout, onEditProfile, children }
             </Drawer>
         </>}
         <div className="min-w-0">
-            <header className="border-b border-divider bg-surface">
+            <header ref={headerRef} className="sticky top-0 z-20 border-b border-divider bg-surface">
                 <div className={`mx-auto flex min-h-16 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8 ${role === 'tenant' ? 'max-w-5xl' : 'max-w-workspace'}`}>
                     <div className="flex min-w-0 items-center gap-3">
                         {role === 'landlord' ? <>

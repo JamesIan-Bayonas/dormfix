@@ -24,7 +24,7 @@ interface Props {
     onEditProfile: () => void;
     children?: ReactNode;
 }
-const taskClass = 'flex min-h-16 w-full items-center gap-3 rounded-control p-4 text-left hover:bg-surface-muted';
+const taskClass = 'df-home-task flex min-h-16 w-full items-center gap-3 rounded-panel p-4 text-left sm:p-5';
 
 export function TenantHome({ user, housing, loading, error, onRetry, onRules, onEditProfile, children }: Props) {
     const housingReady = !loading && !error && !!housing?.landlordId;
@@ -34,7 +34,7 @@ export function TenantHome({ user, housing, loading, error, onRetry, onRules, on
     return <div className="space-y-6">
         <PageHeader title="Home" description={`Welcome, ${user.name}. Manage your dormitory tasks here.`} />
         {loading ? <LoadingState>Loading your housing details…</LoadingState> : error ? <ErrorState title="Housing details unavailable" description={error} action={<Button variant="secondary" onClick={onRetry}>Try again</Button>} /> : housing &&
-            <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-control border border-divider bg-surface p-4 text-sm">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-panel border border-divider bg-surface-muted p-4 text-sm">
                 <p><span className="font-semibold">Room: </span>{assigned ? housing.roomNumber : 'Not yet assigned'}</p>
                 <p className="min-w-0 break-words"><span className="font-semibold">Landlord: </span>{housing.landlordName}</p>
             </div>}
