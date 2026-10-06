@@ -1,25 +1,308 @@
-@import 'tailwindcss';  
-@plugin "daisyui";
+@import "tailwindcss";
+
+@plugin "daisyui" {
+  themes: false;
+}
+
+/* Explicit Light/Dark themes; appearance.js resolves the saved choice before paint. */
+@plugin "daisyui/theme" {
+  name: "dormfix-light";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #ecf1e8;
+  --color-base-300: #d8e0d4;
+  --color-base-content: #1f2c24;
+  --color-primary: #425042;
+  --color-primary-content: #ffffff;
+  --color-secondary: #425042;
+  --color-secondary-content: #ffffff;
+  --color-accent: #e4ede0;
+  --color-accent-content: #425042;
+  --color-neutral: #344034;
+  --color-neutral-content: #ffffff;
+  --color-info: #285e86;
+  --color-info-content: #ffffff;
+  --color-success: #24633d;
+  --color-success-content: #ffffff;
+  --color-warning: #805717;
+  --color-warning-content: #ffffff;
+  --color-error: #a43132;
+  --color-error-content: #ffffff;
+  --radius-selector: 0.375rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+  name: "dormfix-dark";
+  default: false;
+  prefersdark: false;
+  color-scheme: dark;
+  --color-base-100: #18221b;
+  --color-base-200: #263329;
+  --color-base-300: #34483b;
+  --color-base-content: #e7eee3;
+  --color-primary: #a9c6a4;
+  --color-primary-content: #122017;
+  --color-secondary: #a9c6a4;
+  --color-secondary-content: #122017;
+  --color-accent: #293c2e;
+  --color-accent-content: #c1d8b9;
+  --color-neutral: #202c23;
+  --color-neutral-content: #e7eee3;
+  --color-info: #a8cdea;
+  --color-info-content: #1c3040;
+  --color-success: #a8d5af;
+  --color-success-content: #203629;
+  --color-warning: #e8c27a;
+  --color-warning-content: #3a2e18;
+  --color-error: #f1aaab;
+  --color-error-content: #2a1518;
+  --radius-selector: 0.375rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Playfair Display", ui-serif, Georgia, serif;
+  --color-sage-50: #f8f9f5;
+  --color-sage-100: #e7efdb;
+  --color-sage-200: #c2ceae;
+  --color-sage-700: #5c6e4e;
+  --color-sage-800: #425042;
+  --color-sage-900: #344034;
+  --radius-control: 0.5rem;
+  --radius-panel: 0.75rem;
+  --radius-status: 0.375rem;
+  --container-form: 28rem;
+  --container-reading: 64rem;
+  --container-workspace: 80rem;
+}
+
+@theme inline {
+  --color-canvas: var(--df-canvas);
+  --color-surface: var(--df-surface);
+  --color-surface-raised: var(--df-raised);
+  --color-surface-muted: var(--df-muted-surface);
+  --color-sidebar: var(--df-sidebar);
+  --color-ink: var(--df-ink);
+  --color-muted: var(--df-muted);
+  --color-divider: var(--df-divider);
+  --color-control-border: var(--df-control-border);
+  --color-focus: var(--df-focus);
+  --color-primary-hover: var(--df-primary-hover);
+  --color-selected: var(--df-selected);
+  --color-selected-content: var(--df-selected-content);
+  --color-info-soft: var(--df-info-soft);
+  --color-success-soft: var(--df-success-soft);
+  --color-warning-soft: var(--df-warning-soft);
+  --color-error-soft: var(--df-error-soft);
+  --color-danger-hover: var(--df-danger-hover);
+  --color-auth-overlay: #28352b;
+  --color-auth-ink: #ffffff;
+  --shadow-overlay: var(--df-overlay-shadow);
+}
+
+@layer base {
+  :root {
+    background: var(--df-canvas);
+    color: var(--df-ink);
+    --df-canvas: #f5f7f2;
+    --df-surface: #ffffff;
+    --df-raised: #ffffff;
+    --df-muted-surface: #ecf1e8;
+    --df-sidebar: #f0f4ed;
+    --df-ink: #1f2c24;
+    --df-muted: #536457;
+    --df-divider: #d8e0d4;
+    --df-control-border: #73816f;
+    --df-focus: #2f6b4f;
+    --df-primary-hover: #344034;
+    --df-selected: #e4ede0;
+    --df-selected-content: #425042;
+    --df-info-soft: #eef5fc;
+    --df-success-soft: #ecf6ef;
+    --df-warning-soft: #fff5df;
+    --df-error-soft: #fceeef;
+    --df-danger-hover: #872528;
+    --df-overlay-shadow: 0 16px 48px rgb(31 44 36 / 0.16);
+    --df-backdrop: rgb(16 23 19 / 0.5);
+    --df-scrollbar: #73816f;
+  }
+  :root[data-theme="dormfix-dark"] {
+    --df-canvas: #101713;
+    --df-surface: #18221b;
+    --df-raised: #202c23;
+    --df-muted-surface: #263329;
+    --df-sidebar: #131d16;
+    --df-ink: #e7eee3;
+    --df-muted: #adbaaa;
+    --df-divider: #34483b;
+    --df-control-border: #718a75;
+    --df-focus: #c8deac;
+    --df-primary-hover: #bdd4b8;
+    --df-selected: #293c2e;
+    --df-selected-content: #c1d8b9;
+    --df-info-soft: #1c3040;
+    --df-success-soft: #203629;
+    --df-warning-soft: #3a2e18;
+    --df-error-soft: #3d2326;
+    --df-danger-hover: #f8bcbc;
+    --df-overlay-shadow: 0 16px 48px rgb(0 0 0 / 0.24);
+    --df-backdrop: rgb(0 0 0 / 0.6);
+    --df-scrollbar: #718a75;
+  }
+  html {
+    font-family: var(--font-sans);
+    background: var(--df-canvas);
+    color: var(--df-ink);
+  }
+  body {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  ::selection {
+    background: var(--df-selected);
+    color: var(--df-selected-content);
+  }
+  input[type="checkbox"], input[type="radio"] { accent-color: var(--color-primary); }
+}
+
+@layer components {
+  .df-button {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-control border px-4 py-2 text-sm font-semibold leading-5 transition-colors;
+    cursor: pointer;
+  }
+  .df-button:disabled { @apply cursor-not-allowed border-divider bg-surface-muted text-muted; }
+  .df-button--primary { @apply border-primary bg-primary text-primary-content; }
+  .df-button--primary:not(:disabled):hover,
+  .df-button--primary:not(:disabled):active { @apply border-primary-hover bg-primary-hover; }
+  .df-button--secondary { @apply border-control-border bg-surface text-ink; }
+  .df-button--secondary:not(:disabled):hover,
+  .df-button--secondary:not(:disabled):active,
+  .df-button--quiet:not(:disabled):hover,
+  .df-button--quiet:not(:disabled):active { @apply bg-surface-muted; }
+  .df-button--quiet { @apply border-transparent bg-transparent text-primary; }
+  .df-button--danger { @apply border-error bg-error text-error-content; }
+  .df-button--danger:not(:disabled):hover,
+  .df-button--danger:not(:disabled):active { @apply border-danger-hover bg-danger-hover; }
+  .df-control {
+    @apply block min-h-11 w-full rounded-control border border-control-border bg-surface px-3 py-2 text-base leading-6 text-ink transition-colors sm:text-sm;
+  }
+  .df-control::placeholder { @apply text-muted opacity-100; }
+  .df-control:focus-visible { @apply border-focus; }
+  .df-control[aria-invalid="true"] { @apply border-error; }
+  .df-control:disabled { @apply cursor-not-allowed bg-surface-muted text-muted; }
+  .df-control[readonly] { @apply bg-surface-muted; }
+  .df-appearance-select {
+    @apply h-11 w-28 cursor-pointer appearance-none py-0 pl-3 pr-9 text-base leading-6;
+  }
+  .df-appearance-select:hover { @apply border-primary; }
+  .df-panel { @apply min-w-0 rounded-panel border border-divider bg-surface p-4 sm:p-6; }
+  .df-page-title { @apply text-2xl font-semibold leading-tight tracking-tight text-ink sm:text-3xl; }
+  .df-section-title { @apply text-lg font-semibold leading-snug text-ink sm:text-xl; }
+  .df-page { @apply mx-auto w-full max-w-workspace p-4 sm:p-6 lg:p-8; overflow-wrap: anywhere; }
+  .df-nav-link { @apply flex min-h-11 items-center gap-3 rounded-control border-l-4 border-transparent px-3 py-3 text-sm font-medium text-muted hover:bg-surface-muted active:bg-surface-muted; }
+  .df-nav-link--active { @apply border-primary bg-selected font-semibold text-selected-content; }
+  .df-logo-mark {
+    display: inline-block;
+    flex-shrink: 0;
+    background-color: currentColor;
+    mask-size: contain;
+    mask-position: center;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: contain;
+    -webkit-mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+  }
+  .df-task-icon { @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-selected text-selected-content; }
+  .df-task-link { @apply inline-flex min-h-11 items-center gap-2 rounded-control py-2 text-sm font-semibold text-primary underline-offset-4 hover:underline; }
+  .df-home-task:not(:disabled):hover,
+  .df-home-task:not(:disabled):active { @apply bg-surface-muted; }
+  .df-summary { @apply grid gap-px overflow-hidden rounded-panel border border-divider bg-divider sm:grid-cols-2 xl:grid-cols-4; }
+  .df-summary-item { @apply min-w-0 space-y-2 bg-surface-muted p-4 sm:p-5; }
+  .df-auth { @apply flex min-h-dvh bg-canvas text-ink; }
+  .df-auth-brand { @apply sticky top-0 isolate hidden h-dvh w-1/2 shrink-0 items-center justify-center overflow-hidden bg-auth-overlay p-12 text-auth-ink lg:flex; }
+  .df-auth-form { @apply flex min-w-0 w-full items-center justify-center px-4 py-8 sm:px-8 lg:w-1/2 lg:px-12; }
+  .df-status { @apply inline-flex items-center gap-1.5 rounded-status border px-2 py-1 text-xs font-semibold leading-5; }
+  .df-status--neutral { @apply border-divider bg-surface-muted text-muted; }
+  .df-status--info { @apply border-info/30 bg-info-soft text-info; }
+  .df-status--success { @apply border-success/30 bg-success-soft text-success; }
+  .df-status--warning { @apply border-warning/30 bg-warning-soft text-warning; }
+  .df-status--error { @apply border-error/30 bg-error-soft text-error; }
 }
 
 @layer utilities {
-  /* Soft UI Scrollbar styling for data feeds */
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--df-scrollbar) transparent;
   }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
+  .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #c2ceae;
+    background: var(--df-scrollbar);
     border-radius: 9999px;
   }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #aebc98;
+}
+
+/* Outside layers so legacy outline-none utilities cannot hide keyboard focus. */
+/* Follow the workspace bar's actual height, including wrapped mobile controls. */
+html { scroll-padding-top: calc(var(--df-workspace-header-height, 0px) + 1rem); }
+.df-skip-link { position: fixed; top: -10rem; left: 1rem; z-index: 60; }
+.df-skip-link:focus { top: 1rem; padding: 0.75rem 1rem; background: var(--df-surface); color: var(--df-ink); border: 1px solid var(--df-control-border); border-radius: var(--radius-control); }
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--df-focus);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px var(--df-surface);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
+
+/* Native dialogs enter the browser top layer, including when nested in a drawer. */
+body:has(dialog[open]) { overflow: hidden; }
+.df-dialog {
+  width: min(36rem, calc(100% - 2rem));
+  max-width: none;
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--df-divider);
+  border-radius: var(--radius-panel);
+  background: var(--df-raised);
+  color: var(--df-ink);
+  box-shadow: var(--df-overlay-shadow);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.df-dialog::backdrop { background: var(--df-backdrop); }
+.df-dialog--wide { width: min(64rem, calc(100% - 2rem)); }
+.df-dialog--drawer {
+  inset: 0 0 0 auto;
+  width: min(28rem, 100%);
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  border-radius: 0;
+}
+.df-dialog-content { overflow-wrap: anywhere; }
