@@ -18,7 +18,7 @@ export function Contacts({ contacts, selectedId, loading, error, onRetry, onSele
             <EmptyState title="No matching tenants" description="Try another name, room or phone number." action={<Button variant="secondary" onClick={() => { setQuery(''); search.current?.focus(); }}>Clear search</Button>} /> :
             <ul className="space-y-2">{visible.map(contact => <li key={contact.id}><button type="button"
                 data-contact-id={contact.id} aria-pressed={contact.id === selectedId} onClick={() => onSelect(contact)}
-                className={`min-h-11 w-full rounded-control border p-3 text-left ${contact.id === selectedId ? 'border-primary bg-sage-100' : 'border-divider hover:bg-surface-muted'}`}>
+                className={`min-h-11 w-full rounded-control border p-3 text-left ${contact.id === selectedId ? 'border-primary bg-selected' : 'border-control-border hover:bg-surface-muted'}`}>
                 <span className="block break-words font-semibold">{contact.name}</span>
                 <span className="mt-1 block break-words text-sm text-muted">{contact.room && contact.room !== 'Unassigned' ? `Room ${contact.room}` : 'Room not assigned'}{contact.phone ? ` · ${contact.phone}` : ''}</span>
                 {contact.id === selectedId && <span className="mt-1 block text-sm font-semibold text-primary">Selected conversation</span>}

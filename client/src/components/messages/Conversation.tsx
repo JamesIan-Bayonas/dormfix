@@ -76,7 +76,7 @@ export function Conversation({ name, phone, onBack, ...options }: Props) {
                     const own = message.senderId === options.userId;
                     return <li key={message.id} className={`flex flex-col gap-1 ${own ? 'items-end' : 'items-start'}`}>
                         <div className="max-w-full break-words text-sm text-muted"><span className="font-semibold">{own ? 'You' : name}</span>{' · '}{message.timestamp ? <time dateTime={message.timestamp}>{new Date(message.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</time> : 'Time unavailable'}</div>
-                        <p className={`max-w-[92%] whitespace-pre-wrap rounded-control px-4 py-3 text-sm leading-relaxed [overflow-wrap:anywhere] sm:max-w-[85%] ${own ? 'bg-primary text-white' : 'border border-divider bg-surface text-ink'}`}>{message.text}</p>
+                        <p className={`max-w-[92%] whitespace-pre-wrap rounded-control px-4 py-3 text-sm leading-relaxed [overflow-wrap:anywhere] sm:max-w-[85%] ${own ? 'bg-primary text-primary-content' : 'border border-divider bg-surface text-ink'}`}>{message.text}</p>
                         {!message.recorded && <span className="text-sm text-muted">Live message · saving unconfirmed</span>}
                     </li>;
                 })}</ol>}

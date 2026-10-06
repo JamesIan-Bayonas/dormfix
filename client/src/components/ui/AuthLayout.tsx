@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Home } from 'lucide-react';
+import { BrandMark } from './BrandMark';
 import { AppearanceHeader } from './AppearanceHeader';
 
 interface AuthLayoutProps { title: string; description: string; children: ReactNode }
@@ -11,7 +11,7 @@ export function AuthLayout({ title, description, children }: AuthLayoutProps) {
                     decoding="async" className="absolute inset-0 h-full w-full object-cover" />
                 <div aria-hidden="true" className="absolute inset-0 bg-auth-overlay/80" />
                 <div className="relative max-w-sm space-y-6 text-center">
-                    <Home size={36} strokeWidth={1.5} className="mx-auto" aria-hidden="true" />
+                    <BrandMark className="mx-auto h-20 w-20" />
                     <p className="font-serif text-4xl">DormFix</p>
                     <p className="text-base leading-relaxed text-auth-ink">Room assignments, payment records, and maintenance in one place.</p>
                 </div>
