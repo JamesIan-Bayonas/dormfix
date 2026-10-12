@@ -72,6 +72,19 @@ Traditional student housing and boarding facility operations frequently suffer f
 
 ---
 
+## Project Structure
+
+```text
+DormFix/
+├── client/          # React, Vite, and TypeScript frontend for landlords and tenants
+├── server/          # Express and TypeScript backend API, Socket.io chat, and OCR services
+├── supabase/        # PostgreSQL schema migrations and database verification scripts
+├── database/        # Baseline SQL database initialization scripts
+├── docs/            # Design system specifications, UI/UX audits, and verification records
+├── render.yaml      # Backend web service deployment configuration
+└── netlify.toml     # Frontend build and client-side routing configuration
+```
+
 ## Key Features & Enterprise Capabilities
 
 * **Zero-Trust Multi-Stage Payment Verification:** Uploaded remittance screenshots pass through Tesseract.js OCR and an Ollama LLaVA parsing pipeline, extracting amounts, dates, and reference numbers validated against strict Zod schemas $\rightarrow$ **Technical Impact:** Detects date drift (>7 days) and amount mismatches automatically, appending diagnostic metadata (`[AI Audit: Anomalous]`) while preventing fraudulent ledger entries.
