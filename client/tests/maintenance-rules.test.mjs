@@ -7,7 +7,7 @@ async function load(path) {
     const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
     return import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 }
-const { maintenanceStatus, nextMaintenanceStatus, urgencyTone, filterMaintenance, replaceMaintenanceStatus, maintenanceBody, issueTypes, urgencyLevels } = await load('../src/utils/maintenancePresentation.ts');
+const { maintenanceStatus, nextMaintenanceStatus, urgencyTone, filterMaintenance, filterMaintenanceQueue, replaceMaintenanceStatus, maintenanceBody, issueTypes, urgencyLevels } = await load('../src/utils/maintenancePresentation.ts');
 const { applicableRules, filterRules, ruleScope } = await load('../src/utils/rulesPresentation.ts');
 
 test('all recorded maintenance statuses have truthful labels and existing progression', () => {
@@ -33,6 +33,27 @@ test('active, urgency and local search filters exclude finished work without cha
     assert.deepEqual(filterMaintenance(requests, 'all', 'all', '108').map(request => request.id), ['1']);
     assert.deepEqual(filterMaintenance(requests, 'Rejected', 'all').map(request => request.id), ['4']);
     assert.equal(requests[0].status, 'Pending');
+});
+
+const queueFilters = { query: '', status: 'active', urgency: 'all', issue: 'all', from: '', to: '', sort: 'urgency' };
+const queue = [
+    { id: 'a', status: 'Pending', urgency: 'High', issueType: 'Plumbing', tenantName: 'Alex', roomNumber: '101', description: 'Leaking tap', dateSubmitted: '2026-09-05T12:00:00' },
+    { id: 'b', status: 'In Progress', urgency: 'Emergency', issueType: 'Electrical', tenantName: 'Sam', roomNumber: '102', description: 'Broken outlet', dateSubmitted: '2026-09-10T12:00:00' },
+    { id: 'c', status: 'Completed', urgency: 'Emergency', issueType: 'Plumbing', tenantName: 'Alex', roomNumber: '101', description: 'Repaired pipe', dateSubmitted: '2026-09-11T12:00:00' },
+    { id: 'd', status: 'Pending', urgency: 'High', issueType: 'Other', description: 'Loose handle', dateSubmitted: 'invalid' },
+];
+test('maintenance queue combines search, progress, urgency, issue and inclusive submitted dates', () => {
+    assert.deepEqual(filterMaintenanceQueue(queue, { ...queueFilters, query: '  101  ', issue: 'Plumbing', from: '2026-09-05', to: '2026-09-10' }).map(item => item.id), ['a']);
+    assert.deepEqual(filterMaintenanceQueue(queue, { ...queueFilters, urgency: 'Emergency', query: 'outlet' }).map(item => item.id), ['b']);
+    assert.deepEqual(filterMaintenanceQueue(queue, { ...queueFilters, status: 'all', from: '2026-09-10', to: '2026-09-11' }).map(item => item.id), ['c', 'b']);
+    assert.equal(filterMaintenanceQueue(queue, { ...queueFilters, issue: 'Structural' }).length, 0);
+});
+test('maintenance urgency ordering puts emergency work first and preserves the original records', () => {
+    assert.deepEqual(filterMaintenanceQueue(queue, queueFilters).map(item => item.id), ['b', 'a', 'd']);
+    assert.deepEqual(filterMaintenanceQueue(queue, { ...queueFilters, status: 'all', sort: 'newest' }).map(item => item.id), ['c', 'b', 'a', 'd']);
+    assert.deepEqual(filterMaintenanceQueue(queue, { ...queueFilters, sort: 'oldest' }).map(item => item.id), ['a', 'b', 'd']);
+    assert.deepEqual(queue.map(item => item.id), ['a', 'b', 'c', 'd']);
+    assert.equal(queue[0].status, 'Pending');
 });
 test('failed update rolls back only that record, preserving another confirmed status and notes', () => {
     const baseline = [{ id: 'a', status: 'Pending', description: 'A' }, { id: 'b', status: 'In Progress', description: 'B' }];

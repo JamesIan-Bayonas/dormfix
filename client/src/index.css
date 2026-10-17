@@ -213,6 +213,23 @@
   }
   .df-appearance-select:hover { @apply border-primary; }
   .df-panel { @apply min-w-0 rounded-panel border border-divider bg-surface p-4 sm:p-6; }
+  .df-maintenance-table { @apply min-w-0; }
+  .df-maintenance-table-head { @apply sr-only; }
+  .df-maintenance-row { @apply grid min-w-0 items-center gap-x-3 gap-y-2 py-4; grid-template-columns: minmax(0,1fr) auto; }
+  .df-maintenance-row > * { min-width: 0; overflow-wrap: anywhere; }
+  .df-maintenance-row--item { @apply cursor-pointer rounded-control transition-colors hover:bg-surface-muted; }
+  .df-maintenance-person { grid-column: 1 / -1; grid-row: 1; }
+  .df-maintenance-issue { grid-column: 1; grid-row: 2; }
+  .df-maintenance-date { grid-column: 1 / -1; grid-row: 3; }
+  .df-maintenance-urgency { grid-column: 1 / -1; grid-row: 4; }
+  .df-maintenance-progress { grid-column: 1; grid-row: 5; }
+  .df-maintenance-open { grid-column: 2; grid-row: 5; justify-self: end; }
+  .df-maintenance-open .df-button { @apply whitespace-nowrap px-2; }
+  @media (min-width: 1024px) {
+    .df-maintenance-table-head { @apply not-sr-only block border-b border-divider bg-surface-muted text-xs font-semibold uppercase tracking-wide text-muted; }
+    .df-maintenance-row { grid-template-columns: minmax(0,1.3fr) minmax(0,.8fr) minmax(0,1fr) minmax(0,1.2fr) minmax(0,1.1fr) 6rem; @apply px-3 py-2 text-sm; }
+    .df-maintenance-row > * { grid-column: auto; grid-row: auto; }
+  }
   .df-page-title { @apply text-2xl font-semibold leading-tight tracking-tight text-ink sm:text-3xl; }
   .df-section-title { @apply text-lg font-semibold leading-snug text-ink sm:text-xl; }
   .df-page { @apply mx-auto w-full max-w-workspace p-4 sm:p-6 lg:p-8; overflow-wrap: anywhere; }
@@ -306,3 +323,14 @@ body:has(dialog[open]) { overflow: hidden; }
   border-radius: 0;
 }
 .df-dialog-content { overflow-wrap: anywhere; }
+
+/* Compact tenant list omits tenant and room identity. */
+.df-maintenance-table--tenant .df-maintenance-issue { grid-row: 1; }
+.df-maintenance-table--tenant .df-maintenance-date { grid-row: 2; }
+.df-maintenance-table--tenant .df-maintenance-urgency { grid-row: 3; }
+.df-maintenance-table--tenant .df-maintenance-progress,
+.df-maintenance-table--tenant .df-maintenance-open { grid-row: 4; }
+@media (min-width: 1024px) {
+  .df-maintenance-table--tenant .df-maintenance-row { grid-template-columns: minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.2fr) minmax(0,1.1fr) 6rem; }
+  .df-maintenance-table--tenant .df-maintenance-row > * { grid-column: auto; grid-row: auto; }
+}
