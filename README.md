@@ -72,6 +72,19 @@ Traditional student housing and boarding facility operations frequently suffer f
 
 ---
 
+## Project Structure
+
+```text
+DormFix/
+├── client/          # React, Vite, and TypeScript frontend for landlords and tenants
+├── server/          # Express and TypeScript backend API, Socket.io chat, and OCR services
+├── supabase/        # PostgreSQL schema migrations and database verification scripts
+├── database/        # Baseline SQL database initialization scripts
+├── docs/            # Design system specifications, UI/UX audits, and verification records
+├── render.yaml      # Backend web service deployment configuration
+└── netlify.toml     # Frontend build and client-side routing configuration
+```
+
 ## Key Features & Enterprise Capabilities
 
 * **Zero-Trust Multi-Stage Payment Verification:** Uploaded remittance screenshots pass through Tesseract.js OCR and an Ollama LLaVA parsing pipeline, extracting amounts, dates, and reference numbers validated against strict Zod schemas $\rightarrow$ **Technical Impact:** Detects date drift (>7 days) and amount mismatches automatically, appending diagnostic metadata (`[AI Audit: Anomalous]`) while preventing fraudulent ledger entries.
@@ -80,108 +93,6 @@ Traditional student housing and boarding facility operations frequently suffer f
 * **Role-Based Onboarding & Authorization Gatekeeper:** New tenant registrations are tied to unique landlord identifiers (`#XXXXXX`) and held in an unapproved state (`is_approved = 0`) $\rightarrow$ **Technical Impact:** Prevents unauthorized dashboard access via React Router context guards and `PendingApproval` screens until verified by property managers.
 * **Isolated Room-Scoped Real-Time Messaging:** Socket.io dynamically instantiates unique communication namespaces combining landlord and tenant UUIDs with administrative moderation $\rightarrow$ **Technical Impact:** Delivers sub-50ms bidirectional message propagation while giving landlords authority to restrict/mute disrupted channels dynamically.
 * **Granular Building Policy Management:** Landlords can broadcast property directives either globally across the facility or targeted to specific room units with severity flags $\rightarrow$ **Technical Impact:** Normalizes house rules into searchable relational entities, displaying real-time policy reminders across tenant views.
-
----
-
-## Project Structure
-
-```text
-dormfix/
-├── .gitignore                          # Global version control ignore rules
-├── LICENSE                             # Proprietary source-available legal license
-├── package.json                        # Root monorepo build and startup scripts
-├── README.md                           # Comprehensive architectural and setup documentation
-├── client/                             # Frontend Single Page Application (SPA)
-│   ├── daisyui.d.ts                    # DaisyUI TypeScript module definitions
-│   ├── eslint.config.js                # ESLint 9 configuration ruleset
-│   ├── index.html                      # HTML5 entry template with Inter & Playfair Display fonts
-│   ├── package.json                    # Client dependency manifest (React 19, Tailwind v4, Vite)
-│   ├── tailwind.config.ts              # Tailwind CSS theme mappings (sage & amberGold palettes)
-│   ├── tsconfig.app.json               # Application-specific TypeScript compiler configuration
-│   ├── tsconfig.json                   # Root client TypeScript project references
-│   ├── tsconfig.node.json              # Node environment configuration for Vite tooling
-│   ├── vite.config.ts                  # Vite build engine configuration and local proxy rules
-│   ├── public/                         # Public static graphics and preview assets
-│   │   ├── landlord.png
-│   │   ├── tenant.png
-│   │   └── vite.svg
-│   └── src/                            # Application source code
-│       ├── App.tsx                     # Main application router and Toast notifications wrapper
-│       ├── index.css                   # Global Tailwind utilities and scrollbar styling
-│       ├── main.tsx                    # React DOM strict root initialization
-│       ├── TenantOnboarding.tsx        # Tenant dorm pairing token input screen
-│       ├── api/
-│       │   └── client.ts               # Fetch wrapper handling JSON/FormData headers and base URLs
-│       ├── assets/                     # Frontend SVG vector assets
-│       ├── components/                 # Reusable UI component modules
-│       │   ├── Login.tsx               # Split-screen user authentication view
-│       │   ├── MaintenanceList.tsx     # Tenant maintenance history ledger
-│       │   ├── Sidebar.tsx             # Landlord desktop navigation sidebar
-│       │   ├── UserContext.tsx         # Centralized Auth React Context and LocalStorage persistence
-│       │   ├── dashboards/             # Primary role-based portal views
-│       │   │   ├── LandlordDashboard.tsx  # Landlord operational metrics and room matrix
-│       │   │   ├── Register.tsx           # Dual-role account registration form
-│       │   │   └── TenantDashboard.tsx    # Tenant housing portal and action center
-│       │   ├── landlord/               # Landlord administrative interface modules
-│       │   │   ├── LandlordChat.tsx       # Multi-tenant messaging console with mute controls
-│       │   │   ├── LandlordMaintenanceList.tsx # Incident ticket triage and dispatch panel
-│       │   │   ├── LandlordPaymentHistory.tsx # Zero-Trust payment audit and verification board
-│       │   │   ├── LandlordRoomList.tsx   # Room inventory, capacity limits, and density meters
-│       │   │   ├── LandlordRules.tsx      # Building directive manager with scope filters
-│       │   │   ├── LandlordTenantChecklist.tsx # Tenant verification queue and unit allocation
-│       │   │   └── RoomDetailDrawer.tsx   # Interactive slide-over drawer for room inspection
-│       │   └── tenant/                 # Tenant operational modules
-│       │       ├── PendingApproval.tsx    # Authorization lock screen for unverified accounts
-│       │       ├── TenantChat.tsx         # Floating/dedicated landlord messaging client
-│       │       ├── TenantPaymentForm.tsx  # Receipt dropzone with live Zero-Trust AI status
-│       │       └── TenantPaymentHistory.tsx # Payment ledger statements with OCR breakdowns
-│       ├── hooks/                      # Custom state management and data fetching hooks
-│       │   ├── useMaintenance.ts       # Maintenance query hook with optimistic state updates
-│       │   ├── useMyPayments.ts        # Tenant-specific payment statement query hook
-│       │   ├── usePayments.ts          # Landlord payment audit hook with optimistic verification
-│       │   └── useRooms.ts             # Property room inventory query and mutation hook
-│       ├── services/                   # Frontend API integration services
-│       │   ├── maintenanceService.ts   # Maintenance CRUD network requests
-│       │   ├── paymentService.ts       # Payment submission and status dispatch requests
-│       │   ├── roomService.ts          # Room inventory and assignment network requests
-│       │   └── ruleService.ts          # House rule configuration requests
-│       └── types/
-│           └── types.ts                # Shared TypeScript domain contracts and interfaces
-├── database/
-│   └── script.sql                      # T-SQL MSSQL schema definition and constraints
-└── server/                             # Express REST API Backend & WebSocket Server
-    ├── .gitignore                      # Server-specific ignore rules (uploads, environment)
-    ├── package.json                    # Server dependencies (Express 5, MSSQL, Ollama, Tesseract)
-    ├── tsconfig.json                   # Node16 module resolution TypeScript compiler configuration
-    └── src/                            # Server source code
-        ├── index.ts                    # HTTP/WebSocket server entry, CORS configuration, and socket routing
-        ├── config/
-        │   └── dbConfig.ts             # MSSQL Connection Pool initialization with Azure/local fallback
-        ├── controllers/                # Business logic request handlers
-        │   ├── authController.ts       # Registration transactions and salted bcrypt authentication
-        │   ├── maintenanceController.ts # Incident submission, AI triage, and status persistence
-        │   ├── paymentController.ts    # OCR receipt scanning, LLM audit comparison, and verification
-        │   ├── roomController.ts       # Room creation and atomic capacity-checked tenant assignment
-        │   ├── ruleController.ts       # Building policy creation, scoping, and removal
-        │   ├── tenantController.ts     # Tenant authorization, eviction transactions, and queries
-        │   └── uploadController.ts     # Generic Multer file upload handler
-        ├── middleware/
-        │   └── uploadMiddleware.ts     # Multer disk storage and unique timestamp filename generator
-        ├── repositories/
-        │   └── paymentRepository.ts    # Parameterized SQL queries for payment data access
-        ├── routes/                     # Express REST route definitions
-        │   ├── authRoutes.ts           # `/api/login`, `/api/register`
-        │   ├── maintenanceRoutes.ts    # `/api/maintenance`
-        │   ├── paymentRoutes.ts        # `/api/payments`
-        │   ├── roomRoutes.ts           # `/api/landlord/rooms`, `/api/landlord/assign`
-        │   ├── ruleRoutes.ts           # `/api/rules`
-        │   ├── tenantRoutes.ts         # `/api/landlord/tenants`, `/api/tenant/details`
-        │   └── uploadRoutes.ts         # `/api/upload`
-        └── services/                   # Domain orchestration services
-            ├── aiService.ts            # Tesseract OCR & Ollama (LLaVA) Zod schema analysis pipeline
-            └── notificationService.ts  # Nodemailer SMTP and emergency SMS notification gateway
-
-```
 
 ---
 
