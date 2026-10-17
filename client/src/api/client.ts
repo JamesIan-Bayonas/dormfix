@@ -1,52 +1,26 @@
-// client/src/api/client.ts
+import { sessionFetch } from './session';
 
-// Dynamic environment routing for safe Vercel deployment
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'; 
-
-// Helper to handle the actual fetch logic
-const request = async <T>(endpoint: string, options: RequestInit = {}): Promise<{ data: T }> => {
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+type ApiOptions = Omit<RequestInit, 'body'> & { body?: unknown };
+const request = async <T>(endpoint: string, options: ApiOptions = {}): Promise<{ data: T }> => {
     const { headers, body, ...rest } = options;
-    const configHeaders: HeadersInit = { ...headers };
-
-    let configBody: BodyInit | null | undefined = body as BodyInit;
-
-    // 1. Auto-detect JSON vs FormData
-    if (body && !(body instanceof FormData)) { 
-        (configHeaders as any)['Content-Type'] = 'application/json';
-        configBody = JSON.stringify(body);
-    } 
-
-    // 2. Make the Request targeting our dynamic BASE_URL
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
-        ...rest,
-        headers: configHeaders,
-        body: configBody,
+    const configHeaders = new Headers(headers);
+    const multipart = body instanceof FormData;
+    if (body != null && !multipart) configHeaders.set('Content-Type', 'application/json');
+    const response = await sessionFetch(BASE_URL + endpoint, {
+        ...rest, headers: configHeaders,
+        body: body == null ? null : multipart ? body : JSON.stringify(body),
     });
-
-    // 3. Global Error Handler
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP Error ${response.status}`);
+        throw new Error(errorData.error || 'HTTP Error ' + response.status);
     }
-
-    // 4. Return in "Axios Style" ({ data: ... }) 
-    const data = await response.json();
-    return { data };
+    return { data: response.status === 204 ? undefined as T : await response.json() };
 };
-
-// Export the object with methods
 export const apiClient = {
     get: <T>(url: string) => request<T>(url, { method: 'GET' }),
-    
-    post: <T>(url: string, body?: any, options: RequestInit = {}) => 
-        request<T>(url, { method: 'POST', body, ...options }),
-    
-    put: <T>(url: string, body?: any, options: RequestInit = {}) => 
-        request<T>(url, { method: 'PUT', body, ...options }),
-    
-    patch: <T>(url: string, body?: any, options: RequestInit = {}) => 
-        request<T>(url, { method: 'PATCH', body, ...options }),
-    
-    delete: <T>(url: string, options: RequestInit = {}) => 
-        request<T>(url, { method: 'DELETE', ...options }),
+    post: <T>(url: string, body?: unknown, options: RequestInit = {}) => request<T>(url, { method: 'POST', ...options, body }),
+    put: <T>(url: string, body?: unknown, options: RequestInit = {}) => request<T>(url, { method: 'PUT', ...options, body }),
+    patch: <T>(url: string, body?: unknown, options: RequestInit = {}) => request<T>(url, { method: 'PATCH', ...options, body }),
+    delete: <T>(url: string, options: RequestInit = {}) => request<T>(url, { method: 'DELETE', ...options }),
 };
