@@ -1,3 +1,5 @@
+import { requireSession } from '../middleware/session';
+import { landlordOnly, tenantOnly, selfParam, selfBody, bindBody, tenantOwner } from '../middleware/authorization';
 import express from 'express';
 import { 
     approveTenant, 
@@ -9,17 +11,18 @@ import {
 } from '../controllers/tenantController';
 
 const router = express.Router();
+router.use(requireSession);
 
 // Landlord Actions
-router.patch('/landlord/approve/:tenantId', approveTenant);
-router.delete('/landlord/reject/:tenantId', rejectTenant);
-router.get('/landlord/tenants/:landlordId', getLandlordTenants);
+router.patch('/landlord/approve/:tenantId', tenantOwner('params','tenantId'), approveTenant);
+router.delete('/landlord/reject/:tenantId', tenantOwner('params','tenantId'), rejectTenant);
+router.get('/landlord/tenants/:landlordId', landlordOnly, selfParam('landlordId'), getLandlordTenants);
 
 // Tenant Actions
-router.get('/tenant/details/:tenantId', getTenantDetails);
-router.post('/tenant/relink', relinkTenant);
+router.get('/tenant/details/:tenantId', tenantOnly, selfParam('tenantId'), getTenantDetails);
+router.post('/tenant/relink', tenantOnly, selfBody('tenantId'), bindBody('tenantId'), relinkTenant);
 
 // Generic Actions
-router.patch('/users/:id/status', updateUserStatus);
+router.patch('/users/:id/status', tenantOwner('params','id'), updateUserStatus);
 
 export default router;
