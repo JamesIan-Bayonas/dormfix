@@ -111,8 +111,8 @@ export const maintenanceRepository = {
     },
 
     // 5. Update request status
-    updateStatus: async (id: string, status: string) => {
+    updateStatus: async (id: string, status: string, landlordId?: string) => {
 
-        await pool.query(`UPDATE maintenance_requests SET status = $1 WHERE id = $2`, [status, id]);
+        await pool.query(`UPDATE maintenance_requests SET status=$1 WHERE id=$2 AND ($3::varchar IS NULL OR EXISTS(SELECT 1 FROM dorm_assignments da WHERE da.tenant_id=maintenance_requests.tenant_id AND da.landlord_id=$3 AND (SELECT count(*) FROM dorm_assignments x WHERE x.tenant_id=da.tenant_id)=1))`, [status,id,landlordId || null]);
     }
 };

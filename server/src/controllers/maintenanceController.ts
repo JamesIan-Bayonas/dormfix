@@ -68,7 +68,8 @@ export const submitMaintenance = async (req: Request, res: Response) => {
 
 export const getMaintenance = async (req: Request, res: Response) => {
     const { userId } = req.params;
-    const { role } = req.query;
+    const role = res.locals.actor.role;
+    if (req.query.role && req.query.role !== role) { res.status(403).json({error:'The requested role does not match your session.'});return; }
 
     try {
         if (role === 'landlord') {
@@ -95,7 +96,7 @@ export const updateMaintenanceStatus = async (req: Request, res: Response) => {
     }
 
     try {
-        await maintenanceRepository.updateStatus(id, status);
+        await maintenanceRepository.updateStatus(id, status, res.locals.actor.id);
         res.json({ message: "Status updated successfully" });
     } catch (error) {
         console.error("Update Status Error:", error);

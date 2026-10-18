@@ -1,3 +1,4 @@
+import { sessionFetch } from '../api/session';
 import { useEffect, useState } from 'react';
 import { useAuth } from './UserContext';
 import type { MaintenanceRequest } from '../types/types';
@@ -13,7 +14,7 @@ export function MaintenanceList({ refreshKey = 0 }: { refreshKey?: number }) {
         if (!user?.id) { setLoading(false); return; }
         let active = true;
         setLoading(true);
-        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/maintenance/${user.id}`)
+        sessionFetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/maintenance/${user.id}`)
             .then(async response => {
                 if (!response.ok) throw new Error();
                 const data = await response.json();
