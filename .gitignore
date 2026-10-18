@@ -34,3 +34,10 @@ uploads/
 
 /src/generated/prisma
 repomix-output.xml
+
+# Local design screenshots and obsolete image assets
+/docs/screenshots/
+/client/public/landlord.png
+/client/public/tenant.png
+/client/public/vite.svg
+/client/src/assets/react.svg
