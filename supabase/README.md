@@ -1,5 +1,9 @@
 # DormFix PostgreSQL schema migration
 
+## Announcements follow-up migration
+
+The announcement feature also requires `migrations/202610170001_announcements_and_sessions.sql`. Apply it once after the initial schema and before deploying the updated server, because login now creates database-backed sessions. Users then sign out and sign in again. See [feature and deployment details](../docs/dorm-announcements-implementation.md). Follow-up [release verification](../docs/local-release-verification.md) found the required tables already present in the configured database and verified them without rerunning the migration.
+
 ## Apply the migration
 
 1. Create a fresh **development** Supabase project and save its database password privately.
