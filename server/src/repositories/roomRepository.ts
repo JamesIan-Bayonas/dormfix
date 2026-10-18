@@ -51,6 +51,8 @@ export const roomRepository = {
             // Serialize assignments for this tenant and capacity checks for this room.
             const tenant = await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [tenantId]);
             if (!tenant.rows.length) throw new Error('Tenant does not exist.');
+            const links = await client.query('SELECT landlord_id FROM dorm_assignments WHERE tenant_id=$1 FOR UPDATE',[tenantId]);
+            if (links.rows.length !== 1 || links.rows[0].landlord_id !== landlordId) throw new Error('Tenant is not assigned to your dormitory.');
             const room = await client.query(`SELECT capacity FROM rooms
                 WHERE landlord_id = $1 AND room_number = $2 FOR UPDATE`, [landlordId, roomNumber]);
             if (!room.rows.length) throw new Error('Room does not exist.');

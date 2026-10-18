@@ -7,7 +7,7 @@ export const approveTenant = async (req: Request, res: Response) => {
     const { tenantId } = req.params;
 
     try {
-        await tenantRepository.approve(tenantId);
+        await tenantRepository.approve(tenantId, res.locals.actor.id);
         res.json({ message: "Tenant approved successfully" });
     } catch (error) {
         console.error("Approval Error:", error);
@@ -20,7 +20,7 @@ export const rejectTenant = async (req: Request, res: Response) => {
     const { tenantId } = req.params;
 
     try {
-        await tenantRepository.rejectTenantTransaction(tenantId);
+        await tenantRepository.rejectTenantTransaction(tenantId, res.locals.actor.id);
         res.json({ message: "Tenant application rejected successfully" });
     } catch (error) {
         console.error("Reject Error:", error);
@@ -81,9 +81,10 @@ export const getLandlordTenants = async (req: Request, res: Response) => {
 export const updateUserStatus = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { isApproved } = req.body; 
+    if (typeof isApproved !== 'boolean') { res.status(400).json({error:'Approval must be true or false.'});return; }
 
     try {
-        await tenantRepository.updateApprovalStatus(id, isApproved === true);
+        await tenantRepository.updateApprovalStatus(id, isApproved, res.locals.actor.id);
         res.json({ message: "Status updated successfully" });
     } catch (error) {
         console.error("Status Update Error:", error);

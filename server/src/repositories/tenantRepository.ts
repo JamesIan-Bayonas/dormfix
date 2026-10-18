@@ -23,16 +23,20 @@ export interface LandlordTenantRecord {
 
 export const tenantRepository = {
     // 1. Approve Tenant
-    approve: async (tenantId: string) => {
+    approve: async (tenantId: string, landlordId?: string) => {
 
-        await pool.query(`UPDATE users SET is_approved = true WHERE id = $1`, [tenantId]);
+        await pool.query(`UPDATE users SET is_approved = true WHERE id = $1 AND role='tenant' AND ($2::varchar IS NULL OR EXISTS (SELECT 1 FROM dorm_assignments WHERE tenant_id=$1 AND landlord_id=$2))`, [tenantId,landlordId || null]);
     },
 
     // 2. Reject and Unlink Tenant Transaction
-    rejectTenantTransaction: async (tenantId: string) => {
+    rejectTenantTransaction: async (tenantId: string, landlordId?: string) => {
         await withTransaction(async client => {
             await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [tenantId]);
-            await client.query('DELETE FROM payments WHERE tenant_id = $1', [tenantId]);
+            if (landlordId) {
+                const links=await client.query('SELECT landlord_id FROM dorm_assignments WHERE tenant_id=$1 FOR UPDATE',[tenantId]);
+                if (links.rows.length !== 1 || links.rows[0].landlord_id !== landlordId) throw new Error('Tenant no longer belongs to your dormitory.');
+            }
+            await client.query('DELETE FROM payments WHERE tenant_id=$1 AND ($2::varchar IS NULL OR landlord_id=$2)', [tenantId,landlordId || null]);
             await client.query('DELETE FROM maintenance_requests WHERE tenant_id = $1', [tenantId]);
             await client.query('DELETE FROM dorm_assignments WHERE tenant_id = $1', [tenantId]);
             await client.query('UPDATE users SET is_approved = false WHERE id = $1', [tenantId]);
@@ -60,6 +64,7 @@ export const tenantRepository = {
     relinkTransaction: async (tenantId: string, landlordCode: string) => {
         await withTransaction(async client => {
             await client.query('SELECT id FROM users WHERE id = $1 FOR UPDATE', [tenantId]);
+            if ((await client.query('SELECT 1 FROM dorm_assignments WHERE tenant_id=$1',[tenantId])).rows.length) throw new Error('Your account is already linked to a dormitory.');
             const landlord = await client.query(
                 "SELECT id FROM users WHERE dorm_fix_id = $1 AND role = 'landlord'", [landlordCode]);
             if (!landlord.rows.length) throw new Error('Invalid Landlord Code. No matching landlord found.');
@@ -67,6 +72,7 @@ export const tenantRepository = {
                 (id, tenant_id, landlord_id, room_number, move_in_date)
                 VALUES ($1, $2, $3, 'Unassigned', CURRENT_DATE)`,
                 [crypto.randomUUID(), tenantId, landlord.rows[0].id]);
+            await client.query('UPDATE users SET is_approved=false WHERE id=$1',[tenantId]);
         });
     },
     // 5. Get all tenants belonging to a Landlord with Phone Numbers
@@ -89,8 +95,8 @@ export const tenantRepository = {
     },
 
     // 6. Update User Approval Status
-    updateApprovalStatus: async (id: string, isApproved: boolean) => {
+    updateApprovalStatus: async (id: string, isApproved: boolean, landlordId?: string) => {
 
-        await pool.query(`UPDATE users SET is_approved = $1 WHERE id = $2`, [Boolean(isApproved ? 1 : 0), id]);
+        await pool.query(`UPDATE users SET is_approved=$1 WHERE id=$2 AND role='tenant' AND ($3::varchar IS NULL OR EXISTS(SELECT 1 FROM dorm_assignments WHERE tenant_id=$2 AND landlord_id=$3))`, [isApproved,id,landlordId || null]);
     }
 };
