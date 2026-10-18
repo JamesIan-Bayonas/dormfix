@@ -2,6 +2,7 @@
 import React, { createContext, useState, useContext, useEffect, type ReactNode } from 'react';
 import type { User, AuthContextType } from '../types/types';
 import { io, Socket } from 'socket.io-client';
+import { sessionExpiredEvent } from '../api/session';
 
 interface ExtendedAuthContextType extends AuthContextType {
     globalSocket: Socket | null;
@@ -12,11 +13,31 @@ const AuthContext = createContext<ExtendedAuthContextType | undefined>(undefined
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(() => {
         const savedUser = localStorage.getItem('dormfixUser');
-        return savedUser ? JSON.parse(savedUser) : null;
+        try { const saved = savedUser ? JSON.parse(savedUser) : null; return typeof saved?.accessToken === 'string' && /^[a-f0-9]{64}$/i.test(saved.accessToken) ? saved : null; }
+        catch { return null; }
     });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [globalSocket, setGlobalSocket] = useState<Socket | null>(null);
+    useEffect(() => {
+        const changed = (event: StorageEvent) => {
+            if (event.storageArea !== localStorage || event.key !== 'dormfixUser') return;
+            try {
+                const saved = event.newValue ? JSON.parse(event.newValue) : null;
+                setUser(typeof saved?.accessToken === 'string' && /^[a-f0-9]{64}$/i.test(saved.accessToken) ? saved : null);
+            } catch { setUser(null); }
+        };
+        window.addEventListener('storage', changed);
+        return () => window.removeEventListener('storage', changed);
+    }, []);
+    useEffect(() => {
+        const expired = (event: Event) => {
+            if ((event as CustomEvent<{ token: string }>).detail.token !== user?.accessToken) return;
+            setUser(null); setError('Your session expired. Please sign in again.');
+        };
+        window.addEventListener(sessionExpiredEvent, expired);
+        return () => window.removeEventListener(sessionExpiredEvent, expired);
+    }, [user?.accessToken]);
 
     useEffect(() => {
         if (user) {
@@ -28,7 +49,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     useEffect(() => {
         if (user?.id) {
-            const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
+            const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', { auth: { token: user.accessToken } });
             setGlobalSocket(socket);
 
             socket.emit('register_user', user.id);
@@ -42,7 +63,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setGlobalSocket(null);
             }
         }
-    }, [user?.id]);
+    }, [user?.id, user?.accessToken]);
 
     const login = async (email: string, password: string) => {
         setIsLoading(true); 
@@ -58,6 +79,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const data = await response.json();
 
             if (response.ok) {
+                localStorage.setItem('dormfixUser', JSON.stringify(data));
                 setUser(data);
                 setIsLoading(false);
             } else {
@@ -81,6 +103,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const logout = () => {
+        if (user?.accessToken) {
+            void fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logout`, {
+                method: 'POST', headers: { Authorization: `Bearer ${user.accessToken}` },
+            }).catch(() => { /* Local sign out still clears the session on this device. */ });
+        }
         if (globalSocket) {
             globalSocket.disconnect();
         }

@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { userRepository } from '../repositories/userRepository';
+import { createSession } from '../middleware/session';
 
 const generateDormCode = () => {
     return '#' + Math.floor(100000 + Math.random() * 900000).toString();
@@ -30,6 +31,7 @@ export const login = async (req: Request, res: Response) => {
 
         const formattedUser = {
             ...safeUser,
+            accessToken: await createSession(user.id),
             phoneNumber: user.phone_number || undefined,
             dormFixId: user.dorm_fix_id,
             isApproved: user.is_approved, 
@@ -51,6 +53,7 @@ export const register = async (req: Request, res: Response) => {
          res.status(400).json({ error: "Missing required fields" });
          return;
     }   
+    if (!['landlord','tenant'].includes(role)) { res.status(400).json({error:'Choose landlord or tenant.'});return; }
 
     try {
         const userId = crypto.randomUUID();

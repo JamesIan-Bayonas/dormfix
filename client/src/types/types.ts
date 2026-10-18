@@ -2,6 +2,7 @@
 export type UserRole = 'landlord' | 'tenant';
 
 export interface User {
+  accessToken?: string;
   id: string;
   name: string;
   role: UserRole;
@@ -62,7 +63,7 @@ export interface Payment {
     datePaid: string;
     status: 'Pending' | 'Verified' | 'Rejected' | 'Anomalous';
     proofImage: string;
-    remarks?: string;
+    remarks?: string | null;
     rejectionReason?: string;
 }
 
