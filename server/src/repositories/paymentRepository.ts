@@ -40,7 +40,7 @@ export const paymentRepository = {
                     u.name as "tenantName", da.room_number as "roomNumber"
                 FROM payments p
                 JOIN users u ON p.tenant_id = u.id
-                LEFT JOIN dorm_assignments da ON p.tenant_id = da.tenant_id
+                LEFT JOIN dorm_assignments da ON p.tenant_id = da.tenant_id AND da.landlord_id = p.landlord_id
                 WHERE p.landlord_id = $1
                 ORDER BY CASE WHEN p.status = 'Pending' THEN 1 ELSE 2 END, p.date_paid DESC
             `, [landlordId]);
@@ -94,12 +94,12 @@ export const paymentRepository = {
     },
 
     // 7. Verify and append remarks to a Payment
-    verify: async (id: string, status: string, appendedRemarks: string) => {
+    verify: async (id: string, status: string, appendedRemarks: string, landlordId?: string) => {
 
         await pool.query(`
                 UPDATE payments 
                 SET status = $1, remarks = CONCAT(remarks, $2::text) 
-                WHERE id = $3
-            `, [status, appendedRemarks, id]);
+                WHERE id = $3 AND ($4::varchar IS NULL OR landlord_id=$4)
+            `, [status, appendedRemarks, id, landlordId || null]);
     }
 };

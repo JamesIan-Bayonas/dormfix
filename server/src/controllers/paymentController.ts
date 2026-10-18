@@ -141,18 +141,21 @@ export const getTenantHistory = async (req: Request, res: Response) => {
 export const verifyPayment = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status, reason } = req.body; 
+    if (!['Verified', 'Rejected'].includes(status) || (status === 'Rejected' && (typeof reason !== 'string' || !reason.trim())) || (reason !== undefined && (typeof reason !== 'string' || reason.length > 2000))) {
+        res.status(400).json({ error: 'Choose Verified or Rejected and include a rejection reason when rejecting.' }); return;
+    }
 
     try {
         const tenantEmail = await paymentRepository.getTenantEmailByPaymentId(id);
         const appendedRemarksUpdate = `\n[Landlord Verification Verdict: ${status}]${reason ? `\n[Rejection Reason: ${reason}]` : ''}`;
 
-        await paymentRepository.verify(id, status, appendedRemarksUpdate);
+        await paymentRepository.verify(id, status, appendedRemarksUpdate, res.locals.actor.id);
 
         if (tenantEmail) {
             await notificationService.sendTenantUpdate(tenantEmail, status, reason);
         }
 
-        res.json({ message: `Payment marked as ${status} and tenant notified.` });
+        res.json({ message: `Payment marked as ${status}.` });
     } catch (error) {
         console.error("Verify Payment Error:", error);
         res.status(500).json({ error: "Failed to update payment" });
