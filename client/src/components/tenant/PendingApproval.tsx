@@ -1,14 +1,15 @@
 import { LogOut } from 'lucide-react';
 import { useAuth } from '../UserContext';
 import { Button } from '../ui/Button';
-import { Panel } from '../ui/Layout';
 import { StatusBadge } from '../ui/StatusBadge';
+import { AppearanceHeader } from '../ui/AppearanceHeader';
 
 export function PendingApproval() {
     const { logout, user } = useAuth();
     return (
         <main className="flex min-h-dvh items-center justify-center bg-canvas p-4 sm:p-6">
-            <Panel className="w-full max-w-form space-y-6">
+            <div className="df-attention-card df-attention-card--warning w-full max-w-form space-y-6">
+                <AppearanceHeader />
                 <StatusBadge tone="warning">Awaiting landlord approval</StatusBadge>
                 <div className="space-y-3">
                     <h1 className="df-page-title">Your request is pending</h1>
@@ -25,7 +26,7 @@ export function PendingApproval() {
                     </ul>
                 </div>
                 <Button onClick={logout} className="w-full"><LogOut size={18} aria-hidden="true" />Sign out and check later</Button>
-            </Panel>
+            </div>
         </main>
     );
 }

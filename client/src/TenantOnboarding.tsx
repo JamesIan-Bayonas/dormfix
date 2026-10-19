@@ -1,8 +1,10 @@
+import { sessionFetch } from './api/session';
 // client/src/TenantOnboarding.tsx
 import React, { useState } from 'react';
-import { Home, Key, ArrowRight, CheckSquare, AlertCircle } from 'lucide-react';
+import { Key, ArrowRight, CheckSquare, AlertCircle } from 'lucide-react';
+import { BrandMark } from './components/ui/BrandMark';
 import { useAuth } from './components/UserContext';
-import toast from 'react-hot-toast';
+import { notify } from './utils/notify';
 
 export const TenantOnboarding: React.FC<{ onJoin: () => void }> = ({ onJoin }) => {
     const { user } = useAuth();
@@ -25,10 +27,11 @@ export const TenantOnboarding: React.FC<{ onJoin: () => void }> = ({ onJoin }) =
 
         setIsJoining(true);
         setError(null);
+        const toastId = notify.loading('Submitting dormitory application…');
 
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-            const res = await fetch(`${API_URL}/api/tenant/relink`, {
+            const res = await sessionFetch(`${API_URL}/api/tenant/relink`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -43,12 +46,12 @@ export const TenantOnboarding: React.FC<{ onJoin: () => void }> = ({ onJoin }) =
                 throw new Error(data.error || "Failed to link property identifier token.");
             }
 
-            toast.success("Property linkage verified successfully!");
+            notify.success('Dormitory application submitted', { id: toastId, description: 'Check your application status to continue.' });
             onJoin();
-        } catch (err: any) {
-            const errorMessage = err.message || "An unexpected error occurred during property linkage.";
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred during property linkage.';
             setError(errorMessage);
-            toast.error(errorMessage);
+            notify.error('Application could not be submitted', { id: toastId, description: errorMessage });
         } finally {
             setIsJoining(false);
         }
@@ -63,7 +66,7 @@ export const TenantOnboarding: React.FC<{ onJoin: () => void }> = ({ onJoin }) =
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
                     <div className="relative z-10 flex flex-col items-center">
                         <div className="bg-white/10 w-14 h-14 rounded-sm flex items-center justify-center backdrop-blur-sm mb-5 border border-white/20">
-                            <Home className="text-[#e7efdb]" size={28} strokeWidth={1.5} />
+                            <BrandMark className="h-10 w-10 text-[#e7efdb]" />
                         </div>
                         <h2 className="text-3xl font-serif text-white tracking-tight">Property Linkage</h2>
                         <p className="text-[#bac3ba] mt-2 text-xs font-medium tracking-wide">
