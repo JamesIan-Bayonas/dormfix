@@ -1,3 +1,4 @@
+import { sessionFetch } from '../../api/session';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { useAuth } from '../UserContext';
@@ -14,6 +15,7 @@ import { LandlordPaymentHistory } from '../landlord/LandlordPaymentHistory';
 import { LandlordChat } from '../landlord/LandlordChat';
 import { RoomDetailDrawer } from '../landlord/RoomDetailDrawer';
 import { LandlordRules } from '../landlord/LandlordRules';
+import { LandlordAnnouncements } from '../announcements/LandlordAnnouncements';
 
 export function LandlordDashboard() {
     const { user, logout } = useAuth();
@@ -30,7 +32,7 @@ export function LandlordDashboard() {
         if (!user?.id) return;
         setIsLoadingTenants(true);
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/landlord/tenants/${user.id}`);
+            const res = await sessionFetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/landlord/tenants/${user.id}`);
             if (!res.ok) throw new Error('Tenant list unavailable');
             const data = await res.json();
             if (!Array.isArray(data)) throw new Error('Tenant list unavailable');
@@ -69,6 +71,7 @@ export function LandlordDashboard() {
             <Route path="/maintenance" element={<LandlordMaintenanceList />} />
             <Route path="/payments" element={<LandlordPaymentHistory onBack={() => navigate('/')} />} />
             <Route path="/rules" element={<LandlordRules />} />
+            <Route path="/announcements" element={<LandlordAnnouncements />} />
             <Route path="/chat" element={<LandlordChat />} />
         </Routes>
         <RoomDetailDrawer isOpen={!!selectedRoomId} onClose={() => setSelectedRoomId(null)} roomData={selectedRoom}
