@@ -1,7 +1,8 @@
+import { sessionFetch } from './api/session';
 // src/App.tsx
 import { BrowserRouter as Router } from 'react-router-dom';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Toaster } from 'react-hot-toast';
+import { ToastViewport } from './components/ui/ToastViewport';
 import { AuthProvider, useAuth } from './components/UserContext';
 import Login from './components/Login';
 import Register from './components/dashboards/Register'; 
@@ -32,7 +33,7 @@ const AppContent: React.FC = () => {
         setHasHousingLink(null);
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-            const res = await fetch(`${API_URL}/api/tenant/details/${user.id}`);
+            const res = await sessionFetch(`${API_URL}/api/tenant/details/${user.id}`);
             const linked = await readHousingLink(res);
             if (request !== linkRequest.current) return;
             setHasHousingLink(linked);
@@ -50,7 +51,7 @@ const AppContent: React.FC = () => {
         return () => { linkRequest.current += 1; };
     }, [checkTenantHousing, user?.role]);
 
-    if (isLoading || (user?.role === 'tenant' && (lookupTenantId !== user.id || ((isCheckingLink || hasHousingLink === null) && !linkError)))) {
+    if ((isLoading && !!user) || (user?.role === 'tenant' && (lookupTenantId !== user.id || ((isCheckingLink || hasHousingLink === null) && !linkError)))) {
         return (
             <div className="min-h-dvh bg-canvas flex items-center justify-center">
                 <LoadingState>Loading your workspace…</LoadingState>
@@ -91,24 +92,7 @@ const App: React.FC = () => {
     return (
         <Router>
             <AuthProvider>
-                <Toaster 
-                    position="bottom-right" 
-                    toastOptions={{
-                        duration: 4000,
-                        style: {
-                            background: 'var(--df-raised)',
-                            color: 'var(--df-ink)',
-                            border: '1px solid var(--df-divider)',
-                            boxShadow: 'var(--df-overlay-shadow)',
-                        },
-                        success: {
-                            iconTheme: { primary: 'var(--color-success)', secondary: 'var(--color-success-content)' },
-                        },
-                        error: {
-                            iconTheme: { primary: 'var(--color-error)', secondary: 'var(--color-error-content)' },
-                        },
-                    }} 
-                />
+                <ToastViewport />
                 <AppContent />
             </AuthProvider>
         </Router>

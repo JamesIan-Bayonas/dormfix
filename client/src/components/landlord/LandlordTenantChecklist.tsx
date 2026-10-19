@@ -1,3 +1,4 @@
+import { sessionFetch } from '../../api/session';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../UserContext';
 import { TenantDirectory, type DirectoryTenant, type AssignmentRoom } from './TenantDirectory';
@@ -19,7 +20,7 @@ export function LandlordTenantChecklist({ onBack }: { onBack: () => void }) {
         const read = ++roomRead.current;
         setRoomsLoading(true);
         try {
-            const response = await fetch(`${API_URL}/api/landlord/rooms/${user.id}`);
+            const response = await sessionFetch(`${API_URL}/api/landlord/rooms/${user.id}`);
             if (!response.ok) throw new Error();
             const data = await response.json();
             if (!Array.isArray(data)) throw new Error();
@@ -34,7 +35,7 @@ export function LandlordTenantChecklist({ onBack }: { onBack: () => void }) {
         const read = ++tenantRead.current;
         setLoading(true);
         try {
-            const response = await fetch(`${API_URL}/api/landlord/tenants/${user.id}`);
+            const response = await sessionFetch(`${API_URL}/api/landlord/tenants/${user.id}`);
             if (!response.ok) throw new Error();
             const data = await response.json();
             if (!Array.isArray(data)) throw new Error();
@@ -47,7 +48,7 @@ export function LandlordTenantChecklist({ onBack }: { onBack: () => void }) {
     useEffect(() => { refresh(); }, [refresh]);
 
     async function approve(id: string) {
-        const response = await fetch(`${API_URL}/api/landlord/approve/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' } });
+        const response = await sessionFetch(`${API_URL}/api/landlord/approve/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' } });
         if (!response.ok) return false;
         // A read started before this confirmation must not overwrite the updated record.
         tenantRead.current++; setLoading(false);
@@ -55,7 +56,7 @@ export function LandlordTenantChecklist({ onBack }: { onBack: () => void }) {
         return true;
     }
     async function remove(id: string) {
-        const response = await fetch(`${API_URL}/api/landlord/reject/${id}`, { method: 'DELETE' });
+        const response = await sessionFetch(`${API_URL}/api/landlord/reject/${id}`, { method: 'DELETE' });
         if (!response.ok) return false;
         tenantRead.current++; setLoading(false);
         setTenants(current => current.filter(tenant => tenant.id !== id));
@@ -63,7 +64,7 @@ export function LandlordTenantChecklist({ onBack }: { onBack: () => void }) {
         return true;
     }
     async function assign(id: string, roomNumber: string) {
-        const response = await fetch(`${API_URL}/api/landlord/assign`, {
+        const response = await sessionFetch(`${API_URL}/api/landlord/assign`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tenantId: id, landlordId: user?.id, roomNumber }),
         });
