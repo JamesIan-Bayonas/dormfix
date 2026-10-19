@@ -1,5 +1,7 @@
+import { sessionFetch } from '../api/session';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { chatBody, chatMessage, mergeChatMessages, type ChatMessage, type ConversationScope } from '../utils/chatPresentation';
+import { notify } from '../utils/notify';
 
 export interface MessagingSocket {
     connected: boolean;
@@ -12,12 +14,12 @@ export type HistoryLoader = (roomId: string, signal: AbortSignal) => Promise<unk
 export type PresenceLoader = (peerId: string, signal: AbortSignal) => Promise<unknown>;
 const api = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const readHistory: HistoryLoader = async (roomId, signal) => {
-    const response = await fetch(`${api}/api/chat/history/${encodeURIComponent(roomId)}`, { signal });
+    const response = await sessionFetch(`${api}/api/chat/history/${encodeURIComponent(roomId)}`, { signal });
     if (!response.ok) throw new Error('History unavailable');
     return response.json();
 };
 const readPresence: PresenceLoader = async (peerId, signal) => {
-    const response = await fetch(`${api}/api/chat/presence/${encodeURIComponent(peerId)}`, { signal });
+    const response = await sessionFetch(`${api}/api/chat/presence/${encodeURIComponent(peerId)}`, { signal });
     if (!response.ok) throw new Error('Presence unavailable');
     return response.json();
 };
@@ -86,6 +88,7 @@ export function useConversation({ socket, loadHistory = readHistory, loadPresenc
         const error = (payload: unknown) => {
             const message = payload && typeof payload === 'object' ? (payload as Record<string, unknown>).message : null;
             setNotice(typeof message === 'string' ? message : 'A messaging notice was received.');
+            notify.warning('Messaging notice', { id: `chat-notice:${key}`, description: typeof message === 'string' ? message : 'Check the conversation for details.' });
         };
         const changedPresence = (payload: unknown) => {
             if (!payload || typeof payload !== 'object') return;
@@ -113,12 +116,15 @@ export function useConversation({ socket, loadHistory = readHistory, loadPresenc
             historyAbort.current?.abort();
             for (const [event, handler] of Object.entries(events)) socket?.off(event, handler);
         };
-    }, [socket, roomId, userId, peerId, role, refresh, loadPresence]);
+    }, [socket, roomId, userId, peerId, role, refresh, loadPresence, key]);
 
     function setDraft(value: string) { drafts.set(key, value); setDraftState(value); setSendError(null); }
     function newDraft() { setDraft(''); submittedDrafts.delete(key); lastSubmitted.current = null; setSubmitted(null); }
     function send() {
-        if (!socket?.connected) { setSendError('You are disconnected. Your draft is kept. Reconnect before sending.'); return; }
+        if (!socket?.connected) {
+            setSendError('You are disconnected. Your draft is kept. Reconnect before sending.');
+            notify.error('Message not submitted', { id: `chat-send:${key}`, description: 'Reconnect before sending. Your draft is kept.' }); return;
+        }
         if (!draft.trim() || loading || lastSubmitted.current === draft.trim()) return;
         try {
             socket.emit('send_message', chatBody({ roomId, userId, peerId, role }, draft, Date.now()));
@@ -126,7 +132,10 @@ export function useConversation({ socket, loadHistory = readHistory, loadPresenc
             submittedDrafts.set(key, draft.trim());
             setSubmitted(draft.trim());
             setSendError(null);
-        } catch { setSendError('The message could not be submitted. Your draft is kept.'); }
+        } catch {
+            setSendError('The message could not be submitted. Your draft is kept.');
+            notify.error('Message not submitted', { id: `chat-send:${key}`, description: 'Your draft is kept. Please try again.' });
+        }
     }
     return { messages, draft, setDraft, newDraft, send, submitted, connection, loading, historyError, notice, sendError,
         presence, refresh, reconnect: () => socket?.connect(), canSend: connection === 'connected' && !loading && !!draft.trim() && submitted !== draft.trim() };
