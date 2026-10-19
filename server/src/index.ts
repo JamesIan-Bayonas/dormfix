@@ -6,7 +6,10 @@ import path from 'path';
 import fs from 'fs';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import crypto from 'crypto';
+import { configureSecureSockets } from './services/secureSockets';
+import { requireSession } from './middleware/session';
+import { approved } from './middleware/authorization';
+import { privateFile } from './middleware/privateFiles';
 import { chatRepository } from './repositories/chatRepository';
 import { pool } from './config/dbConfig';
 
@@ -19,6 +22,7 @@ import ruleRoutes from './routes/ruleRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 import tenantRoutes from './routes/tenantRoutes';
 import chatRoutes from './routes/chatRoutes';
+import announcementRoutes from './routes/announcementRoutes';
 
 dotenv.config();
 
@@ -55,7 +59,7 @@ const uploadDir = path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
-app.use('/uploads', express.static(uploadDir));
+app.get('/uploads/:filename', requireSession, approved, privateFile);
 
 // Route Mounting
 app.use('/api', authRoutes);
@@ -65,7 +69,12 @@ app.use('/api/landlord', roomRoutes);
 app.use('/api/rules', ruleRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/announcements', announcementRoutes);
 app.use('/api', tenantRoutes);
+
+app.use((error: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    res.status(400).json({ error: error.message.startsWith('Choose a ') || error.message === 'File too large' ? error.message : 'The request could not be processed.' });
+});
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -81,103 +90,7 @@ const io = new Server(httpServer, {
     }
 });
 
-// Presence State: userId -> socketId
-const onlineUsers = new Map<string, string>();
-const socketToUser = new Map<string, string>();
-
-io.on('connection', (socket) => {
-    // 1. User Registration on Initial Entry
-    socket.on('register_user', async (userId: string) => {
-        if (!userId) return;
-
-        onlineUsers.set(userId, socket.id);
-        socketToUser.set(socket.id, userId);
-
-        try {
-            await chatRepository.updateUserLastSeen(userId);
-        } catch (err) {
-            console.error("Failed to update user login last_seen", err);
-        }
-
-        // Broadcast presence change to all clients
-        io.emit('user_presence_update', {
-            userId,
-            isOnline: true,
-            lastSeen: new Date()
-        });
-    });
-
-    // 2. Query specific presence states
-    socket.on('check_presence', (userId: string) => {
-        const isOnline = onlineUsers.has(userId);
-        socket.emit('presence_status', { userId, isOnline });
-    });
-
-    // 3. Join Dedicated Chat Room
-    socket.on('join_room', (roomId: string) => {
-        socket.join(roomId);
-    });
-
-    // 4. Send and Persist Message
-    socket.on('send_message', async (data) => {
-        const { roomId, senderId, recipientId, role, text } = data;
-        if (!text || !senderId || !roomId) return;
-
-        const messageId = crypto.randomUUID();
-        const timestamp = new Date();
-
-        try {
-            await chatRepository.saveMessage(
-                messageId,
-                roomId,
-                senderId,
-                recipientId || senderId,
-                role,
-                text
-            );
-        } catch (err) {
-            console.error("Failed to persist message:", err);
-        }
-
-        io.to(roomId).emit('receive_message', {
-            id: messageId,
-            senderId,
-            role,
-            text,
-            timestamp
-        });
-    });
-
-    // 5. Moderation Controls
-    socket.on('toggle_mute', (data) => {
-        const { roomId, status } = data;
-        io.to(roomId).emit('chat_error', {
-            message: status ? "Communication capabilities restricted by property management." : "Communication capabilities restored."
-        });
-    });
-
-    // 6. Handle Disconnect & Record Last Seen
-    socket.on('disconnect', async () => {
-        const userId = socketToUser.get(socket.id);
-        if (userId) {
-            onlineUsers.delete(userId);
-            socketToUser.delete(socket.id);
-
-            const now = new Date();
-            try {
-                await chatRepository.updateUserLastSeen(userId);
-            } catch (err) {
-                console.error("Failed to update last_seen on disconnect", err);
-            }
-
-            io.emit('user_presence_update', {
-                userId,
-                isOnline: false,
-                lastSeen: now
-            });
-        }
-    });
-});
+configureSecureSockets(io);
 
 async function start() {
     try {
