@@ -6,8 +6,7 @@ import { useRooms } from '../../hooks/useRooms';
 import { AddRoomDialog } from './AddRoomDialog';
 import { Button } from '../ui/Button';
 import { ErrorState, EmptyState, LoadingState } from '../ui/Feedback';
-import toast from 'react-hot-toast';
-import { PageHeader, Panel } from '../ui/Layout';
+import { PageHeader } from '../ui/Layout';
 import { RoomOccupancy } from './RoomOccupancy';
 
 interface RoomListProps {
@@ -25,14 +24,10 @@ export const LandlordRoomList: React.FC<RoomListProps> = ({ onBack }) => {
             <PageHeader title="Rooms" description="Review capacity and room assignments." action={<Button onClick={() => setIsModalOpen(true)}><Plus size={18} aria-hidden="true" />Add room</Button>} />
             {isLoading ? <LoadingState>Loading rooms…</LoadingState> : error ?
                 <ErrorState title="Rooms could not be loaded" description={error} action={<Button variant="secondary" onClick={refreshRooms}>Try again</Button>} /> : rooms.length === 0 ?
-                <Panel><EmptyState title="No rooms yet" description="Add a room before assigning tenants." action={<Button onClick={() => setIsModalOpen(true)}>Add room</Button>} /></Panel> :
+                <div className="df-card"><EmptyState title="No rooms yet" description="Add a room before assigning tenants." action={<Button onClick={() => setIsModalOpen(true)}>Add room</Button>} /></div> :
                 <RoomOccupancy rooms={rooms} />}
             <AddRoomDialog open={isModalOpen} onClose={() => setIsModalOpen(false)} error={addError}
-                onSave={async (roomNumber, capacity) => {
-                    const saved = await addRoom(roomNumber, capacity);
-                    if (saved) toast.success('Room added successfully.');
-                    return saved;
-                }} />
+                onSave={addRoom} />
         </div>
     );
 };

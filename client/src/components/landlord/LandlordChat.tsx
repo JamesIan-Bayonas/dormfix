@@ -1,9 +1,10 @@
+import { sessionFetch } from '../../api/session';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../UserContext';
 import { Conversation } from '../messages/Conversation';
 import { Contacts, type ChatContact } from '../messages/Contacts';
-import { PageHeader, Panel } from '../ui/Layout';
-import { EmptyState } from '../ui/Feedback';
+import { PageHeader } from '../ui/Layout';
+import { MessagesLayout } from '../messages/MessagesLayout';
 
 export function LandlordChat() {
     const { user, globalSocket } = useAuth();
@@ -17,7 +18,7 @@ export function LandlordChat() {
         if (!user?.id) return;
         const controller = new AbortController();
         setLoading(true); setError(null);
-        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/landlord/tenants/${user.id}`, { signal: controller.signal })
+        sessionFetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/landlord/tenants/${user.id}`, { signal: controller.signal })
             .then(async response => { if (!response.ok) throw new Error(); return response.json() as Promise<unknown>; })
             .then(data => {
                 if (!Array.isArray(data)) throw new Error();
@@ -47,10 +48,8 @@ export function LandlordChat() {
     if (!user) return null;
     return <div className="space-y-6" ref={workspace}>
         <PageHeader title="Messages" description="Choose an approved tenant to view your conversation." />
-        <div className="grid items-start gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
-            <div className={selected ? 'hidden min-w-0 lg:block' : 'min-w-0'}><Contacts contacts={contacts} selectedId={selected?.id} loading={loading} error={error} onRetry={() => setRevision(value => value + 1)} onSelect={setSelected} /></div>
-            {selected ? <Conversation key={`${user.id}:${selected.id}`} roomId={`${user.id}-${selected.id}`} userId={user.id} peerId={selected.id} role="landlord" name={selected.name} phone={selected.phone} socket={globalSocket} onBack={back} /> :
-                <Panel className="hidden lg:block"><EmptyState title="Choose a tenant" description="Select a tenant to read history or write a message." /></Panel>}
-        </div>
+        <MessagesLayout selected={!!selected} contacts={<Contacts contacts={contacts} selectedId={selected?.id} loading={loading} error={error} onRetry={() => setRevision(value => value + 1)} onSelect={setSelected} />}>
+            {selected && <Conversation embedded key={`${user.id}:${selected.id}`} roomId={`${user.id}-${selected.id}`} userId={user.id} peerId={selected.id} role="landlord" name={selected.name} phone={selected.phone} room={selected.room} socket={globalSocket} onBack={back} />}
+        </MessagesLayout>
     </div>;
 }
