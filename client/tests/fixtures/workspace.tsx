@@ -25,7 +25,7 @@ const housing = { landlordId: 'fixture', landlordName: 'Fixture landlord', landl
 
 /* Standalone preview of real presentation components. No auth provider, fetch, sockets, or mutations. */
 export default function WorkspaceFixture() {
-    const [role, setRole] = useState<'landlord' | 'tenant'>('landlord');
+    const [role, setRole] = useState<'landlord' | 'tenant'>(new URLSearchParams(window.location.search).get('role') === 'tenant' ? 'tenant' : 'landlord');
     const [mode, setMode] = useState('Populated');
     const [notice, setNotice] = useState<string | null>(null);
     const empty = mode === 'Empty';
@@ -35,7 +35,7 @@ export default function WorkspaceFixture() {
     const roomDetails = (empty ? [] : rooms).map(room => ({ ...room, status: 'occupied' as const, occupants: tenants.filter(tenant => tenant.roomNumber === room.room_number), occupantPaymentStatus: [], activeIssues: requests.filter(request => request.roomNumber === room.room_number), hasIssue: room.id === 'r1', isCritical: room.id === 'r1' }));
     const user = { name: 'Fixture resident', email: 'resident@example.test', dormFixId: 'FIXTURE-ONLY', phoneNumber: '' };
     return <>
-        <div className="border-b border-divider bg-info-soft p-4 text-sm text-info">
+        <div hidden={new URLSearchParams(window.location.search).has('preview')} className="border-b border-divider bg-info-soft p-4 text-sm text-info">
             <p className="mb-3">Isolated frontend fixture: fictional data, simulated states, no backend requests. Secondary routes below are preview placeholders.</p>
             <div className="flex flex-wrap items-center gap-3">
                 <Button variant="secondary" onClick={() => setRole('landlord')}>Preview landlord</Button>
@@ -56,7 +56,7 @@ export default function WorkspaceFixture() {
                         onRetry={retry} onRules={() => setNotice('House rules fixture')} onEditProfile={() => setNotice('Edit profile fixture')}>
                         <Panel><h2 className="df-section-title">Your maintenance requests</h2><p className="mt-2 text-sm text-muted">Fixture placeholder for the existing maintenance component.</p></Panel>
                     </TenantHome>} />
-                {['payments', 'maintenance', 'tenants', 'rooms', 'chat', 'rules', 'pay', 'report', 'history'].map(path => <Route key={path} path={`/${path}`} element={<div className="space-y-6"><PageHeader title={`${path.charAt(0).toUpperCase()}${path.slice(1)} route fixture`} description="Navigation-only placeholder; no real records or actions." /><Link to="/" className="df-button df-button--secondary">Back to home</Link></div>} />)}
+                {['payments', 'maintenance', 'tenants', 'rooms', 'chat', 'rules', 'pay', 'report', 'history', 'announcements'].map(path => <Route key={path} path={`/${path}`} element={<div className="space-y-6"><PageHeader title={`${path.charAt(0).toUpperCase()}${path.slice(1)} route fixture`} description="Navigation-only placeholder; no real records or actions." /><Link to="/" className="df-button df-button--secondary">Back to home</Link></div>} />)}
             </Routes>
             <Dialog open={!!notice} title={notice || 'Fixture'} onClose={() => setNotice(null)}><p>This action is simulated; no records or sessions are changed.</p></Dialog>
         </WorkspaceShell>
