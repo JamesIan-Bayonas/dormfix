@@ -3,6 +3,7 @@ import React, { createContext, useState, useContext, useEffect, type ReactNode }
 import type { User, AuthContextType } from '../types/types';
 import { io, Socket } from 'socket.io-client';
 import { sessionExpiredEvent } from '../api/session';
+import { notify } from '../utils/notify';
 
 interface ExtendedAuthContextType extends AuthContextType {
     globalSocket: Socket | null;
@@ -34,6 +35,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const expired = (event: Event) => {
             if ((event as CustomEvent<{ token: string }>).detail.token !== user?.accessToken) return;
             setUser(null); setError('Your session expired. Please sign in again.');
+            notify.clear();
+            notify.warning('Session expired', { id: 'session-expired', description: 'Please sign in again to continue.' });
         };
         window.addEventListener(sessionExpiredEvent, expired);
         return () => window.removeEventListener(sessionExpiredEvent, expired);
@@ -68,6 +71,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const login = async (email: string, password: string) => {
         setIsLoading(true); 
         setError(null);
+        const toastId = notify.loading('Signing in…');
         
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/login`, {
@@ -81,14 +85,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (response.ok) {
                 localStorage.setItem('dormfixUser', JSON.stringify(data));
                 setUser(data);
+                notify.success('Signed in successfully', { id: toastId });
                 setIsLoading(false);
             } else {
                 setError(data.error || 'Login failed');
+                notify.error('Sign in failed', { id: toastId, description: data.error || 'Check your email and password and try again.' });
                 setIsLoading(false);
             }
         } catch (err) {
             console.error("Network Error:", err);
             setError('Unable to connect to the server.');
+            notify.error('Unable to sign in', { id: toastId, description: 'Unable to connect to the server. Please try again.' });
             setIsLoading(false);
         }
     };
@@ -103,6 +110,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const logout = () => {
+        notify.clear();
+        notify.info('Signed out on this device', { id: 'signed-out' });
         if (user?.accessToken) {
             void fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/logout`, {
                 method: 'POST', headers: { Authorization: `Bearer ${user.accessToken}` },
