@@ -8,7 +8,7 @@ import { RoomOccupancy } from '../../src/components/landlord/RoomOccupancy';
 import { WorkspaceShell } from '../../src/components/ui/WorkspaceShell';
 import { Button } from '../../src/components/ui/Button';
 import { PageHeader, Panel } from '../../src/components/ui/Layout';
-import { EmptyState } from '../../src/components/ui/Feedback';
+import { MessagesLayout } from '../../src/components/messages/MessagesLayout';
 import type { MessagingSocket } from '../../src/hooks/useConversation';
 
 type Listener = (payload: unknown) => void;
@@ -52,7 +52,7 @@ const user = { id: 'l', name: 'Property manager', email: 'fixture@example.test',
 /* Real conversation hook/components, simulated transport. No auth, API, sockets or persistent writes. */
 export default function MessagesFixture() {
     const { pathname } = useLocation();
-    const tenant = pathname === '/tenant';
+    const tenant = pathname === '/tenant' || new URLSearchParams(window.location.search).get('role') === 'tenant';
     const rooms = pathname === '/rooms';
     const [socket] = useState(() => {
         const transport = new FixtureSocket();
@@ -89,7 +89,7 @@ export default function MessagesFixture() {
     }
     return <WorkspaceShell role={tenant ? 'tenant' : 'landlord'} user={fixtureUser} onLogout={() => {}} onEditProfile={() => {}}>
         <div ref={workspace} className="space-y-6">
-            <Panel className="space-y-3"><p className="text-sm font-semibold">Fictional review fixture · no real accounts or messages</p>
+            <Panel hidden={new URLSearchParams(window.location.search).has('preview')} className="space-y-3"><p className="text-sm font-semibold">Fictional review fixture · no real accounts or messages</p>
                 <nav className="flex flex-wrap gap-2"><Link className="df-button df-button--secondary" to="/chat">Landlord preview</Link><Link className="df-button df-button--secondary" to="/tenant">Tenant preview</Link><Link className="df-button df-button--secondary" to="/rooms">Rooms preview</Link></nav>
                 <details open><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Review controls</summary><div className="space-y-3">
                 <div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => { socket.disconnect(); redraw(value => value + 1); }}>Simulate disconnect</Button><Button variant="secondary" onClick={() => { socket.connect(); redraw(value => value + 1); }}>Simulate reconnect</Button>
@@ -104,11 +104,10 @@ export default function MessagesFixture() {
             </Panel>
             <PageHeader title={rooms ? 'Rooms' : tenant ? 'Message landlord' : 'Messages'} description={tenant ? 'Contact your landlord about your dormitory.' : 'Choose an approved tenant to view your conversation.'} />
             {rooms ? <RoomOccupancy rooms={[{ id: 'r1', room_number: '108', capacity: 2, currentOccupants: 2 }, { id: 'r2', room_number: '109', capacity: 3, currentOccupants: 1 }, { id: 'r3', room_number: 'Very long room reference '.repeat(6), capacity: 1, currentOccupants: 0 }]} /> :
-                <div className={tenant ? 'mx-auto max-w-3xl' : 'grid items-start gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]'}>
-                    {!tenant && <div className={active ? 'hidden min-w-0 lg:block' : 'min-w-0'}><Contacts contacts={contactMode === 'Empty' ? [] : contacts} loading={contactMode === 'Loading'} error={contactMode === 'Error' ? 'Contacts could not be loaded.' : null} selectedId={selected?.id} onSelect={setSelected} onRetry={() => setContactMode('Populated')} /></div>}
-                    {active ? <Conversation key={`${tenant ? 'tenant' : 'landlord'}:${active.id}`} roomId={`l-${active.id}`} userId={tenant ? 't1' : 'l'} peerId={tenant ? 'l' : active.id} role={tenant ? 'tenant' : 'landlord'} name={tenant ? 'Morgan Reyes' : active.name} phone={active.phone} socket={socket} loadHistory={loadHistory} loadPresence={readPresence} onBack={tenant ? undefined : back} /> :
-                        <Panel className="hidden lg:block"><EmptyState title="Choose a tenant" description="Select a tenant to read history or write a message." /></Panel>}
-                </div>}
+                tenant ? <div className="w-full min-w-0"><Conversation roomId="l-t1" userId="t1" peerId="l" role="tenant" name="Morgan Reyes" phone={contacts[0].phone} socket={socket} loadHistory={loadHistory} loadPresence={readPresence} /></div> :
+                <MessagesLayout selected={!!active} contacts={<Contacts contacts={contactMode === 'Empty' ? [] : contacts} loading={contactMode === 'Loading'} error={contactMode === 'Error' ? 'Contacts could not be loaded.' : null} selectedId={selected?.id} onSelect={setSelected} onRetry={() => setContactMode('Populated')} />}>
+                    {active && <Conversation embedded key={`landlord:${active.id}`} roomId={`l-${active.id}`} userId="l" peerId={active.id} role="landlord" name={active.name} phone={active.phone} room={active.room} socket={socket} loadHistory={loadHistory} loadPresence={readPresence} onBack={back} />}
+                </MessagesLayout>}
         </div>
     </WorkspaceShell>;
 }

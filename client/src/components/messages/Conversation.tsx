@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft, Send, Phone, MessageSquare } from 'lucide-react';
+import { ContactAvatar } from './MessagesLayout';
 import { useConversation, type HistoryLoader, type MessagingSocket, type PresenceLoader } from '../../hooks/useConversation';
 import { presenceLabel, type ConversationScope } from '../../utils/chatPresentation';
 import { Button } from '../ui/Button';
@@ -7,12 +8,14 @@ import { Dialog } from '../ui/Dialog';
 import { EmptyState, ErrorMessage, LoadingState } from '../ui/Feedback';
 import { FormField, Textarea } from '../ui/FormField';
 import { StatusBadge } from '../ui/StatusBadge';
+import { notify } from '../../utils/notify';
 
 interface Props extends ConversationScope {
     name: string; phone?: string | null; socket: MessagingSocket | null;
     onBack?: () => void; loadHistory?: HistoryLoader; loadPresence?: PresenceLoader;
+    embedded?: boolean; room?: string | null;
 }
-export function Conversation({ name, phone, onBack, ...options }: Props) {
+export function Conversation({ name, phone, onBack, embedded = false, room, ...options }: Props) {
     const chat = useConversation(options);
     const scroll = useRef<HTMLDivElement>(null);
     const heading = useRef<HTMLHeadingElement>(null);
@@ -36,22 +39,24 @@ export function Conversation({ name, phone, onBack, ...options }: Props) {
         atBottom.current = true; setNewMessages(false);
     }
     function sendNotice() {
-        if (!options.socket?.connected) { setModerationError('You are disconnected. Reconnect before sending the notice.'); return; }
+        if (!options.socket?.connected) { setModerationError('You are disconnected. Reconnect before sending the notice.'); notify.error('Notice not submitted', { id: 'moderation-notice', description: 'Reconnect before sending the notice.' }); return; }
         try {
             options.socket.emit('toggle_mute', { roomId: options.roomId, role: 'landlord', status: moderation });
             setModeration(null); setModerationError(null);
-        } catch { setModerationError('The notice could not be submitted. Please try again.'); }
+            notify.info('Notice submitted', { id: 'moderation-notice', description: 'Delivery and a change in messaging permissions are not confirmed.' });
+        } catch { setModerationError('The notice could not be submitted. Please try again.'); notify.error('Notice could not be submitted', { id: 'moderation-notice' }); }
     }
-    return <section aria-label={`Conversation with ${name}`} className="min-w-0 overflow-hidden rounded-panel border border-divider bg-surface">
-        <header className="space-y-3 border-b border-divider p-4 sm:p-6">
+    return <section aria-label={`Conversation with ${name}`} className={`${embedded ? 'flex h-full flex-col bg-surface' : 'df-card'} min-w-0 overflow-hidden p-0`}>
+        <header className="space-y-3 border-b border-divider p-4 sm:px-6">
             {onBack && <Button variant="quiet" onClick={onBack} className="lg:hidden"><ArrowLeft size={18} aria-hidden="true" />All tenants</Button>}
             <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1"><h2 ref={heading} tabIndex={-1} className="df-section-title break-words">{name}</h2>
+                <div className="flex w-full min-w-0 items-start gap-3 sm:w-auto sm:flex-1"><ContactAvatar name={name} /><div className="min-w-0"><h2 ref={heading} tabIndex={-1} className="break-words text-lg font-semibold">{name}</h2>
+                    {room && room !== 'Unassigned' && <p className="mt-1 break-words text-sm text-muted">Room {room}</p>}
                     <p className="mt-1 text-sm text-muted">{presenceLabel(chat.presence.online, chat.presence.lastSeen)}</p>
-                    {phone && <p className="mt-1 break-words text-sm text-muted">{phone}</p>}</div>
+                    {phone && <p className="mt-1 break-words text-sm text-muted">{phone}</p>}</div></div>
                 <div className="flex flex-wrap gap-2">{phone && <>
-                    <a href={`tel:${phone}`} className="df-button df-button--secondary" aria-label={`Call ${name}`}>Call</a>
-                    <a href={`sms:${phone}`} className="df-button df-button--secondary" aria-label={`Text ${name} by SMS`}>SMS</a>
+                    <a href={`tel:${phone}`} className="df-button df-button--quiet" aria-label={`Call ${name}`}><Phone size={16} aria-hidden="true" />Call</a>
+                    <a href={`sms:${phone}`} className="df-button df-button--quiet" aria-label={`Text ${name} by SMS`}><MessageSquare size={16} aria-hidden="true" />SMS</a>
                 </>}</div>
             </div>
             <div className="flex flex-wrap items-center gap-3" role="status">
@@ -69,14 +74,14 @@ export function Conversation({ name, phone, onBack, ...options }: Props) {
         <div ref={scroll} tabIndex={0} role="log" aria-label="Conversation messages" aria-live="off" onScroll={() => {
             const element = scroll.current;
             if (element) { atBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 60; if (atBottom.current) setNewMessages(false); }
-        }} className="max-h-[min(50dvh,32rem)] min-h-40 overflow-y-auto bg-surface-muted p-4 sm:p-6">
+        }} className="max-h-[min(50dvh,32rem)] min-h-64 flex-1 overflow-y-auto bg-canvas p-4 sm:p-6">
             {chat.loading && !chat.messages.length ? <LoadingState>Loading message history…</LoadingState> : !chat.messages.length && !chat.historyError ?
                 <EmptyState title="No messages yet" description="Write a message below to start this conversation." /> :
                 <ol className="space-y-5">{chat.messages.map(message => {
                     const own = message.senderId === options.userId;
                     return <li key={message.id} className={`flex flex-col gap-1 ${own ? 'items-end' : 'items-start'}`}>
                         <div className="max-w-full break-words text-sm text-muted"><span className="font-semibold">{own ? 'You' : name}</span>{' · '}{message.timestamp ? <time dateTime={message.timestamp}>{new Date(message.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</time> : 'Time unavailable'}</div>
-                        <p className={`max-w-[92%] whitespace-pre-wrap rounded-control px-4 py-3 text-sm leading-relaxed [overflow-wrap:anywhere] sm:max-w-[85%] ${own ? 'bg-primary text-primary-content' : 'border border-divider bg-surface text-ink'}`}>{message.text}</p>
+                        <p className={`max-w-[92%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed [overflow-wrap:anywhere] sm:max-w-[85%] ${own ? 'rounded-tr-sm bg-primary text-primary-content' : 'rounded-tl-sm border border-divider bg-surface text-ink'}`}>{message.text}</p>
                         {!message.recorded && <span className="text-sm text-muted">Live message · saving unconfirmed</span>}
                     </li>;
                 })}</ol>}
@@ -89,8 +94,8 @@ export function Conversation({ name, phone, onBack, ...options }: Props) {
                 ? 'Message submitted to the connection. Saving and delivery are unconfirmed. Your draft is kept; refresh history before resending.'
                 : 'Your earlier message was submitted; saving and delivery are unconfirmed. The text below has changed and has not been submitted.'}</div>}
             <FormField label="Message" hint="Enter adds a new line. Use Send message to submit. Drafts stay while this page is open; reloading clears them.">{description =>
-                <Textarea {...description} ref={composer} rows={3} value={chat.draft} onChange={event => chat.setDraft(event.target.value)} />}</FormField>
-            <div className="flex flex-wrap gap-2"><Button type="submit" disabled={!chat.canSend}><Send size={18} aria-hidden="true" />Send message</Button>
+                <Textarea {...description} ref={composer} placeholder={`Write to ${name}…`} rows={3} value={chat.draft} onChange={event => chat.setDraft(event.target.value)} />}</FormField>
+            <div className="flex flex-wrap justify-end gap-2"><Button type="submit" disabled={!chat.canSend}><Send size={18} aria-hidden="true" />Send message</Button>
                 {chat.submitted === chat.draft.trim() && <Button variant="secondary" onClick={() => { chat.newDraft(); composer.current?.focus(); }}>Write another message</Button>}</div>
         </form>
         {options.role === 'landlord' && <details className="border-t border-divider px-4 py-3 sm:px-6"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Communication notices</summary>
