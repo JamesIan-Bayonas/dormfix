@@ -1,9 +1,10 @@
+import { sessionFetch } from '../../api/session';
 // client/src/components/tenant/TenantChat.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../UserContext';
 import { Send, MessageSquare, Trash2, Minimize2, Phone, MessageCircle } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { notify } from '../../utils/notify';
 
 interface Message {
     id: number;
@@ -32,7 +33,7 @@ export const TenantChat: React.FC<TenantChatProps> = ({ isOpen, onClose }) => {
     useEffect(() => {
         if (!user?.id || !isOpen) return;
 
-        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/tenant/details/${user.id}`)
+        sessionFetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/tenant/details/${user.id}`)
             .then(res => res.json())
             .then(data => {
                 if (!data.error && data.landlordId) {
@@ -41,7 +42,7 @@ export const TenantChat: React.FC<TenantChatProps> = ({ isOpen, onClose }) => {
                     setLandlordName(data.landlordName);
                     setLandlordPhone(data.landlordPhone || null);
 
-                    const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
+                    const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', { auth: { token: user.accessToken } });
                     setSocket(newSocket);
                     newSocket.emit('join_room', generatedRoomId);
 
@@ -58,14 +59,15 @@ export const TenantChat: React.FC<TenantChatProps> = ({ isOpen, onClose }) => {
 
                     newSocket.on('message_undone', (data) => {
                         setMessages((prev) => prev.filter(m => m.id !== data.messageId));
+                        notify.info('Message removed from this conversation', { id: 'chat-recall' });
                     });
 
                     newSocket.on('chat_error', (error) => {
-                        toast.error(error.message, { icon: '🛑' });
+                        notify.error('Messaging notice', { id: 'chat-error', description: error.message });
                     });
                 }
             })
-            .catch(() => toast.error("Failed to connect to chat server."));
+            .catch(() => notify.error('Failed to connect to chat server.', { id: 'chat-connection' }));
 
         return () => { socket?.close(); };
     }, [user?.id, isOpen]);
@@ -73,7 +75,8 @@ export const TenantChat: React.FC<TenantChatProps> = ({ isOpen, onClose }) => {
     // 2. Send Message
     const sendMessage = (e: React.FormEvent) => {
         e.preventDefault();
-        if (newMessage.trim() === '' || !socket || !roomId || !user) return;
+        if (newMessage.trim() === '' || !roomId || !user) return;
+        if (!socket?.connected) { notify.error('Message not submitted', { id: 'chat-send', description: 'Reconnect before sending. Your draft is kept.' }); return; }
 
         const tempId = Date.now();
         const messageData = {
@@ -90,9 +93,10 @@ export const TenantChat: React.FC<TenantChatProps> = ({ isOpen, onClose }) => {
 
     // 3. Undo Message
     const undoMessage = (messageId: number) => {
-        if (!socket || !roomId || !user) return;
+        if (!roomId || !user) return;
+        if (!socket?.connected) { notify.error('Recall not submitted', { id: 'chat-recall', description: 'Reconnect before recalling a message.' }); return; }
         socket.emit('undo_message', { messageId, roomId, senderId: user.id });
-        toast.success("Message recalled", { position: 'bottom-center' });
+        notify.info('Recall requested', { id: 'chat-recall', description: 'Waiting for the server to confirm removal.' });
     };
 
     if (!isOpen) return null;
