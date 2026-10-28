@@ -1,3 +1,39 @@
+import type { Payment } from '../types/types';
+
+export interface ReceiptFilters {
+    query: string;
+    status: string;
+    type: string;
+    from: string;
+    to: string;
+    sort: string;
+}
+
+export function filterPaymentReceipts(payments: Payment[], filters: ReceiptFilters) {
+    const query = filters.query.trim().toLocaleLowerCase();
+    const time = (payment: Payment) => new Date(payment.datePaid).getTime();
+    return payments.filter(payment => {
+        if (filters.status !== 'all' && (filters.status === 'review' ? !isReviewable(payment.status) : payment.status !== filters.status)) return false;
+        if (filters.type !== 'all' && payment.paymentType !== filters.type) return false;
+        if (query && ![payment.tenantName, payment.roomNumber, payment.id, parsePaymentRemarks(payment.remarks).reference]
+            .some(value => value?.toLocaleLowerCase().includes(query))) return false;
+        if (filters.from || filters.to) {
+            const date = new Date(payment.datePaid);
+            if (!Number.isFinite(date.getTime())) return false;
+            const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            if (filters.from && key < filters.from || filters.to && key > filters.to) return false;
+        }
+        return true;
+    }).sort((a, b) => {
+        if (filters.sort === 'amount-high') return Number(b.amount) - Number(a.amount);
+        if (filters.sort === 'amount-low') return Number(a.amount) - Number(b.amount);
+        const first = time(a), second = time(b);
+        if (!Number.isFinite(first)) return Number.isFinite(second) ? 1 : 0;
+        if (!Number.isFinite(second)) return -1;
+        return filters.sort === 'oldest' ? first - second : second - first;
+    });
+}
+
 export function paymentStatus(status: string | undefined) {
     switch (status) {
         case 'Pending': return { label: 'Awaiting landlord review', tone: 'info' as const, detail: 'The receipt is recorded. The landlord has not verified it yet.' };
@@ -11,7 +47,8 @@ export function paymentStatus(status: string | undefined) {
 export function isReviewable(status: string) { return status === 'Pending' || status === 'Anomalous'; }
 
 /* Presentation-only adapter for current tagged remarks, legacy scan tags, and plain notes. */
-export function parsePaymentRemarks(raw = '') {
+export function parsePaymentRemarks(raw: string | null | undefined = '') {
+    raw = raw ?? '';
     const tags = 'AI Audit|AI Extracted|Ref No|Warnings|AI Verified|Extracted Amount|Ref|Landlord Verification Verdict|Rejection Reason';
     const matcher = new RegExp(`\\[(${tags}):`, 'g');
     const matches = [...raw.matchAll(matcher)];
@@ -47,7 +84,7 @@ export function submissionResult(data: unknown) {
         warnings: Array.isArray(record.warnings) ? record.warnings.filter((warning): warning is string => typeof warning === 'string') : [] };
 }
 
-export function verdictRemarks(remarks: string | undefined, status: 'Verified' | 'Rejected', reason?: string) {
+export function verdictRemarks(remarks: string | null | undefined, status: 'Verified' | 'Rejected', reason?: string) {
     return `${remarks || ''}\n[Landlord Verification Verdict: ${status}]${reason ? `\n[Rejection Reason: ${reason}]` : ''}`;
 }
 

@@ -8,7 +8,7 @@ export interface Payment {
     datePaid: string;
     status: 'Pending' | 'Verified' | 'Rejected' | 'Anomalous';
     proofImage: string;
-    remarks?: string;
+    remarks?: string | null;
     tenantName?: string; 
     roomNumber?: string;
     rejectionReason?: string;

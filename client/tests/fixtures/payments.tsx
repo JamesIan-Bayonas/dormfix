@@ -21,12 +21,17 @@ const initialPayments: Payment[] = [
 ];
 const initialTenants: DirectoryTenant[] = [{ id: 't1', name: 'Pending Alex', email: 'alex@example.test', isApproved: false }, { id: 't2', name: 'Pending Jamie', email: 'jamie@example.test', isApproved: false }, { id: 't3', name: 'Approved Morgan', email: 'morgan@example.test', isApproved: true, roomNumber: 'Unassigned' }, { id: 't4', name: 'Assigned Casey', email: 'casey@example.test', isApproved: true, roomNumber: '110', phoneNumber: 'Fixture phone unavailable' }];
 const initialRooms = [{ room_number: '108', capacity: 2, currentOccupants: 1 }, { room_number: '109', capacity: 3, currentOccupants: 0 }, { room_number: '110', capacity: 1, currentOccupants: 1 }];
+const bulkPayments: Payment[] = Array.from({ length: 23 }, (_, index) => ({
+    ...initialPayments[index % initialPayments.length], id: `bulk-${index + 1}`, tenantName: 'Alex Rivera', roomNumber: '108',
+    paymentType: ['Rent', 'Water', 'Electric', 'Maintenance', 'Deposit'][index % 5], amount: 500 + index * 100,
+    datePaid: `2026-10-${String(index + 1).padStart(2, '0')}`, proofImage: '/tests/fixtures/receipt.svg',
+}));
 const pause = () => new Promise(resolve => setTimeout(resolve, 1600));
 
 /* Simulated presentation workflows only. No authentication, fetch, sockets, or server writes. */
 export default function Fixture() {
     const { pathname } = useLocation();
-    const [payments, setPayments] = useState(initialPayments);
+    const [payments, setPayments] = useState(new URLSearchParams(window.location.search).has('bulk') ? bulkPayments : initialPayments);
     const [tenants, setTenants] = useState(initialTenants);
     const [rooms, setRooms] = useState(initialRooms);
     const [mode, setMode] = useState('Populated');
@@ -47,7 +52,7 @@ export default function Fixture() {
         return false;
     }
     return <>
-        <div className="space-y-3 border-b border-divider bg-info-soft p-4 text-sm text-info">
+        <div hidden={new URLSearchParams(window.location.search).has('preview')} className="space-y-3 border-b border-divider bg-info-soft p-4 text-sm text-info">
             <p>Isolated Group 4 fixture: fictional records. No server requests, account changes, or financial transactions. First record action fails; retry succeeds.</p>
             <div className="flex flex-wrap gap-3">{[['/payments', 'Landlord receipts'], ['/tenants', 'Tenant directory'], ['/history', 'Tenant receipts'], ['/proof', 'Submit proof']].map(([path, label]) => <Link key={path} to={path} className="df-button df-button--secondary">{label}</Link>)}</div>
             <div className="flex flex-wrap items-center gap-3"><label htmlFor="fixture-state">Data state</label><select id="fixture-state" className="df-control w-auto max-w-full" value={mode} onChange={event => setMode(event.target.value)}>{['Populated', 'Loading', 'Read failure', 'Room read failure', 'Empty'].map(value => <option key={value}>{value}</option>)}</select><label htmlFor="fixture-response">Upload response</label><select id="fixture-response" className="df-control w-auto max-w-full" value={response} onChange={event => setResponse(event.target.value)}>{['Anomalous', 'Verified', 'Missing status', 'Failure'].map(value => <option key={value}>{value}</option>)}</select></div>
@@ -58,6 +63,7 @@ export default function Fixture() {
                 onApprove={async id => { if (await firstFails(`approve-${id}`)) return false; setTenants(current => current.map(tenant => tenant.id === id ? { ...tenant, isApproved: true } : tenant)); return true; }}
                 onRemove={async id => { if (await firstFails(`remove-${id}`)) return false; setTenants(current => current.filter(tenant => tenant.id !== id)); return true; }}
                 onAssign={async (id, roomNumber) => { if (await firstFails(`assign-${id}`)) throw new Error('Room 108 is now full. Refresh availability and choose another room.'); setTenants(current => current.map(tenant => tenant.id === id ? { ...tenant, roomNumber } : tenant)); return true; }} /> : pathname === '/proof' ? <div className="space-y-6"><PageHeader title="Submit payment proof" description="Preview the actual submission form with simulated responses." /><Button onClick={() => setProofOpen(true)}>Open proof form</Button></div> : <PaymentLedger key={tenantRole ? 'tenant' : 'landlord'} role={tenantRole ? 'tenant' : 'landlord'} payments={mode === 'Empty' ? [] : payments} loading={loading} error={error} onRetry={retry} onBack={back} receiptBase={location.origin}
+                initialReceiptId={new URLSearchParams(window.location.search).get('receipt')}
                 onVerify={async (id, status, reason) => { if (await firstFails(`verify-${id}`)) return false; setPayments(current => current.map(payment => payment.id === id ? { ...payment, status, remarks: verdictRemarks(payment.remarks, status, reason) } : payment)); return true; }} />}
         </WorkspaceShell>
         <Dialog open={proofOpen} onClose={() => setProofOpen(false)} title="Submit payment proof" busy={proofBusy}>

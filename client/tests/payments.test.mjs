@@ -7,8 +7,17 @@ async function load(path) {
     const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
     return import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 }
-const { parsePaymentRemarks, paymentStatus, isReviewable, submissionResult, verdictRemarks } = await load('../src/utils/paymentPresentation.ts');
+const { parsePaymentRemarks, paymentStatus, isReviewable, submissionResult, verdictRemarks, filterPaymentReceipts } = await load('../src/utils/paymentPresentation.ts');
 const { paymentFormData, localPaymentDate } = await load('../src/utils/paymentSubmission.ts');
+
+test('PostgreSQL NULL receipt remarks render as an empty note without scan metadata', () => {
+    const parsed = parsePaymentRemarks(null);
+    assert.equal(parsed.notes, '');
+    assert.equal(parsed.scan, null);
+    assert.equal(parsed.rejectionReason, null);
+    assert.deepEqual(parsed.warnings, []);
+    assert.equal(parsePaymentRemarks(verdictRemarks(null, 'Rejected', 'Receipt is missing')).rejectionReason, 'Receipt is missing');
+});
 
 test('the initial paid date follows the local calendar near midnight', () => {
     assert.equal(localPaymentDate(new Date(2026, 9, 3, 0, 5)), '2026-10-03');
@@ -68,4 +77,31 @@ test('multipart fields, allocation enum and original file are preserved', () => 
         assert.equal(data.get('datePaid'), '2026-10-01'); assert.equal(data.get('remarks'), 'October\nrent');
         assert.equal(data.get('proof').name, 'fixture.txt'); assert.equal(data.get('proof').size, proof.size);
     }
+});
+
+const receiptFilters = { query: '', status: 'all', type: 'all', from: '', to: '', sort: 'newest' };
+const receipts = [
+    { id: 'a', tenantName: 'Alex Rivera', roomNumber: '100', paymentType: 'Rent', status: 'Pending', amount: 1000, datePaid: '2026-09-05T12:00:00', remarks: '[Ref No: RENT-100]' },
+    { id: 'b', tenantName: 'Sam Lee', roomNumber: '101', paymentType: 'Water', status: 'Anomalous', amount: 500, datePaid: '2026-09-10T12:00:00' },
+    { id: 'c', tenantName: 'Alex Rivera', roomNumber: '100', paymentType: 'Rent', status: 'Verified', amount: 2000, datePaid: '2026-09-11T12:00:00' },
+    { id: 'd', paymentType: 'Rent', status: 'Rejected', amount: 750, datePaid: 'invalid' },
+];
+test('receipt search matches tenant, room, record id and extracted reference across combined filters', () => {
+    for (const query of ['  ALEX  ', '100', 'rent-100']) {
+        assert.deepEqual(filterPaymentReceipts(receipts, { ...receiptFilters, query, status: 'review', type: 'Rent' }).map(item => item.id), ['a']);
+    }
+    assert.deepEqual(filterPaymentReceipts(receipts, { ...receiptFilters, query: 'd', status: 'Rejected' }).map(item => item.id), ['d']);
+    assert.equal(filterPaymentReceipts(receipts, { ...receiptFilters, query: 'nonexistent' }).length, 0);
+});
+test('recorded date range includes both boundary days and excludes unavailable dates', () => {
+    assert.deepEqual(filterPaymentReceipts(receipts, { ...receiptFilters, from: '2026-09-05', to: '2026-09-10' }).map(item => item.id), ['b', 'a']);
+    assert.deepEqual(filterPaymentReceipts(receipts, { ...receiptFilters, from: '2026-09-11' }).map(item => item.id), ['c']);
+    assert.deepEqual(filterPaymentReceipts(receipts, { ...receiptFilters, to: '2026-09-05' }).map(item => item.id), ['a']);
+});
+test('receipt sorting keeps unavailable dates last and never mutates the original history', () => {
+    assert.deepEqual(filterPaymentReceipts(receipts, receiptFilters).map(item => item.id), ['c', 'b', 'a', 'd']);
+    assert.deepEqual(filterPaymentReceipts(receipts, { ...receiptFilters, sort: 'oldest' }).map(item => item.id), ['a', 'b', 'c', 'd']);
+    assert.deepEqual(filterPaymentReceipts(receipts, { ...receiptFilters, sort: 'amount-high' }).map(item => item.id), ['c', 'a', 'd', 'b']);
+    assert.deepEqual(filterPaymentReceipts(receipts, { ...receiptFilters, sort: 'amount-low' }).map(item => item.id), ['b', 'd', 'a', 'c']);
+    assert.deepEqual(receipts.map(item => item.id), ['a', 'b', 'c', 'd']);
 });
