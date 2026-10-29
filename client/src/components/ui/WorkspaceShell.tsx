@@ -1,30 +1,82 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { NavLink, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, CreditCard, Wrench, Users, BedDouble, MessageSquare, ShieldCheck, Menu, LogOut, UserRound } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { LayoutDashboard, CreditCard, Wrench, Users, BedDouble, MessageSquare, ShieldCheck, Menu, LogOut, UserRound, Megaphone } from 'lucide-react';
 import type { User } from '../../types/types';
 import { Drawer } from './Dialog';
 import { Button, IconButton } from './Button';
 import { AppearanceControl } from './AppearanceControl';
 import { Brand } from './Brand';
 
-const landlordNavigation = [
-    { path: '/', label: 'Overview', icon: LayoutDashboard },
-    { path: '/payments', label: 'Payments', icon: CreditCard },
-    { path: '/maintenance', label: 'Maintenance', icon: Wrench },
-    { path: '/tenants', label: 'Tenants', icon: Users },
-    { path: '/rooms', label: 'Rooms', icon: BedDouble },
-    { path: '/chat', label: 'Messages', icon: MessageSquare },
-    { path: '/rules', label: 'House rules', icon: ShieldCheck },
+/** Nav items split into labelled groups for visual hierarchy. */
+const NAV_GROUPS = [
+    {
+        label: 'Manage',
+        items: [
+            { path: '/', label: 'Overview', icon: LayoutDashboard },
+            { path: '/tenants', label: 'Tenants', icon: Users },
+            { path: '/rooms', label: 'Rooms', icon: BedDouble },
+            { path: '/payments', label: 'Payments', icon: CreditCard },
+            { path: '/maintenance', label: 'Maintenance', icon: Wrench },
+        ],
+    },
+    {
+        label: 'Communicate',
+        items: [
+            { path: '/chat', label: 'Messages', icon: MessageSquare },
+            { path: '/announcements', label: 'Announcements', icon: Megaphone },
+            { path: '/rules', label: 'House rules', icon: ShieldCheck },
+        ],
+    },
 ];
 
-function LandlordNavigation({ onNavigate }: { onNavigate?: () => void }) {
-    return <nav aria-label="Landlord navigation" className="space-y-1">
-        {landlordNavigation.map(({ path, label, icon: Icon }) => <NavLink key={path} to={path} end={path === '/'} onClick={onNavigate}
-            className={({ isActive }) => `df-nav-link ${isActive ? 'df-nav-link--active' : ''}`}>
-            <Icon size={20} aria-hidden="true" /><span>{label}</span>
-        </NavLink>)}
-    </nav>;
+const TENANT_NAV = [
+    { path: '/', label: 'Home', icon: LayoutDashboard },
+    { path: '/payments', label: 'Payments', icon: CreditCard },
+    { path: '/maintenance', label: 'Maintenance', icon: Wrench },
+    { path: '/chat', label: 'Messages', icon: MessageSquare },
+    { path: '/announcements', label: 'Announcements', icon: Megaphone },
+];
+
+function tenantActivePath(pathname: string) {
+    if (['/history', '/pay'].includes(pathname)) return '/payments';
+    if (pathname === '/report') return '/maintenance';
+    return pathname;
+}
+
+function WorkspaceNavigation({ role, onNavigate }: { role: Props['role']; onNavigate?: () => void }) {
+    const { pathname } = useLocation();
+    const activePath = role === 'tenant' ? tenantActivePath(pathname) : pathname;
+    const groups = role === 'landlord' ? NAV_GROUPS : [
+        { label: 'My dormitory', items: TENANT_NAV.slice(0, 3) },
+        { label: 'Communicate', items: TENANT_NAV.slice(3) },
+    ];
+    return (
+        <nav aria-label={role === 'landlord' ? 'Landlord navigation' : 'Tenant navigation'} className="space-y-5">
+            {groups.map(group => (
+                <div key={group.label}>
+                    <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-muted/70 select-none">
+                        {group.label}
+                    </p>
+                    <ul className="space-y-0.5" role="list">
+                        {group.items.map(({ path, label, icon: Icon }) => (
+                            <li key={path}>
+                                <Link
+                                    to={path}
+                                    onClick={onNavigate}
+                                    aria-current={activePath === path || path !== '/' && activePath.startsWith(`${path}/`) ? 'page' : undefined}
+                                    className={`df-nav-link ${activePath === path || path !== '/' && activePath.startsWith(`${path}/`) ? 'df-nav-link--active' : ''}`}
+                                >
+                                    <Icon size={20} aria-hidden="true" />
+                                    <span>{label}</span>
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            ))}
+        </nav>
+    );
 }
 
 interface Props {
@@ -42,7 +94,7 @@ export function WorkspaceShell({ role, user, onLogout, onEditProfile, children }
     const routeFocusPending = useRef(false);
     const mainRef = useRef<HTMLElement>(null);
     const headerRef = useRef<HTMLElement>(null);
-    const title = role === 'landlord' ? landlordNavigation.find(item => item.path === location.pathname)?.label ?? 'Workspace' : 'Tenant workspace';
+    const title = (role === 'landlord' ? NAV_GROUPS.flatMap(g => g.items) : TENANT_NAV).find(item => item.path === (role === 'tenant' ? tenantActivePath(location.pathname) : location.pathname))?.label ?? 'Workspace';
 
     useEffect(() => {
         const header = headerRef.current;
@@ -88,40 +140,49 @@ export function WorkspaceShell({ role, user, onLogout, onEditProfile, children }
     const account = <div className="space-y-3 border-t border-divider pt-4">
         <div className="min-w-0 space-y-1 text-sm">
             <p className="font-semibold text-ink break-words">{user.name}</p>
-            <p className="text-muted break-all">Dorm code: <span className="font-mono">{user.dormFixId}</span></p>
+            {user.dormFixId && <p className="text-muted break-all">Dorm code: <span className="font-mono">{user.dormFixId}</span></p>}
         </div>
         <Button variant="secondary" onClick={onLogout}><LogOut size={18} aria-hidden="true" />Sign out</Button>
     </div>;
 
-    return <div className={`min-h-dvh bg-canvas text-ink ${role === 'landlord' ? 'lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]' : ''}`}>
+    return <div className="min-h-dvh bg-canvas text-ink lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
         <a href="#workspace-main" className="df-skip-link" onClick={event => { event.preventDefault(); mainRef.current?.focus(); mainRef.current?.scrollIntoView({ block: 'start' }); }}>Skip to main content</a>
-        {role === 'landlord' && <>
-            <aside aria-label="Landlord workspace" className="sticky top-0 hidden h-dvh flex-col gap-6 overflow-y-auto border-r border-divider bg-sidebar p-5 lg:flex">
-                <Link to="/" aria-label="DormFix overview" className="flex min-h-11 items-center"><Brand /></Link>
-                <LandlordNavigation />
+        <>
+            <aside
+                aria-label={role === 'landlord' ? 'Landlord workspace' : 'Tenant workspace'}
+                className="df-sidebar-shadow sticky top-0 hidden h-dvh flex-col gap-6 overflow-y-auto border-r border-divider bg-sidebar p-5 lg:flex"
+            >
+                {/* Brand + role label */}
+                <div className="space-y-1.5">
+                    <Link to="/" aria-label={role === 'landlord' ? 'DormFix overview' : 'DormFix home'} className="flex min-h-11 items-center">
+                        <Brand />
+                    </Link>
+                    <p className="pl-0.5 text-[10px] font-semibold uppercase tracking-widest text-muted/60 select-none">
+                        {role === 'landlord' ? 'Landlord Portal' : 'Tenant Portal'}
+                    </p>
+                </div>
+                <WorkspaceNavigation role={role} />
                 <div className="mt-auto">{account}</div>
             </aside>
             <Drawer open={menuOpen} onClose={() => setMenuOpen(false)} title="Navigation">
-                <LandlordNavigation onNavigate={() => setMenuOpen(false)} />{account}
+                <WorkspaceNavigation role={role} onNavigate={() => setMenuOpen(false)} />{account}
             </Drawer>
-        </>}
+        </>
         <div className="min-w-0">
             <header ref={headerRef} className="sticky top-0 z-20 border-b border-divider bg-surface">
-                <div className={`mx-auto flex min-h-16 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8 ${role === 'tenant' ? 'max-w-5xl' : 'max-w-workspace'}`}>
+                <div className="mx-auto flex min-h-16 max-w-workspace flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
                     <div className="flex min-w-0 items-center gap-3">
-                        {role === 'landlord' ? <>
                             <IconButton label="Open navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)} className="lg:hidden"><Menu size={20} /></IconButton>
                             <span className="font-semibold">{title}</span>
-                        </> : <Link to="/" className="flex min-h-11 flex-wrap items-center gap-3" aria-label="DormFix home"><Brand /><span className="hidden text-sm font-normal text-muted md:inline">Tenant workspace</span></Link>}
                     </div>
-                    {role === 'tenant' ? <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                        <span className="hidden text-sm text-muted xl:inline">{role === 'landlord' ? 'Landlord workspace' : 'Tenant workspace'}</span>
                         <AppearanceControl />
-                        {onEditProfile && <IconButton label="Edit profile" onClick={onEditProfile}><UserRound size={20} /></IconButton>}
-                        <Button variant="quiet" onClick={onLogout}><LogOut size={18} aria-hidden="true" /><span>Sign out</span></Button>
-                    </div> : <div className="flex flex-wrap items-center gap-4"><span className="hidden text-sm text-muted xl:inline">Landlord workspace</span><AppearanceControl /></div>}
+                        {role === 'tenant' && onEditProfile && <IconButton label="Edit profile" onClick={onEditProfile}><UserRound size={20} /></IconButton>}
+                    </div>
                 </div>
             </header>
-            <main ref={mainRef} id="workspace-main" tabIndex={-1} className={`df-page min-w-0 ${role === 'tenant' ? 'max-w-5xl' : ''}`}>{children}</main>
+            <main ref={mainRef} id="workspace-main" tabIndex={-1} className="df-page min-w-0">{children}</main>
         </div>
     </div>;
 }
