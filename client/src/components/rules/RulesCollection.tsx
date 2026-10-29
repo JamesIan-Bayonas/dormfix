@@ -6,7 +6,6 @@ import { Button } from '../ui/Button';
 import { FormField, Input, Select } from '../ui/FormField';
 import { EmptyState, ErrorState, LoadingState } from '../ui/Feedback';
 import { StatusBadge } from '../ui/StatusBadge';
-import { Panel } from '../ui/Layout';
 
 interface Props { rules: HouseRule[]; loading: boolean; error: string | null; onRetry: () => void; landlord?: boolean; onDelete?: (rule: HouseRule) => void; busy?: Record<string, boolean> }
 export function RulesCollection({ rules, loading, error, onRetry, landlord = false, onDelete, busy = {} }: Props) {
@@ -30,11 +29,11 @@ export function RulesCollection({ rules, loading, error, onRetry, landlord = fal
         {landlord ? filters : <details className="rounded-control border border-divider px-3"><summary className="min-h-11 cursor-pointer text-sm font-semibold leading-11">Find or filter rules</summary><div className="pb-3 pt-2">{filters}</div></details>}
         {loading ? <LoadingState>Loading house rules…</LoadingState> : error ? <ErrorState title="House rules unavailable" description={error} action={<Button variant="secondary" onClick={onRetry}>Try again</Button>} /> : !rules.length ? <EmptyState title="No rules published" description={landlord ? 'Publish a rule to make it available to tenants in the selected scope.' : 'Your landlord has not published rules for your dormitory or room.'} /> : !visible.length ? <EmptyState title="No matching rules" description="Try another scope or category, or clear the filters." action={<Button variant="secondary" onClick={() => { setQuery(''); setScope('all'); setCategory('all'); setPriority(false); }}>Clear filters</Button>} /> : <>
             <p className="text-sm text-muted">{visible.length} of {rules.length} rules · Priority rules first</p>
-            {visible.map(rule => <Panel key={rule.id} className="space-y-3 break-words" aria-label={`Rule ${rule.id}`}>
+            {visible.map(rule => <div key={rule.id} className="df-card space-y-3 break-words" aria-label={`Rule ${rule.id}`}>
                 <div className="flex flex-wrap gap-2"><StatusBadge>{rule.category || 'General'}</StatusBadge><StatusBadge tone="info">{ruleScope(rule)}</StatusBadge>{rule.is_priority && <StatusBadge tone="warning">Priority rule</StatusBadge>}</div>
                 <p className="whitespace-pre-wrap text-sm leading-relaxed">{rule.rule_text}</p>
                 {landlord && onDelete && <Button variant="quiet" className="text-error" disabled={busy[rule.id]} onClick={() => onDelete(rule)}>Delete rule</Button>}
-            </Panel>)}
+            </div>)}
         </>}
     </section>;
 }

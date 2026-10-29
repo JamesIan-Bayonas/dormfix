@@ -8,7 +8,7 @@ import { RuleForm } from './RuleForm';
 import { Button } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
 import { ErrorMessage } from '../ui/Feedback';
-import { PageHeader, Panel } from '../ui/Layout';
+import { PageHeader } from '../ui/Layout';
 
 interface Props {
     rules: HouseRule[]; loading: boolean; error: string | null; rooms: { room_number: string }[]; roomsLoading: boolean; roomsError: string | null;
@@ -23,13 +23,13 @@ export function RulesWorkspace({ rules, loading, error, rooms, roomsLoading, roo
     const canDelete = !!deleting && !loading && !error && rules.some(rule => rule.id === deleting.id);
     async function remove() {
         if (!deleting || !canDelete) return;
-        if (await action.run(deleting.id, () => onDelete(deleting.id), 'Deletion could not be confirmed. Refresh rules before retrying.')) { setDeleting(null); setNotice('Rule deleted from the published list.'); }
+        if (await action.run(deleting.id, () => onDelete(deleting.id), 'Deletion could not be confirmed. Refresh rules before retrying.', 'House rule deleted.')) { setDeleting(null); setNotice('Rule deleted from the published list.'); }
     }
     return <div className="space-y-6">
         <PageHeader title="House rules" description="Publish clear instructions for every room or a specific room. Priority rules appear first." />
         <p ref={noticeRef} tabIndex={-1} role="status" className="text-sm text-success">{notice}</p>
         <div className="grid items-start gap-6 xl:grid-cols-3">
-            <Panel><RuleForm rooms={rooms} roomsLoading={roomsLoading} roomsError={roomsError} onRetryRooms={onRetryRooms} onAdd={onAdd} /></Panel>
+            <div className="df-card"><RuleForm rooms={rooms} roomsLoading={roomsLoading} roomsError={roomsError} onRetryRooms={onRetryRooms} onAdd={onAdd} /></div>
             <div className="min-w-0 xl:col-span-2"><RulesCollection landlord rules={rules} loading={loading} error={error} onRetry={onRetry} busy={action.busy} onDelete={rule => { setDeleting(rule); action.clearError(rule.id); setNotice(''); }} /></div>
         </div>
         <Dialog open={!!deleting} onClose={() => setDeleting(null)} title="Delete house rule?" busy={deleting ? action.busy[deleting.id] : false}>
