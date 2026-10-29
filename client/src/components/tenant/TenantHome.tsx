@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CreditCard, Wrench, MessageSquare, ShieldCheck } from 'lucide-react';
+import { BedDouble, CreditCard, Wrench, MessageSquare, ShieldCheck } from 'lucide-react';
 import type { User } from '../../types/types';
 import { Button } from '../ui/Button';
-import { PageHeader, Panel } from '../ui/Layout';
+import { PageHeader } from '../ui/Layout';
 import { ErrorState, LoadingState } from '../ui/Feedback';
 
 export interface HousingSummary {
@@ -22,39 +22,36 @@ interface Props {
     onRetry: () => void;
     onRules: () => void;
     onEditProfile: () => void;
+    summary?: ReactNode;
     children?: ReactNode;
 }
-const taskClass = 'df-home-task flex min-h-16 w-full items-center gap-3 rounded-panel p-4 text-left sm:p-5';
 
-export function TenantHome({ user, housing, loading, error, onRetry, onRules, onEditProfile, children }: Props) {
+export function TenantHome({ user, housing, loading, error, onRetry, onRules, onEditProfile, summary, children }: Props) {
     const housingReady = !loading && !error && !!housing?.landlordId;
     const assigned = housingReady && !!housing?.roomNumber && housing.roomNumber !== 'Unassigned';
     const unavailable = loading ? 'Loading your housing details…' : error || !housing ? 'Housing details are unavailable. Retry housing details.' : 'Your landlord must assign a room first.';
     const detailsDate = housing?.moveInDate ? new Date(housing.moveInDate) : null;
     return <div className="space-y-6">
-        <PageHeader title="Home" description={`Welcome, ${user.name}. Manage your dormitory tasks here.`} />
+        <PageHeader title={`Welcome home, ${user.name}.`} description="Your room, payments, and requests in one place." />
         {loading ? <LoadingState>Loading your housing details…</LoadingState> : error ? <ErrorState title="Housing details unavailable" description={error} action={<Button variant="secondary" onClick={onRetry}>Try again</Button>} /> : housing &&
-            <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-panel border border-divider bg-surface-muted p-4 text-sm">
-                <p><span className="font-semibold">Room: </span>{assigned ? housing.roomNumber : 'Not yet assigned'}</p>
-                <p className="min-w-0 break-words"><span className="font-semibold">Landlord: </span>{housing.landlordName}</p>
+            <div className="df-card flex flex-wrap items-center gap-3 text-sm">
+                <div className="rounded-control bg-surface-muted p-3 text-primary"><BedDouble size={24} aria-hidden="true" /></div>
+                <div className="min-w-0 flex-1 space-y-1"><h2 className="font-semibold">{assigned ? `Room ${housing.roomNumber}` : 'Room assignment pending'}</h2><p className="break-words text-muted">Landlord: {housing.landlordName}</p></div>
+                <Link to="/chat" className="df-button df-button--secondary w-full sm:w-auto">Contact landlord<MessageSquare size={18} aria-hidden="true" /></Link>
             </div>}
+        {summary}
         <section aria-labelledby="tenant-tasks-title" className="space-y-3">
-            <h2 id="tenant-tasks-title" className="df-section-title">Your tasks</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-                <Panel className="p-0 sm:p-0">
-                    {assigned ? <Link to="/pay" className={taskClass}><CreditCard size={22} aria-hidden="true" className="shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block font-semibold">Submit payment proof</span><span className="block text-sm text-muted">Upload a receipt for landlord review</span></span><ArrowRight size={18} aria-hidden="true" className="shrink-0" /></Link> :
-                        <div className="space-y-1 p-4"><button type="button" disabled aria-describedby="payment-unavailable" className="flex min-h-11 items-center gap-3 text-muted"><CreditCard size={22} aria-hidden="true" />Submit payment proof</button><p id="payment-unavailable" className="text-sm text-muted">{unavailable}</p></div>}
-                    <div className="border-t border-divider px-4 py-2">{assigned ? <Link to="/history" className="df-button df-button--quiet">Payment history<ArrowRight size={16} aria-hidden="true" /></Link> : <p className="py-3 text-sm text-muted">Payment history becomes available after room assignment.</p>}</div>
-                </Panel>
-                <Panel className="p-0 sm:p-0">{assigned ? <Link to="/report" className={taskClass}><Wrench size={22} aria-hidden="true" className="shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block font-semibold">Report an issue</span><span className="block text-sm text-muted">Request maintenance for your room</span></span><ArrowRight size={18} aria-hidden="true" className="shrink-0" /></Link> :
-                    <div className="space-y-1 p-4"><button type="button" disabled aria-describedby="repair-unavailable" className="flex min-h-11 items-center gap-3 text-muted"><Wrench size={22} aria-hidden="true" />Report an issue</button><p id="repair-unavailable" className="text-sm text-muted">{unavailable}</p></div>}</Panel>
-                <Panel className="p-0 sm:p-0">{housingReady ? <Link to="/chat" className={taskClass}><MessageSquare size={22} aria-hidden="true" className="shrink-0 text-primary" /><span className="min-w-0 flex-1"><span className="block font-semibold">Message landlord</span><span className="block text-sm text-muted">Open your conversation</span></span><ArrowRight size={18} aria-hidden="true" className="shrink-0" /></Link> :
-                    <div className="space-y-1 p-4"><button type="button" disabled className="min-h-11 text-muted" aria-describedby="messages-unavailable">Message landlord</button><p id="messages-unavailable" className="text-sm text-muted">{unavailable}</p></div>}</Panel>
-                <Panel className="p-0 sm:p-0"><button type="button" onClick={onRules} disabled={!housingReady} aria-describedby={!housingReady ? 'rules-unavailable' : undefined} className={`${taskClass} disabled:cursor-not-allowed disabled:text-muted`}><ShieldCheck size={22} aria-hidden="true" className="shrink-0" /><span className="min-w-0 flex-1"><span className="block font-semibold">House rules</span><span className="block text-sm text-muted">Read dormitory and room policies</span></span><ArrowRight size={18} aria-hidden="true" className="shrink-0" /></button>{!housingReady && <p id="rules-unavailable" className="px-4 pb-4 text-sm text-muted">{unavailable}</p>}</Panel>
+            <h2 id="tenant-tasks-title" className="df-section-title">What would you like to do?</h2>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                {assigned ? <Link to="/pay" className="df-button df-button--primary justify-start text-left"><CreditCard size={20} aria-hidden="true" className="shrink-0" />Submit payment proof</Link> : <Button disabled aria-describedby="tenant-room-unavailable" className="justify-start text-left"><CreditCard size={20} aria-hidden="true" className="shrink-0" />Submit payment proof</Button>}
+                {assigned ? <Link to="/report" className="df-button df-button--secondary justify-start text-left"><Wrench size={20} aria-hidden="true" className="shrink-0" />Report an issue</Link> : <Button variant="secondary" disabled aria-describedby="tenant-room-unavailable" className="justify-start text-left"><Wrench size={20} aria-hidden="true" className="shrink-0" />Report an issue</Button>}
+                {housingReady ? <Link to="/chat" className="df-button df-button--secondary justify-start text-left"><MessageSquare size={20} aria-hidden="true" className="shrink-0" />Message landlord</Link> : <Button variant="secondary" disabled aria-describedby="tenant-room-unavailable" className="justify-start text-left"><MessageSquare size={20} aria-hidden="true" className="shrink-0" />Message landlord</Button>}
+                <Button variant="secondary" onClick={onRules} disabled={!housingReady} aria-describedby={!housingReady ? 'tenant-room-unavailable' : undefined} className="justify-start text-left"><ShieldCheck size={20} aria-hidden="true" className="shrink-0" />House rules</Button>
             </div>
+            {!assigned && <p id="tenant-room-unavailable" className="text-sm text-muted">{unavailable}</p>}
         </section>
         {children}
-        <details className="df-panel">
+        <details className="df-card">
             <summary className="min-h-11 cursor-pointer py-3 font-semibold">Account and housing details</summary>
             <div className="mt-4 grid gap-6 sm:grid-cols-2">
                 <div className="min-w-0 space-y-3"><h2 className="df-section-title">Your account</h2><dl className="space-y-3 text-sm">
