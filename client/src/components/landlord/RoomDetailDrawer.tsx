@@ -9,6 +9,7 @@ import { ErrorMessage, EmptyState } from '../ui/Feedback';
 import { StatusBadge } from '../ui/StatusBadge';
 import { maintenanceStatus, urgencyTone } from '../../utils/maintenancePresentation';
 import { ImageLightbox, ReceiptPreview } from '../ui/ImageLightbox';
+import { notify } from '../../utils/notify';
 
 export interface RoomOccupant {
     id?: string;
@@ -54,16 +55,21 @@ export const RoomDetailDrawer: React.FC<Props> = React.memo(({ isOpen, onClose, 
     const [image, setImage] = useState<string | null>(null);
     const pending = useRef(false);
 
-    async function run(operation: () => Promise<boolean>, afterSuccess: () => void) {
+    async function run(operation: () => Promise<boolean>, afterSuccess: () => void, success: string) {
         if (pending.current) return;
         pending.current = true;
         setBusy(true);
         setError(null);
+        const toastId = notify.loading('Saving changes…');
         try {
-            if (await operation()) afterSuccess();
-            else setError('The change could not be saved. Please try again.');
+            if (await operation()) { notify.success(success, { id: toastId }); afterSuccess(); }
+            else {
+                setError('The change could not be saved. Please try again.');
+                notify.error('Change could not be saved', { id: toastId, description: 'Refresh records before trying again.' });
+            }
         } catch {
             setError('The change could not be saved. Please check your connection and try again.');
+            notify.error('Change could not be confirmed', { id: toastId, description: 'Check your connection and refresh records before retrying.' });
         } finally {
             pending.current = false;
             setBusy(false);
@@ -84,7 +90,7 @@ export const RoomDetailDrawer: React.FC<Props> = React.memo(({ isOpen, onClose, 
                     <h3 className="df-section-title">Occupants</h3>
                     {roomData.occupants.length === 0 && <EmptyState title="This room is vacant" description="No tenants are assigned to this room." />}
                     {roomData.occupantPaymentStatus.map((occupant, index) => (
-                        <div key={occupant.id || index} className="df-panel space-y-4">
+                        <div key={occupant.id || index} className="df-card space-y-4">
                             <div className="space-y-2">
                                 <h4 className="font-semibold text-ink">{occupant.name}</h4>
                                 {occupant.joinedDate && <p className="text-sm text-muted">Joined {new Date(occupant.joinedDate).toLocaleDateString()}</p>}
@@ -102,7 +108,7 @@ export const RoomDetailDrawer: React.FC<Props> = React.memo(({ isOpen, onClose, 
                                         {occupant.paymentProof ? <Button variant="secondary" disabled={busy} onClick={() => setImage(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${occupant.paymentProof}`)}><Eye size={18} aria-hidden="true" />View full receipt</Button> : <p className="text-sm text-muted">No receipt image available.</p>}
                                         <div className="flex flex-wrap gap-3">
                                             <Button variant="secondary" disabled={busy} onClick={() => { setRejectId(occupant.paymentId!); setReason('Screenshot is blurry / unreadable'); setCustomReason(''); setError(null); }}>Reject</Button>
-                                            <Button loading={busy} loadingText="Saving…" onClick={() => run(() => onVerifyPayment(occupant.paymentId!, 'Verified'), () => setReviewId(null))}>Verify payment</Button>
+                                            <Button loading={busy} loadingText="Saving…" onClick={() => run(() => onVerifyPayment(occupant.paymentId!, 'Verified'), () => setReviewId(null), 'Payment marked verified.')}>Verify payment</Button>
                                             <Button variant="quiet" disabled={busy} onClick={() => setReviewId(null)}>Cancel review</Button>
                                         </div>
                                     </> : <Button variant="secondary" disabled={busy} onClick={() => setReviewId(occupant.paymentId!)}>Review receipt</Button>}
@@ -114,7 +120,7 @@ export const RoomDetailDrawer: React.FC<Props> = React.memo(({ isOpen, onClose, 
                 <section className="space-y-4" aria-label="Active maintenance requests">
                     <h3 className="df-section-title">Active maintenance requests</h3>
                     {roomData.activeIssues.length === 0 && <p className="text-sm text-muted">No active requests for this room.</p>}
-                    {roomData.activeIssues.map((issue) => <div key={issue.id} className="df-panel space-y-3">
+                    {roomData.activeIssues.map((issue) => <div key={issue.id} className="df-card space-y-3">
                         <h4 className="font-semibold">{issue.issueType}</h4>
                         <div className="flex flex-wrap gap-2"><StatusBadge tone={maintenanceStatus(issue.status).tone}>{maintenanceStatus(issue.status).label}</StatusBadge><StatusBadge tone={urgencyTone(issue.urgency)}>Urgency: {issue.urgency}</StatusBadge></div>
                         <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">{issue.description}</p>
@@ -125,7 +131,7 @@ export const RoomDetailDrawer: React.FC<Props> = React.memo(({ isOpen, onClose, 
             <Dialog open={!!rejectId && isOpen} onClose={() => setRejectId(null)} title="Reject payment" busy={busy}>
                 <form className="space-y-4" onSubmit={(event) => {
                     event.preventDefault();
-                    if (rejectId) run(() => onVerifyPayment(rejectId, 'Rejected', reason === 'Other' ? customReason : reason), () => { setRejectId(null); setReviewId(null); });
+                    if (rejectId) run(() => onVerifyPayment(rejectId, 'Rejected', reason === 'Other' ? customReason : reason), () => { setRejectId(null); setReviewId(null); }, 'Payment marked rejected.');
                 }}>
                     <FormField id="drawer-rejection-reason" label="Rejection reason">
                         {(field) => <Select {...field} value={reason} disabled={busy} onChange={(event) => setReason(event.target.value)}>
@@ -140,7 +146,7 @@ export const RoomDetailDrawer: React.FC<Props> = React.memo(({ isOpen, onClose, 
                 </form>
             </Dialog>
             <ConfirmationDialog open={!!resolveId && isOpen} onClose={() => setResolveId(null)} title="Complete maintenance request?" confirmLabel="Mark completed" destructive={false} busy={busy} error={error}
-                onConfirm={() => { if (resolveId) run(() => onResolveIssue(resolveId), () => setResolveId(null)); }}>
+                onConfirm={() => { if (resolveId) run(() => onResolveIssue(resolveId), () => setResolveId(null), 'Maintenance marked completed.'); }}>
                 The request will be marked Completed in the tenant's maintenance history.
             </ConfirmationDialog>
             <ImageLightbox src={isOpen ? image : null} onClose={() => setImage(null)} />
