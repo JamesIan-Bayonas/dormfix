@@ -7,7 +7,10 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
-    "test:postgres": "npm run build && node tests/postgresql.integration.cjs"
+    "test:postgres": "npm run build && node tests/postgresql.integration.cjs",
+    "test:announcements": "npm run build && node tests/announcements.integration.cjs",
+    "verify:release": "npm run build && node scripts/verify-release.cjs --configured-database",
+    "test:authorization": "npm run build && node tests/authorization.integration.cjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
